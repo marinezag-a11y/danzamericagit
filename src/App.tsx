@@ -802,7 +802,7 @@ function DonationDropdown({ variant = 'default' }: { variant?: 'default' | 'larg
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className={`absolute ${variant === 'large' ? 'bottom-full mb-4 left-0' : 'top-full mt-4 right-0'} w-[calc(100vw-3rem)] sm:w-72 bg-white shadow-[0_30px_60px_rgba(0,0,0,0.5)] border border-black/5 z-[9999] mix-blend-normal isolation-isolate overflow-hidden`}
+            className={`absolute ${variant === 'large' ? 'bottom-full mb-4 left-0' : 'top-full mt-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0'} w-[calc(100vw-3rem)] sm:w-72 bg-white shadow-[0_30px_60px_rgba(0,0,0,0.5)] border border-black/5 z-[9999] mix-blend-normal isolation-isolate overflow-hidden`}
           >
             <div className="p-2 space-y-1">
               <button

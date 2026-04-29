@@ -17,9 +17,12 @@ import {
   Menu,
   X,
   CreditCard,
-  Target
+  Target,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { AnimatePresence } from 'motion/react';
 
 // Product Types
 interface Product {
@@ -98,12 +101,7 @@ export default function App() {
           <a href="#eventos" className="hover:text-brand-orange transition-colors">Eventos</a>
         </div>
 
-        <button 
-          className="bg-brand-orange text-white px-8 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-black transition-all"
-          onClick={() => setActiveModal('donation')}
-        >
-          Doar Agora
-        </button>
+        <DonationDropdown />
       </nav>
 
       {/* Hero Section */}
@@ -335,12 +333,7 @@ export default function App() {
               Apoie agora e faça parte desta história de excelência artística e superação.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <button 
-                onClick={() => setActiveModal('donation')}
-                className="bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"
-              >
-                Apoie Agora <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
-              </button>
+              <DonationDropdown variant="large" />
               <button 
                 onClick={() => window.location.href = '#patrocinio'}
                 className="border border-brand-dark/10 px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-grey transition-all"
@@ -545,37 +538,6 @@ export default function App() {
               </div>
             )}
 
-            {activeModal === 'donation' && (
-              <div className="max-w-xl mx-auto text-center">
-                 <Heart className="w-16 h-16 text-brand-orange mx-auto mb-8 animate-pulse" strokeWidth={1} />
-                 <h2 className="text-5xl mb-4 italic">Doe Qualquer Valor</h2>
-                 <p className="text-brand-dark/40 font-serif mb-12 italic">Cada real nos aproxima do palco internacional na Argentina.</p>
-                 
-                 <div className="grid grid-cols-3 gap-4 mb-8">
-                    {[50, 100, 500].map(val => (
-                      <button key={val} className="p-6 border border-black/10 hover:border-brand-orange hover:text-brand-orange transition-all font-display text-2xl">
-                        R$ {val}
-                      </button>
-                    ))}
-                 </div>
-                 
-                 <div className="relative mb-12">
-                    <input 
-                      type="text" 
-                      placeholder="Outro valor (R$)" 
-                      className="w-full bg-brand-grey p-6 text-center text-4xl font-display outline-none focus:ring-2 ring-brand-orange/20"
-                    />
-                 </div>
-
-                 <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
-                   Contribuir Agora
-                 </button>
-                 <div className="flex justify-center gap-8 mt-12 grayscale opacity-30">
-                    <CreditCard className="w-8 h-8" strokeWidth={1} />
-                    <Target className="w-8 h-8" strokeWidth={1} />
-                 </div>
-              </div>
-            )}
           </motion.div>
         </div>
       )}
@@ -739,6 +701,98 @@ function TierCard({ name, price, benefits, highlight = false }: { name: string, 
        <button className={`w-full py-4 text-[10px] uppercase tracking-widest font-bold border transition-all ${highlight ? 'bg-white text-brand-orange border-white hover:bg-brand-dark hover:text-white hover:border-brand-dark' : 'text-white border-white/20 hover:border-brand-orange hover:text-brand-orange'}`}>
          Solicitar Proposta
        </button>
+    </div>
+  );
+}
+
+function DonationDropdown({ variant = 'default' }: { variant?: 'default' | 'large' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const pixKey = "6093259@vakinha.com.br";
+  const vakinhaUrl = "https://www.vakinha.com.br/vaquinha/talentos-de-minas-nossa-turma-no-palco-internacional";
+
+  const handleCopyPix = async () => {
+    try {
+      await navigator.clipboard.writeText(pixKey);
+      setCopied(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      console.error('Falha ao copiar:', err);
+    }
+  };
+
+  return (
+    <div 
+      className="relative"
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+      ref={dropdownRef}
+    >
+      <button 
+        className={
+          variant === 'large' 
+          ? "bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"
+          : "bg-brand-orange text-white px-8 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-black transition-all"
+        }
+      >
+        {variant === 'large' ? 'Apoie Agora' : 'Doar Agora'}
+        {variant === 'large' && <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />}
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className={`absolute ${variant === 'large' ? 'bottom-full mb-4 left-0' : 'top-full mt-2 right-0'} w-72 bg-white shadow-2xl border border-black/5 z-[60] overflow-hidden`}
+          >
+            <div className="p-2 space-y-1">
+              <button
+                onClick={handleCopyPix}
+                className="w-full flex items-center justify-between p-4 hover:bg-brand-grey transition-colors text-left group"
+              >
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-brand-orange mb-1">Copiar Chave PIX</span>
+                  <span className="text-xs font-serif text-brand-dark/60 truncate max-w-[180px]">{pixKey}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {copied ? (
+                    <span className="text-[9px] uppercase font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Copiado!</span>
+                  ) : (
+                    <Copy className="w-4 h-4 text-brand-dark/20 group-hover:text-brand-orange transition-colors" />
+                  )}
+                </div>
+              </button>
+
+              <div className="h-[1px] bg-black/5 mx-4"></div>
+
+              <a
+                href={vakinhaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-between p-4 hover:bg-brand-grey transition-colors text-left group"
+              >
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-brand-dark mb-1">Vakinha Virtual</span>
+                  <span className="text-xs font-serif text-brand-dark/60">Contribuir via site oficial</span>
+                </div>
+                <ExternalLink className="w-4 h-4 text-brand-dark/20 group-hover:text-brand-orange transition-colors" />
+              </a>
+            </div>
+            
+            <div className="bg-brand-orange/5 p-3 flex items-center gap-3">
+              <div className="w-1 h-1 rounded-full bg-brand-orange animate-pulse"></div>
+              <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-brand-dark/40">Sua ajuda é fundamental</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

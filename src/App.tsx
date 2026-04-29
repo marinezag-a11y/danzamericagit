@@ -761,8 +761,6 @@ function DonationDropdown({ variant = 'default' }: { variant?: 'default' | 'larg
     }
   };
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {

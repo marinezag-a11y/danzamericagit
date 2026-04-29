@@ -85,7 +85,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-transparent px-6 py-4 flex justify-between items-center text-white backdrop-blur-sm">
+      <nav className="fixed top-0 left-0 w-full z-[70] bg-transparent px-6 py-4 flex justify-between items-center text-white backdrop-blur-sm">
         {/* Border Layer - Inside nav but at the bottom */}
         <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/10 z-0 pointer-events-none"></div>
 
@@ -102,16 +102,14 @@ export default function App() {
           <a href="#eventos" className="hover:text-brand-orange transition-colors">Eventos</a>
         </div>
 
-        <div className="flex items-center gap-4 z-20">
-          <div className="hidden md:block">
-            <DonationDropdown />
-          </div>
+        <div className="relative z-20 flex items-center gap-2 sm:gap-4">
+          <DonationDropdown />
           
           <button 
-            className="lg:hidden text-white p-2"
+            className="lg:hidden text-white p-1 sm:p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            {isMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
+            {isMenuOpen ? <X className="w-7 h-7 sm:w-8 h-8" /> : <Menu className="w-7 h-7 sm:w-8 h-8" />}
           </button>
         </div>
       </nav>
@@ -763,14 +761,32 @@ function DonationDropdown({ variant = 'default' }: { variant?: 'default' | 'larg
     }
   };
 
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div 
       className="relative"
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
+      onMouseEnter={() => !('ontouchstart' in window) && setIsOpen(true)}
+      onMouseLeave={() => !('ontouchstart' in window) && setIsOpen(false)}
       ref={dropdownRef}
     >
       <button 
+        onClick={toggleOpen}
         className={
           variant === 'large' 
           ? "bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"

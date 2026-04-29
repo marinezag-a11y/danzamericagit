@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-orange: #FF5A1F;
+  --color-brand-orange: #BE3144;
   --color-brand-white: #FFFFFF;
   --color-brand-grey: #F5F5F5;
   --color-brand-dark: #1A1A1A;
@@ -41,3 +41,4 @@
 .animate-marquee {
   animation: scroll-text 20s linear infinite;
 }
+

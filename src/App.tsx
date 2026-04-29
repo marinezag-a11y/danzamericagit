@@ -85,14 +85,15 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-50 mix-blend-difference bg-transparent px-6 py-8 flex justify-between items-center text-white border-b border-white/10 backdrop-blur-sm">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <span className="font-serif text-2xl font-bold tracking-tighter uppercase italic">Nucleo</span>
-          <span className="h-4 w-[1px] bg-white/30 hidden md:block"></span>
-          <span className="text-xs tracking-widest uppercase font-display hidden md:block">Tatiana Figueiredo</span>
+      <nav className="fixed top-0 left-0 w-full z-50 bg-transparent px-6 py-4 flex justify-between items-center text-white backdrop-blur-sm">
+        {/* Border Layer - Inside nav but at the bottom */}
+        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/10 z-0 pointer-events-none"></div>
+
+        <div className="flex items-center cursor-pointer mix-blend-difference z-10" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <img src="/logo_branca.png" alt="Nucleo Tatiana Figueiredo" className="h-14 md:h-24 w-auto object-contain" />
         </div>
         
-        <div className="hidden lg:flex gap-12 text-[10px] uppercase tracking-[0.2em] font-display">
+        <div className="hidden lg:flex gap-14 text-xs uppercase tracking-[0.25em] font-display font-medium mix-blend-difference z-10">
           <a href="#jornada" className="hover:text-brand-orange transition-colors">A Jornada</a>
           <a href="#desafio" className="hover:text-brand-orange transition-colors">O Desafio</a>
           <a href="#galeria" className="hover:text-brand-orange transition-colors">Galeria</a>
@@ -101,20 +102,57 @@ export default function App() {
           <a href="#eventos" className="hover:text-brand-orange transition-colors">Eventos</a>
         </div>
 
-        <DonationDropdown />
+        <div className="flex items-center gap-4 z-20">
+          <div className="hidden md:block">
+            <DonationDropdown />
+          </div>
+          
+          <button 
+            className="lg:hidden text-white p-2"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
+          </button>
+        </div>
       </nav>
+
+        {/* Mobile Menu Overlay */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-0 bg-brand-dark z-[60] flex flex-col p-8 pt-32"
+            >
+              <div className="flex flex-col gap-8 text-2xl uppercase tracking-widest font-display text-white">
+                <a href="#jornada" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">A Jornada</a>
+                <a href="#desafio" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">O Desafio</a>
+                <a href="#galeria" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Galeria</a>
+                <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Como Ajudar</a>
+                <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Patrocínio</a>
+                <a href="#eventos" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Eventos</a>
+              </div>
+              
+              <div className="mt-auto pt-12 border-t border-white/10">
+                <DonationDropdown variant="large" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       {/* Hero Section */}
       <section className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-brand-dark">
-        <div className="absolute inset-0 z-0">
-          <motion.img 
-            style={{ y: useTransform(scrollYProgress, [0, 1], [0, 200]) }}
-            src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=2669&auto=format&fit=crop" 
-            alt="Dança Contemporânea"
-            className="w-full h-full object-cover opacity-60 grayscale filter contrast-125"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent"></div>
-        </div>
+          <div className="absolute inset-0 z-0">
+            <motion.img 
+              style={{ y: useTransform(scrollYProgress, [0, 1], [0, 200]) }}
+              src="/hero-bg.jpg" 
+              alt="Dança Contemporânea"
+              className="w-full h-full object-cover opacity-70 filter brightness-75 contrast-95"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent"></div>
+          </div>
 
         <motion.div 
           initial={{ opacity: 0, y: 50 }}
@@ -124,9 +162,9 @@ export default function App() {
         >
           <div className="flex items-center gap-4 mb-8">
             <span className="h-[1px] w-12 bg-brand-orange"></span>
-            <p className="text-brand-orange text-xs uppercase tracking-[0.4em] font-display font-medium">Melhor Grupo no Festival Arte Minas 2026</p>
+            <p className="text-white text-xs uppercase tracking-[0.4em] font-display font-medium">Melhor Grupo no Festival Arte Minas 2026</p>
           </div>
-          <h1 className="text-6xl md:text-[120px] lg:text-[160px] text-white leading-[0.8] mb-12">
+          <h1 className="text-5xl sm:text-6xl md:text-[120px] lg:text-[160px] text-white leading-[0.8] mb-12">
             A Jornada: <br />
             <span className="italic font-light">26 Anos</span> de Dança
           </h1>
@@ -241,7 +279,7 @@ export default function App() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-[1200px] md:h-[800px]">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-auto md:h-[800px]">
             {/* Featured Video Placeholder */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -736,7 +774,7 @@ function DonationDropdown({ variant = 'default' }: { variant?: 'default' | 'larg
         className={
           variant === 'large' 
           ? "bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"
-          : "bg-brand-orange text-white px-8 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-black transition-all"
+          : "bg-brand-orange text-white px-10 py-4 text-xs uppercase tracking-widest font-bold hover:bg-black transition-all"
         }
       >
         {variant === 'large' ? 'Apoie Agora' : 'Doar Agora'}
@@ -750,39 +788,37 @@ function DonationDropdown({ variant = 'default' }: { variant?: 'default' | 'larg
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className={`absolute ${variant === 'large' ? 'bottom-full mb-4 left-0' : 'top-full mt-2 right-0'} w-72 bg-white shadow-2xl border border-black/5 z-[60] overflow-hidden`}
+            className={`absolute ${variant === 'large' ? 'bottom-full mb-4 left-0' : 'top-full mt-4 right-0'} w-[calc(100vw-3rem)] sm:w-72 bg-white shadow-[0_30px_60px_rgba(0,0,0,0.5)] border border-black/5 z-[9999] mix-blend-normal isolation-isolate overflow-hidden`}
           >
             <div className="p-2 space-y-1">
               <button
                 onClick={handleCopyPix}
-                className="w-full flex items-center justify-between p-4 hover:bg-brand-grey transition-colors text-left group"
+                className="w-full flex items-center justify-between p-5 hover:bg-brand-grey transition-colors text-left group border-b border-black/5"
               >
                 <div className="flex flex-col">
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-brand-orange mb-1">Copiar Chave PIX</span>
-                  <span className="text-xs font-serif text-brand-dark/60 truncate max-w-[180px]">{pixKey}</span>
+                  <span className="text-[10px] uppercase tracking-widest font-black text-brand-orange mb-1.5">Copiar Chave PIX</span>
+                  <span className="text-sm font-bold font-sans text-brand-dark tracking-tight">{pixKey}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {copied ? (
-                    <span className="text-[9px] uppercase font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Copiado!</span>
+                    <span className="text-[9px] uppercase font-bold text-green-600 bg-green-50 px-2 py-1 border border-green-200">Copiado!</span>
                   ) : (
-                    <Copy className="w-4 h-4 text-brand-dark/20 group-hover:text-brand-orange transition-colors" />
+                    <Copy className="w-5 h-5 text-brand-dark/30 group-hover:text-brand-orange transition-colors" />
                   )}
                 </div>
               </button>
-
-              <div className="h-[1px] bg-black/5 mx-4"></div>
 
               <a
                 href={vakinhaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-between p-4 hover:bg-brand-grey transition-colors text-left group"
+                className="w-full flex items-center justify-between p-5 hover:bg-brand-grey transition-colors text-left group"
               >
                 <div className="flex flex-col">
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-brand-dark mb-1">Vakinha Virtual</span>
-                  <span className="text-xs font-serif text-brand-dark/60">Contribuir via site oficial</span>
+                  <span className="text-[10px] uppercase tracking-widest font-black text-brand-dark/40 mb-1.5">Vakinha Virtual</span>
+                  <span className="text-sm font-bold font-sans text-brand-dark">Acessar página de contribuição</span>
                 </div>
-                <ExternalLink className="w-4 h-4 text-brand-dark/20 group-hover:text-brand-orange transition-colors" />
+                <ExternalLink className="w-5 h-5 text-brand-dark/30 group-hover:text-brand-orange transition-colors" />
               </a>
             </div>
             

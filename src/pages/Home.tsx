@@ -1,0 +1,706 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Users, 
+  ShoppingBag, 
+  Ticket, 
+  Calendar, 
+  Award, 
+  Instagram, 
+  ArrowRight,
+  Heart,
+  ChevronRight,
+  Menu,
+  X,
+  CreditCard,
+  Target,
+  Copy,
+  ExternalLink,
+  RefreshCw
+} from 'lucide-react';
+import { useSiteSettings } from '../hooks/useSiteSettings';
+import { useGallery } from '../hooks/useGallery';
+import { useSponsorship } from '../hooks/useSponsorship';
+
+// Product Types
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  description: string;
+}
+
+const PRODUCTS: Product[] = [
+  {
+    id: 'mug-01',
+    name: 'Caneca do Bem',
+    price: 45.00,
+    image: 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop',
+    description: 'Caneca oficial do projeto Talentos de Minas. Edição limitada.'
+  },
+  {
+    id: 'shirt-01',
+    name: 'Camiseta do Projeto',
+    price: 85.00,
+    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=2670&auto=format&fit=crop',
+    description: 'Camiseta técnica em tecido respirável, com logo oficial.'
+  }
+];
+
+function TierCard({ name, price, benefits, highlight = false }: { name: string, price: string, benefits: string[], highlight?: boolean }) {
+  return (
+    <div className={`p-12 border border-white/10 flex flex-col justify-between transition-all group ${highlight ? 'bg-brand-orange' : 'bg-white/5 hover:bg-white/10'}`}>
+       <div>
+          <h4 className={`text-2xl mb-2 font-serif ${highlight ? 'text-white' : 'text-white'}`}>
+            {name}
+          </h4>
+          <div className="flex items-baseline gap-2 mb-12">
+            <span className={`text-[10px] uppercase opacity-50 ${highlight ? 'text-white' : 'text-white'}`}>R$</span>
+            <p className={`text-4xl font-display font-light ${highlight ? 'text-white' : 'text-brand-orange'}`}>{price}</p>
+          </div>
+          <ul className="space-y-4 mb-12">
+            {benefits.map((benefit, i) => (
+              <li key={i} className={`text-xs flex items-center gap-3 font-serif ${highlight ? 'text-white/80' : 'text-white/40'}`}>
+                 <span className={`w-1 h-1 rounded-full ${highlight ? 'bg-white' : 'bg-brand-orange'}`}></span>
+                 {benefit}
+              </li>
+            ))}
+          </ul>
+       </div>
+       <button className={`w-full py-4 text-[10px] uppercase tracking-widest font-bold border transition-all ${highlight ? 'bg-white text-brand-orange border-white hover:bg-brand-dark hover:text-white hover:border-brand-dark' : 'text-white border-white/20 hover:border-brand-orange hover:text-brand-orange'}`}>
+         Solicitar Proposta
+       </button>
+    </div>
+  );
+}
+
+function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant?: 'default' | 'large', pixKey?: string, vakinhaUrl?: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<any>(null);
+
+  const finalPixKey = pixKey || "6093259@vakinha.com.br";
+  const finalVakinhaUrl = vakinhaUrl || "https://www.vakinha.com.br/vaquinha/talentos-de-minas-nossa-turma-no-palco-internacional";
+
+  const handleCopyPix = async () => {
+    try {
+      await navigator.clipboard.writeText(finalPixKey);
+      setCopied(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      console.error('Falha ao copiar:', err);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <div 
+      className="relative"
+      onMouseEnter={() => !('ontouchstart' in window) && setIsOpen(true)}
+      onMouseLeave={() => !('ontouchstart' in window) && setIsOpen(false)}
+      ref={dropdownRef}
+    >
+      <button 
+        onClick={toggleOpen}
+        className={
+          variant === 'large' 
+          ? "bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"
+          : "bg-brand-orange text-white px-10 py-4 text-xs uppercase tracking-widest font-bold hover:bg-black transition-all"
+        }
+      >
+        {variant === 'large' ? 'Apoie Agora' : 'Doar Agora'}
+        {variant === 'large' && <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />}
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className={`
+              fixed lg:absolute left-4 right-4 lg:left-auto lg:right-0 mt-4 lg:w-96 
+              bg-white text-brand-dark shadow-2xl p-6 lg:p-8 z-[100]
+              border border-black/5
+            `}
+            style={{
+              top: '100%',
+              margin: '1rem'
+            }}
+          >
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-4 border-b border-black/5 pb-4">
+                <div className="w-10 h-10 bg-brand-orange/10 rounded-full flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-brand-orange" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">Opção 01</p>
+                  <h4 className="text-lg font-serif">Doação via PIX</h4>
+                </div>
+              </div>
+              
+              <div className="bg-brand-grey p-4 flex flex-col gap-3">
+                <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">Chave PIX</p>
+                <div className="flex justify-between items-center bg-white p-3 border border-black/5">
+                  <code className="text-xs font-mono">{finalPixKey}</code>
+                  <button 
+                    onClick={handleCopyPix}
+                    className="p-2 hover:bg-brand-grey transition-colors text-brand-orange"
+                    title="Copiar Chave"
+                  >
+                    {copied ? <span className="text-[9px] font-bold uppercase tracking-tighter">Copiado!</span> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 border-b border-black/5 pb-4 pt-2">
+                <div className="w-10 h-10 bg-brand-orange/10 rounded-full flex items-center justify-center">
+                  <Target className="w-5 h-5 text-brand-orange" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">Opção 02</p>
+                  <h4 className="text-lg font-serif">Campanha Vakinha</h4>
+                </div>
+              </div>
+
+              <a 
+                href={finalVakinhaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-brand-dark text-white py-4 text-center font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all flex items-center justify-center gap-3"
+              >
+                Acessar Vakinha <ExternalLink className="w-3 h-3" />
+              </a>
+
+              <p className="text-[9px] uppercase tracking-widest opacity-40 leading-relaxed text-center italic">
+                Sua ajuda cobre custos de 22 bailarinos mineiros em Córdoba, Argentina.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default function Home() {
+  const [activeModal, setActiveModal] = useState<'store' | 'raffle' | 'event' | 'donation' | null>(null);
+  const [cart, setCart] = useState<{product: Product, qty: number}[]>([]);
+  const [raffleQty, setRaffleQty] = useState(1);
+  const [bingoQty, setBingoQty] = useState(1);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Dynamic Data
+  const { settings, loading: settingsLoading } = useSiteSettings();
+  const { images, loading: galleryLoading } = useGallery();
+  const { tiers, loading: tiersLoading } = useSponsorship();
+  
+  const goalTotal = Number(settings.target_amount?.value) || 136712;
+  const currentRaised = Number(settings.current_amount?.value) || 88862;
+  
+  const safeGoal = goalTotal > 0 ? goalTotal : 136712;
+  const percentage = Math.min((currentRaised / safeGoal) * 100, 100) || 0;
+
+  if (settingsLoading) return (
+    <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center text-white p-8">
+      <RefreshCw className="w-8 h-8 text-brand-orange animate-spin mb-4" />
+      <p className="text-xs uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 w-full z-[70] bg-transparent px-6 py-4 flex justify-between items-center text-white backdrop-blur-sm">
+        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/10 z-0 pointer-events-none"></div>
+
+        <div className="flex items-center cursor-pointer mix-blend-difference z-10" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <img src="/logo_branca.png" alt="Nucleo Tatiana Figueiredo" className="h-14 md:h-24 w-auto object-contain" />
+        </div>
+        
+        <div className="hidden lg:flex gap-14 text-xs uppercase tracking-[0.25em] font-display font-medium mix-blend-difference z-10">
+          <a href="#jornada" className="hover:text-brand-orange transition-colors">A Jornada</a>
+          <a href="#desafio" className="hover:text-brand-orange transition-colors">O Desafio</a>
+          <a href="#galeria" className="hover:text-brand-orange transition-colors">Galeria</a>
+          <a href="#ajudar" className="hover:text-brand-orange transition-colors">Como Ajudar</a>
+          <a href="#patrocinio" className="hover:text-brand-orange transition-colors">Patrocínio</a>
+          <a href="#eventos" className="hover:text-brand-orange transition-colors">Eventos</a>
+        </div>
+
+        <div className="relative z-20 flex items-center gap-2 sm:gap-4">
+          <DonationDropdown pixKey={settings?.pix_key?.value} vakinhaUrl={settings?.vakinha_url?.value} />
+          
+          <button 
+            className="lg:hidden text-white p-1 sm:p-2"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X className="w-7 h-7 sm:w-8 h-8" /> : <Menu className="w-7 h-7 sm:w-8 h-8" />}
+          </button>
+        </div>
+      </nav>
+
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              className="fixed inset-0 bg-brand-dark z-[60] flex flex-col p-8 pt-32"
+            >
+              <div className="flex flex-col gap-8 text-2xl uppercase tracking-widest font-display text-white">
+                <a href="#jornada" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">A Jornada</a>
+                <a href="#desafio" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">O Desafio</a>
+                <a href="#galeria" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Galeria</a>
+                <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Como Ajudar</a>
+                <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Patrocínio</a>
+                <a href="#eventos" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Eventos</a>
+              </div>
+              
+              <div className="mt-auto pt-12 border-t border-white/10">
+                <DonationDropdown variant="large" pixKey={settings?.pix_key?.value} vakinhaUrl={settings?.vakinha_url?.value} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+      {/* Hero Section */}
+      <section className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-brand-dark">
+          <div className="absolute inset-0 z-0">
+            <img 
+              src="/hero-bg.jpg" 
+              alt="Dança Contemporânea"
+              className="w-full h-full object-cover opacity-70 filter brightness-75 contrast-95"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent"></div>
+          </div>
+
+        <div className="relative z-10 max-w-6xl w-full">
+          <div className="flex items-center gap-4 mb-8">
+            <span className="h-[1px] w-12 bg-brand-orange"></span>
+            <p className="text-white text-xs uppercase tracking-[0.4em] font-display font-medium">Melhor Grupo no Festival Arte Minas 2026</p>
+          </div>
+          <h1 className="text-6xl sm:text-7xl md:text-[90px] lg:text-[110px] text-white leading-[1.1] mb-12 font-serif">
+            A Jornada:<br />
+            <span className="italic">26 Anos de</span><br />
+            Dança
+          </h1>
+          <div className="flex flex-col md:flex-row gap-12 items-start md:items-center">
+            <p className="text-white/60 text-lg max-w-lg font-serif leading-relaxed italic">
+              "{settings?.hero_subtitle?.value || 'Transformando talento mineiro em excelência mundial. Nossa próxima parada: Danzamerica, Argentina.'}"
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* History & Social Proof Details */}
+      <section id="jornada" className="py-32 bg-brand-grey px-6 lg:px-12">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+           <div className="relative">
+              <div className="aspect-video bg-brand-dark overflow-hidden ring-1 ring-black/10">
+                <img 
+                  src="https://images.unsplash.com/photo-1518834107812-67b0b7c58434?q=80&w=2670&auto=format&fit=crop" 
+                  alt="Nucleo Performance" 
+                  className="w-full h-full object-cover grayscale contrast-125"
+                />
+              </div>
+              <div className="absolute -top-12 -right-12 w-48 h-48 border border-brand-orange/20 rounded-full hidden md:flex items-center justify-center p-4">
+                 <p className="text-[10px] text-brand-orange uppercase tracking-[0.5em] font-display text-center leading-loose">26 Anos Extraordinários</p>
+              </div>
+           </div>
+           <div>
+              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">A Nossa História</p>
+              <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">Excelência que <span className="italic">Atravessa</span> Fronteiras.</h2>
+              <div className="space-y-12">
+                 <div className="flex gap-8">
+                    <span className="text-brand-orange text-4xl font-serif">2026.</span>
+                    <div>
+                       <h4 className="text-2xl font-serif mb-2 text-brand-dark">Melhor Grupo: Arte Minas</h4>
+                       <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">Premiados pela coreografia "Crustáceos", consolidando nossa posição como referência técnica no estado.</p>
+                    </div>
+                 </div>
+                 <div className="flex gap-8">
+                    <span className="text-brand-orange text-4xl font-serif">S.P.</span>
+                    <div>
+                       <h4 className="text-2xl font-serif mb-2 text-brand-dark">Social Proof: Douglas de Oliveira</h4>
+                       <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">Ex-aluno do Núcleo que hoje brilha como Primeiro Bailarino na Polônia, provando que nosso método forma cidadãos globais.</p>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      </section>
+
+      {/* Marquee Social Proof */}
+      <div className="bg-brand-orange py-4 overflow-hidden whitespace-nowrap border-y border-black/10">
+        <div className="flex animate-marquee gap-12 items-center">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex gap-12 items-center">
+              <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold">14.8K Seguidores @nucleodedanca</span>
+              <span className="text-white/50 text-2xl">×</span>
+              <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold text-black"> Douglas de Oliveira: Primeiro Bailarino na Polônia</span>
+              <span className="text-white/50 text-2xl">×</span>
+              <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold">Vencedores "Crustáceos" 2026</span>
+              <span className="text-white/50 text-2xl">×</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Goal Tracker Section */}
+      <section id="desafio" className="bg-brand-dark py-32 px-6 lg:px-12 border-b border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-start">
+            <div>
+              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">01. O Desafio</p>
+              <h2 className="text-5xl md:text-7xl text-white mb-8 leading-tight font-serif">
+                Rumo ao <br /><span className="text-brand-orange italic">Danzamerica 2026</span>
+              </h2>
+              <p className="text-white/40 text-lg leading-relaxed max-w-xl mb-12 font-serif text-justify-editorial">
+                Após sermos coroados como o melhor grupo no Festival Arte Minas, recebemos o convite oficial para representar o Brasil em Córdoba, Argentina. O desafio é transformar o talento em presença internacional. 
+                <br /><br />
+                Nossa meta de arrecadação de <span className="text-white">R$ {goalTotal.toLocaleString()}</span> cobrirá os custos de transporte, hospedagem e inscrições para 22 bailarinos que dedicam suas vidas à excelência do movimento.
+              </p>
+              
+              {/* Progress Bar */}
+              <div className="mb-8">
+                <div className="flex justify-between items-end mb-4">
+                  <span className="text-brand-orange text-4xl font-display font-light">{percentage.toFixed(1)}%</span>
+                  <span className="text-white/40 text-xs uppercase tracking-widest">Alcançado</span>
+                </div>
+                <div className="h-[2px] w-full bg-white/10 relative">
+                  <div 
+                    className="absolute top-0 left-0 h-full bg-brand-orange shadow-[0_0_15px_rgba(255,90,31,0.5)]"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div>
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Arrecadado</p>
+                  <p className="text-white text-2xl font-serif">R$ {currentRaised.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Meta Final</p>
+                  <p className="text-white text-2xl font-serif">R$ {goalTotal.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Apoiadores</p>
+                  <p className="text-white text-2xl font-serif">412</p>
+                </div>
+                <div>
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Dias Restantes</p>
+                  <p className="text-white text-2xl font-serif">152</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative aspect-[3/4] group overflow-hidden">
+              <img 
+                src="https://images.unsplash.com/photo-1535525153412-5a42439a210d?q=80&w=2670&auto=format&fit=crop" 
+                alt="Ensaio Bailarinos" 
+                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 contrast-110"
+              />
+              <div className="absolute inset-0 ring-1 ring-white/20 ring-inset pointer-events-none"></div>
+              <div className="absolute bottom-12 -left-12 bg-brand-orange p-12 max-w-xs text-white">
+                <p className="text-5xl font-serif mb-4">22</p>
+                <p className="text-xs uppercase tracking-widest font-display leading-loose">Bailarinos Prontos para Brilhar</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Gallery Section */}
+      <section id="galeria" className="py-32 bg-brand-white px-6 lg:px-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
+            <div className="max-w-xl">
+              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">03. Portfólio de Talentos</p>
+              <h2 className="text-5xl md:text-7xl text-brand-dark mb-8 leading-tight font-serif">
+                Arte em <br /><span className="italic">Movimento</span>
+              </h2>
+            </div>
+            <p className="text-brand-dark/40 text-sm font-serif max-w-xs mb-4 italic">
+              Registros da dedicação diária de nossos 22 bailarinos que buscam a perfeição para representar Minas na Argentina.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+             {images.map((img, i) => (
+                <div 
+                  key={img.id}
+                  className="aspect-square bg-brand-grey overflow-hidden group border border-black/5 relative"
+                >
+                  <img 
+                    src={img.url} 
+                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-110" 
+                    alt={img.caption || `Galeria ${i}`} 
+                  />
+                  {img.caption && (
+                    <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-white text-[10px] uppercase tracking-widest font-bold">{img.caption}</p>
+                    </div>
+                  )}
+                </div>
+             ))}
+
+             {images.length === 0 && !galleryLoading && (
+                <p className="col-span-full py-12 text-center text-brand-dark/20 font-serif italic">Nenhuma foto na galeria ainda...</p>
+             )}
+          </div>
+        </div>
+      </section>
+
+      {/* How to Help - Interative Cards */}
+      <section id="ajudar" className="py-12 bg-brand-white px-6 lg:px-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Loja */}
+            <div 
+              onClick={() => setActiveModal('store')}
+              className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
+            >
+              <div>
+                <ShoppingBag className="w-10 h-10 mb-8 text-brand-orange group-hover:text-white" strokeWidth={1} />
+                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">Nossa Loja</h3>
+                <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
+                  Adquira produtos exclusivos do Núcleo. Todo o lucro é revertido para a viagem dos bailarinos.
+                </p>
+              </div>
+              <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
+                Ver Produtos <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Rifa */}
+            <div 
+              onClick={() => setActiveModal('raffle')}
+              className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
+            >
+              <div>
+                <Ticket className="w-10 h-10 mb-8 text-brand-orange group-hover:text-white" strokeWidth={1} />
+                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">Rifa Digital</h3>
+                <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
+                  Concorra a uma TV 50" por apenas R$ 25,00. Quanto mais bilhetes, maior sua chance e maior a nossa ajuda.
+                </p>
+              </div>
+              <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
+                Comprar Bilhetes <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Eventos */}
+            <div 
+              onClick={() => setActiveModal('event')}
+              className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
+            >
+              <div>
+                <Calendar className="w-10 h-10 mb-8 text-brand-orange group-hover:text-white" strokeWidth={1} />
+                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">Ação Junina</h3>
+                <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
+                  Venha para o nosso Arraiá! Compre ingressos para o bingo e veja a nossa Grande Quadrilha.
+                </p>
+              </div>
+              <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
+                Saber Mais <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sponsorship Section */}
+      <section id="patrocinio" className="py-32 bg-brand-dark px-6 lg:px-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-24">
+            <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Sponsorship</p>
+            <h2 className="text-5xl md:text-7xl text-white mb-8 font-serif">Invista no <span className="italic">Talento</span></h2>
+            <p className="text-white/40 text-lg max-w-2xl mx-auto font-serif">
+              Sua empresa pode ser a ponte que levará 22 bailarinos mineiros ao palco internacional. Conheça nossas cotas de patrocínio.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-white/10 border border-white/10">
+             {tiers.filter(t => t.highlight).map(tier => (
+               <TierCard 
+                 key={tier.id}
+                 name={tier.name}
+                 price={tier.price}
+                 benefits={tier.benefits}
+                 highlight={true}
+               />
+             ))}
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+             {tiers.filter(t => !t.highlight).map(tier => (
+               <div key={tier.id} className="bg-white/5 p-12 border border-white/10 hover:border-brand-orange transition-all flex flex-col justify-between">
+                  <div>
+                     <h4 className="text-white text-2xl mb-2 font-serif">{tier.name}</h4>
+                     <p className="text-brand-orange text-3xl font-display font-light mb-6">R$ {tier.price}</p>
+                     <ul className="space-y-4 mb-8">
+                        {tier.benefits.map((benefit, i) => (
+                          <li key={i} className="text-white/40 text-xs flex items-center gap-3 font-serif">
+                             <span className="w-1 h-1 rounded-full bg-brand-orange"></span>
+                             {benefit}
+                          </li>
+                        ))}
+                     </ul>
+                  </div>
+                  <button className="text-white text-[10px] uppercase tracking-widest font-bold border-b border-white/20 pb-2 hover:text-brand-orange hover:border-brand-orange transition-all w-fit">Solicitar Proposta</button>
+               </div>
+             ))}
+          </div>
+
+          {tiers.length === 0 && !tiersLoading && (
+            <p className="text-center text-white/20 font-serif italic py-20">Nenhuma cota de patrocínio cadastrada...</p>
+          )}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-brand-white pt-32 pb-12 px-6 lg:px-12 border-t border-brand-dark/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-32 text-brand-dark/80">
+            <div className="col-span-1 md:col-span-2">
+              <h4 className="font-serif text-3xl mb-8 uppercase italic font-bold">Núcleo de Dança</h4>
+              <p className="max-w-sm text-sm font-serif leading-relaxed mb-8">
+                Há 26 anos construindo carreiras e sonhos através da disciplina e da arte. Sediados em Belo Horizonte, somos o berço dos novos talentos de Minas.
+              </p>
+              <div className="flex gap-6">
+                <a href="https://instagram.com/nucleotatianafigueiredo" target="_blank" className="p-3 bg-brand-dark text-white rounded-full hover:bg-brand-orange transition-all">
+                  <Instagram className="w-5 h-5" />
+                </a>
+              </div>
+            </div>
+            <div>
+              <h5 className="text-[10px] uppercase font-bold tracking-widest mb-8 text-brand-orange">Navegação</h5>
+              <ul className="space-y-4 text-xs font-display">
+                <li><a href="#jornada" className="hover:text-brand-orange">História</a></li>
+                <li><a href="#desafio" className="hover:text-brand-orange">Danzamerica</a></li>
+                <li><a href="#galeria" className="hover:text-brand-orange">Galeria</a></li>
+                <li><a href="#ajudar" className="hover:text-brand-orange">Doe Agora</a></li>
+                <li><a href="/admin" className="hover:text-brand-orange">Painel Administrativo</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row justify-between items-center py-12 border-t border-brand-dark/5 text-[10px] uppercase tracking-widest font-bold">
+            <p className="text-brand-dark/40">© 2026 Núcleo Tatiana Figueiredo. Todos os direitos reservados.</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Modals Rendering */}
+      <AnimatePresence>
+        {activeModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-brand-dark/95 backdrop-blur-md"
+              onClick={() => setActiveModal(null)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-brand-white w-full max-w-4xl p-8 md:p-16 max-h-[90vh] overflow-y-auto"
+            >
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="absolute top-8 right-8 text-brand-dark/20 hover:text-brand-orange"
+              >
+                <X className="w-8 h-8" strokeWidth={1} />
+              </button>
+
+              {activeModal === 'store' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+                  <div>
+                    <h2 className="text-4xl mb-8 font-serif text-brand-dark">Itens Solidários</h2>
+                    <div className="space-y-4">
+                      {PRODUCTS.map(product => (
+                        <div key={product.id} className="p-6 bg-brand-grey group flex gap-6 items-center">
+                          <img src={product.image} className="w-24 h-24 object-cover" alt={product.name} />
+                          <div className="flex-1">
+                            <h4 className="font-serif text-xl text-brand-dark">{product.name}</h4>
+                            <p className="text-brand-orange font-display">R$ {product.price.toFixed(2)}</p>
+                            <button 
+                              className="text-[10px] uppercase font-bold tracking-widest mt-2 hover:text-brand-orange flex items-center gap-2"
+                            >
+                              Adicionar <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-brand-grey p-8 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-2xl mb-8 font-serif text-brand-dark">Carrinho</h3>
+                      <p className="text-brand-dark/40 font-serif italic text-sm">Em breve disponível para checkout online.</p>
+                    </div>
+                    <div className="mt-12 pt-8 border-t border-black/10">
+                      <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
+                        Solicitar via WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeModal === 'raffle' && (
+                <div className="max-w-xl mx-auto text-center">
+                  <Ticket className="w-16 h-16 text-brand-orange mx-auto mb-8" strokeWidth={1} />
+                  <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação entre Amigos</h2>
+                  <p className="text-brand-dark/40 font-serif mb-12">Estamos sorteando uma Smart TV 50" Samsung Crystal 4K. Ajude o Núcleo a chegar na Argentina!</p>
+                  
+                  <div className="bg-brand-grey p-12 mb-8">
+                    <p className="text-xs uppercase tracking-widest font-bold mb-6">Valor do Bilhete</p>
+                    <div className="text-5xl font-display text-brand-orange mb-8">R$ 25,00</div>
+                    <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
+                      Comprar Bilhete
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeModal === 'event' && (
+                <div className="max-w-xl mx-auto text-center">
+                  <Calendar className="w-16 h-16 text-brand-orange mx-auto mb-8" strokeWidth={1} />
+                  <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação Junina</h2>
+                  <p className="text-brand-dark/40 font-serif mb-12">Venha para o nosso Arraiá! Compre ingressos para o bingo e veja a nossa Grande Quadrilha.</p>
+                  
+                  <div className="bg-brand-grey p-12 mb-8">
+                    <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
+                      Ver Programação Completa
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

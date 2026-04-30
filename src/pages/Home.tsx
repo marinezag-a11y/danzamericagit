@@ -255,8 +255,11 @@ export default function Home() {
   };
 
   // Safety checks for settings
-  const goalTotal = (settings && settings.target_amount) ? Number(settings.target_amount.value) || 136712 : 136712;
-  const currentRaised = (settings && settings.current_amount) ? Number(settings.current_amount.value) || 88862 : 88862;
+  const goalTotalValue = Number(settings?.target_amount?.value);
+  const goalTotal = !isNaN(goalTotalValue) && settings?.target_amount?.value ? goalTotalValue : 136712;
+
+  const currentRaisedValue = Number(settings?.current_amount?.value);
+  const currentRaised = !isNaN(currentRaisedValue) && settings?.current_amount?.value ? currentRaisedValue : 88862;
   
   const safeGoal = goalTotal > 0 ? goalTotal : 136712;
   const percentage = Math.min((currentRaised / safeGoal) * 100, 100) || 0;
@@ -269,8 +272,8 @@ export default function Home() {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const remainingDays = diffDays > 0 ? diffDays : 0;
 
-  const supportersCount = settings?.supporters_count?.value || '412';
-  const dancersCount = settings?.dancers_count?.value || '22';
+  const supportersCount = settings?.supporters_count?.value ?? '412';
+  const dancersCount = settings?.dancers_count?.value ?? '22';
 
   if (settingsLoading || bannersLoading || galleryLoading || tiersLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
@@ -396,7 +399,7 @@ export default function Home() {
             className="flex flex-col md:flex-row gap-12 items-start md:items-center"
           >
             <p className="text-white/60 text-lg max-w-lg font-serif leading-relaxed italic">
-              {settings?.hero_subtitle?.value || 'Transformando talento mineiro em excelência mundial. Nossa próxima parada: Danzamerica, Argentina.'}
+              {currentBanner.subtitle || 'Transformando talento mineiro em excelência mundial. Nossa próxima parada: Danzamerica, Argentina.'}
             </p>
           </motion.div>
 

@@ -21,6 +21,7 @@ import {
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { useGallery } from '../hooks/useGallery';
 import { useSponsorship } from '../hooks/useSponsorship';
+import { useHeroBanners } from '../hooks/useHeroBanners';
 
 // Product Types
 interface Product {
@@ -52,15 +53,13 @@ function TierCard({ name, price, benefits, highlight = false }: { name: string, 
   return (
     <div className={`p-12 border border-white/10 flex flex-col justify-between transition-all group ${highlight ? 'bg-brand-orange' : 'bg-white/5 hover:bg-white/10'}`}>
        <div>
-          <h4 className={`text-2xl mb-2 font-serif ${highlight ? 'text-white' : 'text-white'}`}>
-            {name}
-          </h4>
+          <h4 className="text-white text-2xl mb-2 font-serif">{name}</h4>
           <div className="flex items-baseline gap-2 mb-12">
-            <span className={`text-[10px] uppercase opacity-50 ${highlight ? 'text-white' : 'text-white'}`}>R$</span>
+            <span className="text-[10px] uppercase opacity-50 text-white">R$</span>
             <p className={`text-4xl font-display font-light ${highlight ? 'text-white' : 'text-brand-orange'}`}>{price}</p>
           </div>
           <ul className="space-y-4 mb-12">
-            {benefits.map((benefit, i) => (
+            {(benefits || []).map((benefit, i) => (
               <li key={i} className={`text-xs flex items-center gap-3 font-serif ${highlight ? 'text-white/80' : 'text-white/40'}`}>
                  <span className={`w-1 h-1 rounded-full ${highlight ? 'bg-white' : 'bg-brand-orange'}`}></span>
                  {benefit}
@@ -208,31 +207,49 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
 
 export default function Home() {
   const [activeModal, setActiveModal] = useState<'store' | 'raffle' | 'event' | 'donation' | null>(null);
-  const [cart, setCart] = useState<{product: Product, qty: number}[]>([]);
-  const [raffleQty, setRaffleQty] = useState(1);
-  const [bingoQty, setBingoQty] = useState(1);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Dynamic Data
   const { settings, loading: settingsLoading } = useSiteSettings();
   const { images, loading: galleryLoading } = useGallery();
   const { tiers, loading: tiersLoading } = useSponsorship();
+  const { banners, loading: bannersLoading } = useHeroBanners();
   
-  const goalTotal = Number(settings.target_amount?.value) || 136712;
-  const currentRaised = Number(settings.current_amount?.value) || 88862;
+  const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
+
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentBannerIdx((prev) => (prev + 1) % banners.length);
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [banners.length]);
+
+  const currentBanner = banners[currentBannerIdx] || { 
+    id: 'static-hero', 
+    title: 'A Jornada: 26 Anos de Dança', 
+    subtitle: 'Melhor Grupo no Festival Arte Minas 2026',
+    image_url: '/hero-bg.jpg' 
+  };
+
+  // Safety checks for settings
+  const goalTotal = (settings && settings.target_amount) ? Number(settings.target_amount.value) || 136712 : 136712;
+  const currentRaised = (settings && settings.current_amount) ? Number(settings.current_amount.value) || 88862 : 88862;
   
   const safeGoal = goalTotal > 0 ? goalTotal : 136712;
   const percentage = Math.min((currentRaised / safeGoal) * 100, 100) || 0;
 
-  if (settingsLoading) return (
-    <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center text-white p-8">
-      <RefreshCw className="w-8 h-8 text-brand-orange animate-spin mb-4" />
-      <p className="text-xs uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
+  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading) return (
+    <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
+      <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="text-[10px] uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#1A1A1A]">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 w-full z-[70] bg-transparent px-6 py-4 flex justify-between items-center text-white backdrop-blur-sm">
         <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/10 z-0 pointer-events-none"></div>
@@ -247,7 +264,6 @@ export default function Home() {
           <a href="#galeria" className="hover:text-brand-orange transition-colors">Galeria</a>
           <a href="#ajudar" className="hover:text-brand-orange transition-colors">Como Ajudar</a>
           <a href="#patrocinio" className="hover:text-brand-orange transition-colors">Patrocínio</a>
-          <a href="#eventos" className="hover:text-brand-orange transition-colors">Eventos</a>
         </div>
 
         <div className="relative z-20 flex items-center gap-2 sm:gap-4">
@@ -276,7 +292,6 @@ export default function Home() {
                 <a href="#galeria" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Galeria</a>
                 <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Como Ajudar</a>
                 <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Patrocínio</a>
-                <a href="#eventos" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Eventos</a>
               </div>
               
               <div className="mt-auto pt-12 border-t border-white/10">
@@ -286,19 +301,16 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-      {/* Hero Section */}
-      <section className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-brand-dark">
-          <div className="absolute inset-0 z-0">
-            <motion.img 
-              initial={{ scale: 1.1, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.7 }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              src="/hero-bg.jpg" 
-              alt="Dança Contemporânea"
-              className="w-full h-full object-cover filter brightness-75 contrast-95"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent"></div>
-          </div>
+      {/* Hero Section Carousel */}
+      <section className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-[#1A1A1A]">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={currentBanner.image_url || '/hero-bg.jpg'} 
+            alt={currentBanner.title || "Dança"}
+            className="w-full h-full object-cover opacity-80"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/80 via-transparent to-transparent"></div>
+        </div>
 
         <div className="relative z-10 max-w-6xl w-full">
           <motion.div 
@@ -308,18 +320,37 @@ export default function Home() {
             className="flex items-center gap-4 mb-8"
           >
             <span className="h-[1px] w-12 bg-brand-orange"></span>
-            <p className="text-white text-xs uppercase tracking-[0.4em] font-display font-medium">Melhor Grupo no Festival Arte Minas 2026</p>
+            <p className="text-white text-xs uppercase tracking-[0.4em] font-display font-medium">
+              {currentBanner.subtitle || 'Melhor Grupo no Festival Arte Minas 2026'}
+            </p>
           </motion.div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            className="text-6xl sm:text-7xl md:text-[90px] lg:text-[110px] text-white leading-[1.1] mb-12 font-serif"
-          >
-            A Jornada:<br />
-            <span className="italic">26 Anos de</span><br />
-            Dança
-          </motion.h1>
+          
+          <AnimatePresence mode="wait">
+            <motion.h1 
+              key={currentBanner.id + '-title'}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.8 }}
+              className="text-6xl sm:text-7xl md:text-[90px] lg:text-[110px] text-white leading-[1.1] mb-12 font-serif"
+            >
+              {currentBanner.title ? (
+                currentBanner.title.includes(':') ? (
+                  <>
+                    {(currentBanner.title.split(':')[0] || '').trim()}:<br />
+                    <span className="italic">{(currentBanner.title.split(':')[1] || '').trim()}</span>
+                  </>
+                ) : currentBanner.title
+              ) : (
+                <>
+                  A Jornada:<br />
+                  <span className="italic">26 Anos de</span><br />
+                  Dança
+                </>
+              )}
+            </motion.h1>
+          </AnimatePresence>
+
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -327,9 +358,22 @@ export default function Home() {
             className="flex flex-col md:flex-row gap-12 items-start md:items-center"
           >
             <p className="text-white/60 text-lg max-w-lg font-serif leading-relaxed italic">
-              "{settings?.hero_subtitle?.value || 'Transformando talento mineiro em excelência mundial. Nossa próxima parada: Danzamerica, Argentina.'}"
+              {settings?.hero_subtitle?.value || 'Transformando talento mineiro em excelência mundial. Nossa próxima parada: Danzamerica, Argentina.'}
             </p>
           </motion.div>
+
+          {/* Carousel Indicators */}
+          {banners.length > 1 && (
+            <div className="flex gap-4 mt-12">
+              {banners.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentBannerIdx(idx)}
+                  className={`h-1 transition-all duration-500 ${idx === currentBannerIdx ? 'w-12 bg-brand-orange' : 'w-4 bg-white/20'}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -350,7 +394,7 @@ export default function Home() {
                 className="aspect-video bg-brand-dark overflow-hidden ring-1 ring-black/10"
               >
                 <img 
-                  src="https://images.unsplash.com/photo-1518834107812-67b0b7c58434?q=80&w=2670&auto=format&fit=crop" 
+                  src={settings.jornada_image?.value || "https://images.unsplash.com/photo-1518834107812-67b0b7c58434?q=80&w=2670&auto=format&fit=crop"} 
                   alt="Nucleo Performance" 
                   className="w-full h-full object-cover grayscale contrast-125"
                 />
@@ -361,7 +405,9 @@ export default function Home() {
            </div>
            <div>
               <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">A Nossa História</p>
-              <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">Excelência que <span className="italic">Atravessa</span> Fronteiras.</h2>
+              <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">
+                {settings.jornada_title?.value || 'Excelência que Atravessa Fronteiras.'}
+              </h2>
               <div className="space-y-12">
                  <motion.div 
                    initial={{ opacity: 0, x: 20 }}
@@ -372,7 +418,9 @@ export default function Home() {
                     <span className="text-brand-orange text-4xl font-serif">2026.</span>
                     <div>
                        <h4 className="text-2xl font-serif mb-2 text-brand-dark">Melhor Grupo: Arte Minas</h4>
-                       <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">Premiados pela coreografia "Crustáceos", consolidando nossa posição como referência técnica no estado.</p>
+                       <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">
+                         {settings.jornada_description?.value || 'Premiados pela coreografia "Crustáceos", consolidando nossa posição como referência técnica no estado.'}
+                       </p>
                     </div>
                  </motion.div>
                  <motion.div 
@@ -426,10 +474,10 @@ export default function Home() {
             >
               <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">01. O Desafio</p>
               <h2 className="text-5xl md:text-7xl text-white mb-8 leading-tight font-serif">
-                Rumo ao <br /><span className="text-brand-orange italic">Danzamerica 2026</span>
+                {settings.desafio_title?.value || 'Rumo ao Danzamerica 2026'}
               </h2>
               <p className="text-white/40 text-lg leading-relaxed max-w-xl mb-12 font-serif text-justify-editorial">
-                Após sermos coroados como o melhor grupo no Festival Arte Minas, recebemos o convite oficial para representar o Brasil em Córdoba, Argentina. O desafio é transformar o talento em presença internacional. 
+                {settings.desafio_description?.value || 'Após sermos coroados como o melhor grupo no Festival Arte Minas, recebemos o convite oficial para representar o Brasil em Córdoba, Argentina.'}
                 <br /><br />
                 Nossa meta de arrecadação de <span className="text-white">R$ {goalTotal.toLocaleString()}</span> cobrirá os custos de transporte, hospedagem e inscrições para 22 bailarinos que dedicam suas vidas à excelência do movimento.
               </p>
@@ -477,7 +525,7 @@ export default function Home() {
               className="relative aspect-[3/4] group overflow-hidden"
             >
               <img 
-                src="https://images.unsplash.com/photo-1535525153412-5a42439a210d?q=80&w=2670&auto=format&fit=crop" 
+                src={settings.desafio_image?.value || "https://images.unsplash.com/photo-1535525153412-5a42439a210d?q=80&w=2670&auto=format&fit=crop"} 
                 alt="Ensaio Bailarinos" 
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 contrast-110"
               />
@@ -507,7 +555,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {images.map((img, i) => (
+              {(images || []).map((img, i) => (
                 <motion.div 
                   key={img.id}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -528,10 +576,6 @@ export default function Home() {
                   )}
                 </motion.div>
              ))}
-
-             {images.length === 0 && !galleryLoading && (
-                <p className="col-span-full py-12 text-center text-brand-dark/20 font-serif italic">Nenhuma foto na galeria ainda...</p>
-             )}
           </div>
         </div>
       </section>
@@ -547,10 +591,16 @@ export default function Home() {
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
               <div>
-                <ShoppingBag className="w-10 h-10 mb-8 text-brand-orange group-hover:text-white" strokeWidth={1} />
-                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">Nossa Loja</h3>
+                <div className="w-full h-40 mb-8 overflow-hidden bg-brand-dark/10 group-hover:bg-white/10 transition-colors">
+                  <img 
+                    src={settings.help_store_image?.value || "https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop"} 
+                    alt="Loja"
+                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                  />
+                </div>
+                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">{settings.help_store_title?.value || 'Nossa Loja'}</h3>
                 <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
-                  Adquira produtos exclusivos do Núcleo. Todo o lucro é revertido para a viagem dos bailarinos.
+                  {settings.help_store_description?.value || 'Adquira produtos exclusivos do Núcleo. Todo o lucro é revertido para a viagem dos bailarinos.'}
                 </p>
               </div>
               <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
@@ -565,10 +615,16 @@ export default function Home() {
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
               <div>
-                <Ticket className="w-10 h-10 mb-8 text-brand-orange group-hover:text-white" strokeWidth={1} />
-                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">Rifa Digital</h3>
+                <div className="w-full h-40 mb-8 overflow-hidden bg-brand-dark/10 group-hover:bg-white/10 transition-colors">
+                  <img 
+                    src={settings.help_raffle_image?.value || "https://images.unsplash.com/photo-1535525153412-5a42439a210d?q=80&w=2670&auto=format&fit=crop"} 
+                    alt="Rifa"
+                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                  />
+                </div>
+                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">{settings.help_raffle_title?.value || 'Rifa Digital'}</h3>
                 <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
-                  Concorra a uma TV 50" por apenas R$ 25,00. Quanto mais bilhetes, maior sua chance e maior a nossa ajuda.
+                  {settings.help_raffle_description?.value || 'Concorra a uma TV 50" por apenas R$ 25,00. Quanto mais bilhetes, maior sua chance e maior a nossa ajuda.'}
                 </p>
               </div>
               <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
@@ -583,10 +639,16 @@ export default function Home() {
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
               <div>
-                <Calendar className="w-10 h-10 mb-8 text-brand-orange group-hover:text-white" strokeWidth={1} />
-                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">Ação Junina</h3>
+                <div className="w-full h-40 mb-8 overflow-hidden bg-brand-dark/10 group-hover:bg-white/10 transition-colors">
+                  <img 
+                    src={settings.help_event_image?.value || "https://images.unsplash.com/photo-1518834107812-67b0b7c58434?q=80&w=2670&auto=format&fit=crop"} 
+                    alt="Evento"
+                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                  />
+                </div>
+                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">{settings.help_event_title?.value || 'Ação Junina'}</h3>
                 <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
-                  Venha para o nosso Arraiá! Compre ingressos para o bingo e veja a nossa Grande Quadrilha.
+                  {settings.help_event_description?.value || 'Venha para o nosso Arraiá! Compre ingressos para o bingo e veja a nossa Grande Quadrilha.'}
                 </p>
               </div>
               <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
@@ -609,7 +671,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-white/10 border border-white/10">
-             {tiers.filter(t => t.highlight).map(tier => (
+             {(tiers || []).filter(t => t.highlight).map(tier => (
                <TierCard 
                  key={tier.id}
                  name={tier.name}
@@ -621,7 +683,7 @@ export default function Home() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {tiers.filter(t => !t.highlight).map((tier, idx) => (
+              {(tiers || []).filter(t => !t.highlight).map((tier, idx) => (
                 <motion.div 
                   key={tier.id} 
                   initial={{ opacity: 0, y: 20 }}
@@ -634,7 +696,7 @@ export default function Home() {
                      <h4 className="text-white text-2xl mb-2 font-serif">{tier.name}</h4>
                      <p className="text-brand-orange text-3xl font-display font-light mb-6">R$ {tier.price}</p>
                      <ul className="space-y-4 mb-8">
-                        {tier.benefits.map((benefit, i) => (
+                        {(tier.benefits || []).map((benefit, i) => (
                           <li key={i} className="text-white/40 text-xs flex items-center gap-3 font-serif">
                              <span className="w-1 h-1 rounded-full bg-brand-orange"></span>
                              {benefit}
@@ -651,10 +713,6 @@ export default function Home() {
                 </motion.div>
               ))}
           </div>
-
-          {tiers.length === 0 && !tiersLoading && (
-            <p className="text-center text-white/20 font-serif italic py-20">Nenhuma cota de patrocínio cadastrada...</p>
-          )}
         </div>
       </section>
 
@@ -725,26 +783,15 @@ export default function Home() {
                           <div className="flex-1">
                             <h4 className="font-serif text-xl text-brand-dark">{product.name}</h4>
                             <p className="text-brand-orange font-display">R$ {product.price.toFixed(2)}</p>
-                            <button 
-                              className="text-[10px] uppercase font-bold tracking-widest mt-2 hover:text-brand-orange flex items-center gap-2"
-                            >
-                              Adicionar <ArrowRight className="w-3 h-3" />
-                            </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
                   <div className="bg-brand-grey p-8 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-2xl mb-8 font-serif text-brand-dark">Carrinho</h3>
-                      <p className="text-brand-dark/40 font-serif italic text-sm">Em breve disponível para checkout online.</p>
-                    </div>
-                    <div className="mt-12 pt-8 border-t border-black/10">
-                      <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
-                        Solicitar via WhatsApp
-                      </button>
-                    </div>
+                    <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
+                      Solicitar via WhatsApp
+                    </button>
                   </div>
                 </div>
               )}
@@ -753,15 +800,7 @@ export default function Home() {
                 <div className="max-w-xl mx-auto text-center">
                   <Ticket className="w-16 h-16 text-brand-orange mx-auto mb-8" strokeWidth={1} />
                   <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação entre Amigos</h2>
-                  <p className="text-brand-dark/40 font-serif mb-12">Estamos sorteando uma Smart TV 50" Samsung Crystal 4K. Ajude o Núcleo a chegar na Argentina!</p>
-                  
-                  <div className="bg-brand-grey p-12 mb-8">
-                    <p className="text-xs uppercase tracking-widest font-bold mb-6">Valor do Bilhete</p>
-                    <div className="text-5xl font-display text-brand-orange mb-8">R$ 25,00</div>
-                    <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
-                      Comprar Bilhete
-                    </button>
-                  </div>
+                  <div className="bg-brand-grey p-12 mb-8 text-5xl font-display text-brand-orange">R$ 25,00</div>
                 </div>
               )}
 
@@ -769,13 +808,6 @@ export default function Home() {
                 <div className="max-w-xl mx-auto text-center">
                   <Calendar className="w-16 h-16 text-brand-orange mx-auto mb-8" strokeWidth={1} />
                   <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação Junina</h2>
-                  <p className="text-brand-dark/40 font-serif mb-12">Venha para o nosso Arraiá! Compre ingressos para o bingo e veja a nossa Grande Quadrilha.</p>
-                  
-                  <div className="bg-brand-grey p-12 mb-8">
-                    <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
-                      Ver Programação Completa
-                    </button>
-                  </div>
                 </div>
               )}
             </motion.div>

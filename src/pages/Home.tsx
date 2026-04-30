@@ -864,10 +864,6 @@ export default function Home() {
               <p className="max-w-sm text-sm font-serif leading-relaxed mb-8">
                 Há 26 anos construindo carreiras e sonhos através da disciplina e da arte. Sediados em Belo Horizonte, somos o berço dos novos talentos de Minas.
               </p>
-              <div className="flex gap-6">
-                <a href="https://instagram.com/nucleodedanca" target="_blank" className="p-3 bg-brand-dark text-white rounded-full hover:bg-brand-orange transition-all">
-                  <Instagram className="w-5 h-5" />
-                </a>
               </div>
             </div>
             <div>

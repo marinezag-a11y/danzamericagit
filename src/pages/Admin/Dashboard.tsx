@@ -145,7 +145,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="flex justify-between items-center mb-12">
+      <header className="flex justify-between items-center mb-12">
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, x: -20 }}

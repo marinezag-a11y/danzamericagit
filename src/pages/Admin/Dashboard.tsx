@@ -22,6 +22,7 @@ import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { useGallery } from '../../hooks/useGallery';
 import { useSponsorship, SponsorshipTier } from '../../hooks/useSponsorship';
 import { useHeroBanners, HeroBanner } from '../../hooks/useHeroBanners';
+import { useTicker, TickerPhrase } from '../../hooks/useTicker';
 import { uploadImage } from '../../lib/upload';
 
 // Global Image Optimization Utility
@@ -151,7 +152,21 @@ export default function Dashboard() {
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-serif transition-all ${activeTab === 'content' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <LayoutDashboard className="w-4 h-4" />
-            Conteúdo das Seções
+            Conteúdo Geral
+          </button>
+          <button 
+            onClick={() => setActiveTab('banners')}
+            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-serif transition-all ${activeTab === 'banners' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            Banners do Hero
+          </button>
+          <button 
+            onClick={() => setActiveTab('ticker')}
+            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-serif transition-all ${activeTab === 'ticker' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
+          >
+            <Settings className="w-4 h-4" />
+            Frases da Barra
           </button>
           <button 
             onClick={() => setActiveTab('gallery')}
@@ -203,10 +218,11 @@ export default function Dashboard() {
       <main className="flex-1 p-6 md:p-12 overflow-y-auto">
         <header className="mb-12">
           <h2 className="text-4xl font-serif italic mb-2 capitalize">
-            {activeTab === 'content' ? 'Conteúdo das Seções' : 
+            {activeTab === 'content' ? 'Conteúdo Geral' : 
              activeTab === 'gallery' ? 'Galeria de Fotos' :
              activeTab === 'sponsorship' ? 'Cotas de Patrocínio' :
              activeTab === 'banners' ? 'Banners do Hero' :
+             activeTab === 'ticker' ? 'Frases da Barra Rotativa' :
              'Como Ajudar'}
           </h2>
           <div className="w-12 h-1 bg-brand-orange"></div>
@@ -222,6 +238,17 @@ export default function Dashboard() {
               className="max-w-4xl"
             >
               <ContentEditor />
+            </motion.div>
+          )}
+          {activeTab === 'ticker' && (
+            <motion.div 
+              key="ticker"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-4xl"
+            >
+              <TickerManager />
             </motion.div>
           )}
           {activeTab === 'gallery' && (
@@ -314,7 +341,6 @@ function ContentEditor() {
     {
       title: '02. Seção: O Desafio',
       keys: [
-        'ticker_text',
         'desafio_title', 
         'desafio_description', 
         'target_amount', 
@@ -899,6 +925,113 @@ function BannerManager() {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function TickerManager() {
+  const { phrases, loading, addPhrase, updatePhrase, deletePhrase } = useTicker();
+  const [newPhrase, setNewPhrase] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  if (loading) return <Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" />;
+
+  const handleAdd = async () => {
+    if (!newPhrase.trim()) return;
+    setSaving(true);
+    await addPhrase(newPhrase);
+    setNewPhrase('');
+    setSaving(false);
+  };
+
+  const handleUpdate = async (id: string) => {
+    if (!editText.trim()) return;
+    setSaving(true);
+    await updatePhrase(id, editText);
+    setEditingId(null);
+    setSaving(false);
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="bg-white/5 border border-white/10 p-8">
+        <h3 className="text-xl font-serif italic mb-6">Adicionar Nova Frase</h3>
+        <div className="flex gap-4">
+          <input 
+            type="text"
+            value={newPhrase}
+            onChange={(e) => setNewPhrase(e.target.value)}
+            placeholder="Ex: Novos Vencedores 2026..."
+            className="flex-1 bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
+          />
+          <button 
+            onClick={handleAdd}
+            disabled={saving || !newPhrase.trim()}
+            className="bg-brand-orange text-white px-8 py-4 text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar'}
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-xl font-serif italic text-white/60">Frases Atuais</h3>
+        <div className="grid gap-4">
+          {phrases.map((phrase) => (
+            <div key={phrase.id} className="bg-white/5 border border-white/10 p-6 flex items-center justify-between group">
+              {editingId === phrase.id ? (
+                <div className="flex-1 flex gap-4 mr-4">
+                  <input 
+                    type="text"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="flex-1 bg-white/10 border border-brand-orange p-2 text-sm font-serif outline-none"
+                    autoFocus
+                  />
+                  <button 
+                    onClick={() => handleUpdate(phrase.id)}
+                    className="text-green-500 hover:text-white transition-colors"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => setEditingId(null)}
+                    className="text-white/20 hover:text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="font-serif italic text-lg">{phrase.text}</p>
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => {
+                        setEditingId(phrase.id);
+                        setEditText(phrase.text);
+                      }}
+                      className="p-2 hover:text-brand-orange transition-colors"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => deletePhrase(phrase.id)}
+                      className="p-2 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+          {phrases.length === 0 && (
+            <p className="text-center py-12 text-white/20 font-serif italic border border-dashed border-white/10">Nenhuma frase cadastrada.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

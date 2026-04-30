@@ -23,6 +23,7 @@ import { useSiteSettings } from '../hooks/useSiteSettings';
 import { useGallery } from '../hooks/useGallery';
 import { useSponsorship } from '../hooks/useSponsorship';
 import { useHeroBanners } from '../hooks/useHeroBanners';
+import { useTicker } from '../hooks/useTicker';
 
 // Product Types
 interface Product {
@@ -216,6 +217,7 @@ export default function Home() {
   const { images, loading: galleryLoading } = useGallery();
   const { tiers, loading: tiersLoading } = useSponsorship();
   const { banners, loading: bannersLoading } = useHeroBanners();
+  const { phrases, loading: phrasesLoading } = useTicker();
   
   const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
 
@@ -287,7 +289,7 @@ export default function Home() {
 
   // ... (keeping other hooks/logic)
 
-  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading) return (
+  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
       <p className="text-[10px] uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
@@ -501,9 +503,9 @@ export default function Home() {
         <div className="flex animate-marquee gap-12 items-center">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="flex gap-12 items-center">
-              {(settings?.ticker_text?.value || '14.8K Seguidores @nucleodedanca; Douglas de Oliveira: Primeiro Bailarino na Polônia; Vencedores "Crustáceos" 2026').split(';').map((text, idx) => (
-                <React.Fragment key={idx}>
-                  <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold">{text.trim()}</span>
+              {phrases.map((phrase) => (
+                <React.Fragment key={phrase.id}>
+                  <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold">{phrase.text}</span>
                   <span className="text-white/50 text-2xl">×</span>
                 </React.Fragment>
               ))}

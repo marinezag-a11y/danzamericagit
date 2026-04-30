@@ -476,9 +476,12 @@ export default function Home() {
                       </text>
                     </svg>
                  </motion.div>
-                 <div className="text-center drop-shadow-lg">
-                    <span className="text-5xl font-serif italic text-white block leading-none mb-1">26</span>
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold">Anos</p>
+                 <div className="relative w-32 h-32 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-brand-dark/40 backdrop-blur-sm rounded-full border border-white/10"></div>
+                    <div className="relative text-center">
+                       <span className="text-5xl font-serif italic text-white block leading-none mb-1">26</span>
+                       <p className="text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold">Anos</p>
+                    </div>
                  </div>
               </div>
            </div>

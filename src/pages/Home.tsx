@@ -68,9 +68,12 @@ function TierCard({ name, price, benefits, highlight = false }: { name: string, 
             ))}
           </ul>
        </div>
-       <button className={`w-full py-4 text-[10px] uppercase tracking-widest font-bold border transition-all ${highlight ? 'bg-white text-brand-orange border-white hover:bg-brand-dark hover:text-white hover:border-brand-dark' : 'text-white border-white/20 hover:border-brand-orange hover:text-brand-orange'}`}>
+       <motion.button 
+         whileHover={{ scale: 1.02 }}
+         whileTap={{ scale: 0.98 }}
+         className={`w-full py-4 text-[10px] uppercase tracking-widest font-bold border transition-all ${highlight ? 'bg-white text-brand-orange border-white hover:bg-brand-dark hover:text-white hover:border-brand-dark' : 'text-white border-white/20 hover:border-brand-orange hover:text-brand-orange'}`}>
          Solicitar Proposta
-       </button>
+       </motion.button>
     </div>
   );
 }
@@ -117,17 +120,19 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
       onMouseLeave={() => !('ontouchstart' in window) && setIsOpen(false)}
       ref={dropdownRef}
     >
-      <button 
-        onClick={toggleOpen}
-        className={
-          variant === 'large' 
-          ? "bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"
-          : "bg-brand-orange text-white px-10 py-4 text-xs uppercase tracking-widest font-bold hover:bg-black transition-all"
-        }
-      >
-        {variant === 'large' ? 'Apoie Agora' : 'Doar Agora'}
-        {variant === 'large' && <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />}
-      </button>
+       <motion.button 
+         whileHover={{ scale: 1.05 }}
+         whileTap={{ scale: 0.95 }}
+         onClick={toggleOpen}
+         className={
+           variant === 'large' 
+           ? "bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"
+           : "bg-brand-orange text-white px-10 py-4 text-xs uppercase tracking-widest font-bold hover:bg-black transition-all"
+         }
+       >
+         {variant === 'large' ? 'Apoie Agora' : 'Doar Agora'}
+         {variant === 'large' && <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />}
+       </motion.button>
 
       <AnimatePresence>
         {isOpen && (
@@ -284,43 +289,72 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-brand-dark">
           <div className="absolute inset-0 z-0">
-            <img 
+            <motion.img 
+              initial={{ scale: 1.1, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.7 }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
               src="/hero-bg.jpg" 
               alt="Dança Contemporânea"
-              className="w-full h-full object-cover opacity-70 filter brightness-75 contrast-95"
+              className="w-full h-full object-cover filter brightness-75 contrast-95"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent"></div>
           </div>
 
         <div className="relative z-10 max-w-6xl w-full">
-          <div className="flex items-center gap-4 mb-8">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex items-center gap-4 mb-8"
+          >
             <span className="h-[1px] w-12 bg-brand-orange"></span>
             <p className="text-white text-xs uppercase tracking-[0.4em] font-display font-medium">Melhor Grupo no Festival Arte Minas 2026</p>
-          </div>
-          <h1 className="text-6xl sm:text-7xl md:text-[90px] lg:text-[110px] text-white leading-[1.1] mb-12 font-serif">
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.8 }}
+            className="text-6xl sm:text-7xl md:text-[90px] lg:text-[110px] text-white leading-[1.1] mb-12 font-serif"
+          >
             A Jornada:<br />
             <span className="italic">26 Anos de</span><br />
             Dança
-          </h1>
-          <div className="flex flex-col md:flex-row gap-12 items-start md:items-center">
+          </motion.h1>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2 }}
+            className="flex flex-col md:flex-row gap-12 items-start md:items-center"
+          >
             <p className="text-white/60 text-lg max-w-lg font-serif leading-relaxed italic">
               "{settings?.hero_subtitle?.value || 'Transformando talento mineiro em excelência mundial. Nossa próxima parada: Danzamerica, Argentina.'}"
             </p>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* History & Social Proof Details */}
-      <section id="jornada" className="py-32 bg-brand-grey px-6 lg:px-12">
+      <motion.section 
+        id="jornada" 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-32 bg-brand-grey px-6 lg:px-12"
+      >
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
            <div className="relative">
-              <div className="aspect-video bg-brand-dark overflow-hidden ring-1 ring-black/10">
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.5 }}
+                className="aspect-video bg-brand-dark overflow-hidden ring-1 ring-black/10"
+              >
                 <img 
                   src="https://images.unsplash.com/photo-1518834107812-67b0b7c58434?q=80&w=2670&auto=format&fit=crop" 
                   alt="Nucleo Performance" 
                   className="w-full h-full object-cover grayscale contrast-125"
                 />
-              </div>
+              </motion.div>
               <div className="absolute -top-12 -right-12 w-48 h-48 border border-brand-orange/20 rounded-full hidden md:flex items-center justify-center p-4">
                  <p className="text-[10px] text-brand-orange uppercase tracking-[0.5em] font-display text-center leading-loose">26 Anos Extraordinários</p>
               </div>
@@ -329,24 +363,34 @@ export default function Home() {
               <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">A Nossa História</p>
               <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">Excelência que <span className="italic">Atravessa</span> Fronteiras.</h2>
               <div className="space-y-12">
-                 <div className="flex gap-8">
+                 <motion.div 
+                   initial={{ opacity: 0, x: 20 }}
+                   whileInView={{ opacity: 1, x: 0 }}
+                   transition={{ delay: 0.2 }}
+                   className="flex gap-8"
+                 >
                     <span className="text-brand-orange text-4xl font-serif">2026.</span>
                     <div>
                        <h4 className="text-2xl font-serif mb-2 text-brand-dark">Melhor Grupo: Arte Minas</h4>
                        <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">Premiados pela coreografia "Crustáceos", consolidando nossa posição como referência técnica no estado.</p>
                     </div>
-                 </div>
-                 <div className="flex gap-8">
+                 </motion.div>
+                 <motion.div 
+                   initial={{ opacity: 0, x: 20 }}
+                   whileInView={{ opacity: 1, x: 0 }}
+                   transition={{ delay: 0.4 }}
+                   className="flex gap-8"
+                 >
                     <span className="text-brand-orange text-4xl font-serif">S.P.</span>
                     <div>
                        <h4 className="text-2xl font-serif mb-2 text-brand-dark">Social Proof: Douglas de Oliveira</h4>
                        <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">Ex-aluno do Núcleo que hoje brilha como Primeiro Bailarino na Polônia, provando que nosso método forma cidadãos globais.</p>
                     </div>
-                 </div>
+                 </motion.div>
               </div>
            </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Marquee Social Proof */}
       <div className="bg-brand-orange py-4 overflow-hidden whitespace-nowrap border-y border-black/10">
@@ -365,10 +409,21 @@ export default function Home() {
       </div>
 
       {/* Goal Tracker Section */}
-      <section id="desafio" className="bg-brand-dark py-32 px-6 lg:px-12 border-b border-white/5">
+      <motion.section 
+        id="desafio" 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 1 }}
+        className="bg-brand-dark py-32 px-6 lg:px-12 border-b border-white/5"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-start">
-            <div>
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+            >
               <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">01. O Desafio</p>
               <h2 className="text-5xl md:text-7xl text-white mb-8 leading-tight font-serif">
                 Rumo ao <br /><span className="text-brand-orange italic">Danzamerica 2026</span>
@@ -386,9 +441,11 @@ export default function Home() {
                   <span className="text-white/40 text-xs uppercase tracking-widest">Alcançado</span>
                 </div>
                 <div className="h-[2px] w-full bg-white/10 relative">
-                  <div 
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${percentage}%` }}
+                    transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
                     className="absolute top-0 left-0 h-full bg-brand-orange shadow-[0_0_15px_rgba(255,90,31,0.5)]"
-                    style={{ width: `${percentage}%` }}
                   />
                 </div>
               </div>
@@ -411,9 +468,14 @@ export default function Home() {
                   <p className="text-white text-2xl font-serif">152</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="relative aspect-[3/4] group overflow-hidden">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="relative aspect-[3/4] group overflow-hidden"
+            >
               <img 
                 src="https://images.unsplash.com/photo-1535525153412-5a42439a210d?q=80&w=2670&auto=format&fit=crop" 
                 alt="Ensaio Bailarinos" 
@@ -424,10 +486,10 @@ export default function Home() {
                 <p className="text-5xl font-serif mb-4">22</p>
                 <p className="text-xs uppercase tracking-widest font-display leading-loose">Bailarinos Prontos para Brilhar</p>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Gallery Section */}
       <section id="galeria" className="py-32 bg-brand-white px-6 lg:px-12">
@@ -445,9 +507,13 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-             {images.map((img, i) => (
-                <div 
+              {images.map((img, i) => (
+                <motion.div 
                   key={img.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.1 }}
+                  viewport={{ once: true }}
                   className="aspect-square bg-brand-grey overflow-hidden group border border-black/5 relative"
                 >
                   <img 
@@ -460,7 +526,7 @@ export default function Home() {
                       <p className="text-white text-[10px] uppercase tracking-widest font-bold">{img.caption}</p>
                     </div>
                   )}
-                </div>
+                </motion.div>
              ))}
 
              {images.length === 0 && !galleryLoading && (
@@ -475,7 +541,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Loja */}
-            <div 
+            <motion.div 
+              whileHover={{ y: -10 }}
               onClick={() => setActiveModal('store')}
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
@@ -489,10 +556,11 @@ export default function Home() {
               <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
                 Ver Produtos <ChevronRight className="w-4 h-4" />
               </button>
-            </div>
+            </motion.div>
 
             {/* Rifa */}
-            <div 
+            <motion.div 
+              whileHover={{ y: -10 }}
               onClick={() => setActiveModal('raffle')}
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
@@ -506,10 +574,11 @@ export default function Home() {
               <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
                 Comprar Bilhetes <ChevronRight className="w-4 h-4" />
               </button>
-            </div>
+            </motion.div>
 
             {/* Eventos */}
-            <div 
+            <motion.div 
+              whileHover={{ y: -10 }}
               onClick={() => setActiveModal('event')}
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
@@ -523,7 +592,7 @@ export default function Home() {
               <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
                 Saber Mais <ChevronRight className="w-4 h-4" />
               </button>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -552,8 +621,15 @@ export default function Home() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-             {tiers.filter(t => !t.highlight).map(tier => (
-               <div key={tier.id} className="bg-white/5 p-12 border border-white/10 hover:border-brand-orange transition-all flex flex-col justify-between">
+                        {tiers.filter(t => !t.highlight).map((tier, idx) => (
+                <motion.div 
+                  key={tier.id} 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  viewport={{ once: true }}
+                  className="bg-white/5 p-12 border border-white/10 hover:border-brand-orange transition-all flex flex-col justify-between"
+                >
                   <div>
                      <h4 className="text-white text-2xl mb-2 font-serif">{tier.name}</h4>
                      <p className="text-brand-orange text-3xl font-display font-light mb-6">R$ {tier.price}</p>
@@ -566,9 +642,14 @@ export default function Home() {
                         ))}
                      </ul>
                   </div>
-                  <button className="text-white text-[10px] uppercase tracking-widest font-bold border-b border-white/20 pb-2 hover:text-brand-orange hover:border-brand-orange transition-all w-fit">Solicitar Proposta</button>
-               </div>
-             ))}
+                  <motion.button 
+                    whileHover={{ x: 5 }}
+                    className="text-white text-[10px] uppercase tracking-widest font-bold border-b border-white/20 pb-2 hover:text-brand-orange hover:border-brand-orange transition-all w-fit"
+                  >
+                    Solicitar Proposta
+                  </motion.button>
+                </motion.div>
+              ))}
           </div>
 
           {tiers.length === 0 && !tiersLoading && (

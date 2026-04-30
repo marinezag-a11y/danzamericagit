@@ -261,6 +261,17 @@ export default function Home() {
   const safeGoal = goalTotal > 0 ? goalTotal : 136712;
   const percentage = Math.min((currentRaised / safeGoal) * 100, 100) || 0;
 
+  // Calculate remaining days
+  const eventDateStr = settings?.event_date?.value || '2026-09-30';
+  const eventDate = new Date(eventDateStr);
+  const today = new Date();
+  const diffTime = eventDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const remainingDays = diffDays > 0 ? diffDays : 0;
+
+  const supportersCount = settings?.supporters_count?.value || '412';
+  const dancersCount = settings?.dancers_count?.value || '22';
+
   if (settingsLoading || bannersLoading || galleryLoading || tiersLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -506,7 +517,7 @@ export default function Home() {
               <p className="text-white/40 text-lg leading-relaxed max-w-xl mb-12 font-serif text-justify-editorial">
                 {settings.desafio_description?.value || 'Após sermos coroados como o melhor grupo no Festival Arte Minas, recebemos o convite oficial para representar o Brasil em Córdoba, Argentina.'}
                 <br /><br />
-                Nossa meta de arrecadação de <span className="text-white">R$ {goalTotal.toLocaleString()}</span> cobrirá os custos de transporte, hospedagem e inscrições para 22 bailarinos que dedicam suas vidas à excelência do movimento.
+                Nossa meta de arrecadação de <span className="text-white">R$ {goalTotal.toLocaleString()}</span> cobrirá os custos de transporte, hospedagem e inscrições para {dancersCount} bailarinos que dedicam suas vidas à excelência do movimento.
               </p>
               
               {/* Progress Bar */}
@@ -536,11 +547,11 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Apoiadores</p>
-                  <p className="text-white text-2xl font-serif">412</p>
+                  <p className="text-white text-2xl font-serif">{Number(supportersCount).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Dias Restantes</p>
-                  <p className="text-white text-2xl font-serif">152</p>
+                  <p className="text-white text-2xl font-serif">{remainingDays}</p>
                 </div>
               </div>
             </motion.div>
@@ -558,7 +569,7 @@ export default function Home() {
               />
               <div className="absolute inset-0 ring-1 ring-white/20 ring-inset pointer-events-none"></div>
               <div className="absolute bottom-12 -left-12 bg-brand-orange p-12 max-w-xs text-white">
-                <p className="text-5xl font-serif mb-4">22</p>
+                <p className="text-5xl font-serif mb-4">{dancersCount}</p>
                 <p className="text-xs uppercase tracking-widest font-display leading-loose">Bailarinos Prontos para Brilhar</p>
               </div>
             </motion.div>

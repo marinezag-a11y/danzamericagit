@@ -259,7 +259,7 @@ function ContentEditor() {
   const sections = [
     {
       title: 'Seção de Doações',
-      keys: ['pix_key', 'vakinha_url', 'target_amount', 'current_amount']
+      keys: ['pix_key', 'vakinha_url', 'target_amount', 'current_amount', 'supporters_count']
     },
     {
       title: 'Textos do Hero',
@@ -271,7 +271,7 @@ function ContentEditor() {
     },
     {
       title: 'Seção: O Desafio',
-      keys: ['desafio_title', 'desafio_description', 'desafio_image']
+      keys: ['desafio_title', 'desafio_description', 'desafio_image', 'dancers_count', 'event_date']
     }
   ];
 
@@ -296,7 +296,7 @@ function ContentEditor() {
                   />
                 ) : (
                   <input 
-                    type={key.includes('amount') ? 'number' : 'text'}
+                    type={key.includes('amount') || key.includes('count') ? 'number' : 'text'}
                     className="w-full bg-white/5 border border-white/10 p-3 text-sm font-serif focus:border-brand-orange focus:outline-none transition-all"
                     value={localValues[key] || ''}
                     onChange={(e) => setLocalValues(prev => ({ ...prev, [key]: e.target.value }))}

@@ -865,7 +865,6 @@ export default function Home() {
                 Há 26 anos construindo carreiras e sonhos através da disciplina e da arte. Sediados em Belo Horizonte, somos o berço dos novos talentos de Minas.
               </p>
               </div>
-            </div>
             <div>
               <h5 className="text-[10px] uppercase font-bold tracking-widest mb-8 text-brand-orange">Navegação</h5>
               <ul className="space-y-4 text-xs font-display">

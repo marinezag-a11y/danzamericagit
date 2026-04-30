@@ -155,13 +155,6 @@ export default function Dashboard() {
             Conteúdo Geral
           </button>
           <button 
-            onClick={() => setActiveTab('banners')}
-            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-serif transition-all ${activeTab === 'banners' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
-          >
-            <ImageIcon className="w-4 h-4" />
-            Banners do Hero
-          </button>
-          <button 
             onClick={() => setActiveTab('ticker')}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-serif transition-all ${activeTab === 'ticker' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >

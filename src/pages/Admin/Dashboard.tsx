@@ -363,23 +363,28 @@ function GalleryManager() {
     });
   };
 
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
+    setStatus({ type: 'info', message: 'Otimizando imagem...' });
     try {
       const optimizedBlob = await optimizeImage(file);
       const optimizedFile = new File([optimizedBlob], file.name, { type: 'image/jpeg' });
       
+      setStatus({ type: 'info', message: 'Enviando para o servidor...' });
       const result = await uploadImage(optimizedFile);
       if (result.success && result.url) {
         setNewUrl(result.url);
+        setStatus({ type: 'success', message: 'Imagem enviada com sucesso! Agora clique em Finalizar.' });
       } else {
-        alert('Erro ao subir imagem: ' + result.error);
+        setStatus({ type: 'error', message: 'Erro no upload: ' + result.error });
       }
     } catch (err) {
-      alert('Erro ao otimizar imagem.');
+      setStatus({ type: 'error', message: 'Erro ao processar imagem.' });
     }
     setUploading(false);
   };
@@ -387,10 +392,15 @@ function GalleryManager() {
   const handleAdd = async () => {
     if (!newUrl) return;
     setAdding(true);
+    setStatus({ type: 'info', message: 'Salvando na galeria...' });
     const result = await addImage(newUrl, newCaption);
     if (result.success) {
       setNewUrl('');
       setNewCaption('');
+      setStatus({ type: 'success', message: 'Foto adicionada com sucesso!' });
+      setTimeout(() => setStatus(null), 3000);
+    } else {
+      setStatus({ type: 'error', message: 'Erro ao salvar: ' + result.error });
     }
     setAdding(false);
   };
@@ -481,6 +491,15 @@ function GalleryManager() {
               </div>
             </div>
           </div>
+          {status && (
+            <div className={`p-4 text-xs font-bold uppercase tracking-widest rounded-sm ${
+              status.type === 'success' ? 'bg-green-500/20 text-green-500 border border-green-500/20' :
+              status.type === 'error' ? 'bg-red-500/20 text-red-500 border border-red-500/20' :
+              'bg-blue-500/20 text-blue-500 border border-blue-500/20'
+            }`}>
+              {status.message}
+            </div>
+          )}
         </div>
       </div>
 

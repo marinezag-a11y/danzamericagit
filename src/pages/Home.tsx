@@ -17,7 +17,11 @@ import {
   Target,
   Copy,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  MapPin,
+  Mail,
+  Phone,
+  Globe
 } from 'lucide-react';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { useGallery } from '../hooks/useGallery';
@@ -861,7 +865,7 @@ export default function Home() {
                 Há 26 anos construindo carreiras e sonhos através da disciplina e da arte. Sediados em Belo Horizonte, somos o berço dos novos talentos de Minas.
               </p>
               <div className="flex gap-6">
-                <a href="https://instagram.com/nucleotatianafigueiredo" target="_blank" className="p-3 bg-brand-dark text-white rounded-full hover:bg-brand-orange transition-all">
+                <a href="https://instagram.com/nucleodedanca" target="_blank" className="p-3 bg-brand-dark text-white rounded-full hover:bg-brand-orange transition-all">
                   <Instagram className="w-5 h-5" />
                 </a>
               </div>
@@ -876,6 +880,31 @@ export default function Home() {
                 <li><a href="#ajudar" className="hover:text-brand-orange">Como Ajudar</a></li>
                 <li><a href="#patrocinio" className="hover:text-brand-orange">Patrocínio</a></li>
                 <li className="pt-4 border-t border-brand-dark/5"><a href="/admin" className="hover:text-brand-orange">Painel Administrativo</a></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="text-[10px] uppercase font-bold tracking-widest mb-8 text-brand-orange">Contato</h5>
+              <ul className="space-y-4 text-[11px] font-serif">
+                <li className="flex gap-3">
+                  <MapPin className="w-4 h-4 text-brand-orange shrink-0" />
+                  <span>Av. Abílio Machado, 3997 – BH/MG</span>
+                </li>
+                <li className="flex gap-3">
+                  <Globe className="w-4 h-4 text-brand-orange shrink-0" />
+                  <a href="https://nucleotatianafigueiredo.com.br" target="_blank" className="hover:text-brand-orange transition-colors">nucleotatianafigueiredo.com.br</a>
+                </li>
+                <li className="flex gap-3">
+                  <Phone className="w-4 h-4 text-brand-orange shrink-0" />
+                  <a href="https://wa.me/5531993615488" target="_blank" className="hover:text-brand-orange transition-colors">(31) 99361-5488</a>
+                </li>
+                <li className="flex gap-3">
+                  <Instagram className="w-4 h-4 text-brand-orange shrink-0" />
+                  <a href="https://instagram.com/nucleodedanca" target="_blank" className="hover:text-brand-orange transition-colors">@nucleodedanca</a>
+                </li>
+                <li className="flex gap-3">
+                  <Mail className="w-4 h-4 text-brand-orange shrink-0" />
+                  <a href="mailto:nucleodedanca@yahoo.com.br" className="hover:text-brand-orange transition-colors break-all">nucleodedanca@yahoo.com.br</a>
+                </li>
               </ul>
             </div>
           </div>

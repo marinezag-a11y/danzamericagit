@@ -14,9 +14,11 @@ export function useGallery() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchImages = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     try {
-      setLoading(true);
-      if (!supabase) return;
       const { data, error } = await supabase
         .from('gallery')
         .select('*')

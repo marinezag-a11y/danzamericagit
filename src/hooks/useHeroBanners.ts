@@ -14,8 +14,11 @@ export function useHeroBanners() {
   const [loading, setLoading] = useState(true);
 
   const fetchBanners = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     try {
-      if (!supabase) return;
       const { data, error } = await supabase
         .from('hero_banners')
         .select('*')

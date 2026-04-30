@@ -14,8 +14,11 @@ export function useSiteSettings() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchSettings = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     try {
-      if (!supabase) return;
       const { data, error } = await supabase
         .from('site_settings')
         .select('*');

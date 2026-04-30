@@ -869,11 +869,13 @@ export default function Home() {
             <div>
               <h5 className="text-[10px] uppercase font-bold tracking-widest mb-8 text-brand-orange">Navegação</h5>
               <ul className="space-y-4 text-xs font-display">
-                <li><a href="#jornada" className="hover:text-brand-orange">História</a></li>
-                <li><a href="#desafio" className="hover:text-brand-orange">Danzamerica</a></li>
+                <li><a href="#essencia" className="hover:text-brand-orange">Nossa Essência</a></li>
+                <li><a href="#jornada" className="hover:text-brand-orange">A Jornada</a></li>
+                <li><a href="#desafio" className="hover:text-brand-orange">O Desafio</a></li>
                 <li><a href="#galeria" className="hover:text-brand-orange">Galeria</a></li>
-                <li><a href="#ajudar" className="hover:text-brand-orange">Doe Agora</a></li>
-                <li><a href="/admin" className="hover:text-brand-orange">Painel Administrativo</a></li>
+                <li><a href="#ajudar" className="hover:text-brand-orange">Como Ajudar</a></li>
+                <li><a href="#patrocinio" className="hover:text-brand-orange">Patrocínio</a></li>
+                <li className="pt-4 border-t border-brand-dark/5"><a href="/admin" className="hover:text-brand-orange">Painel Administrativo</a></li>
               </ul>
             </div>
           </div>

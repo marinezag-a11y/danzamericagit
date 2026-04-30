@@ -314,6 +314,7 @@ function ContentEditor() {
     {
       title: '02. Seção: O Desafio',
       keys: [
+        'ticker_text',
         'desafio_title', 
         'desafio_description', 
         'target_amount', 

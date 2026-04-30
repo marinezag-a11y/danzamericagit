@@ -501,12 +501,12 @@ export default function Home() {
         <div className="flex animate-marquee gap-12 items-center">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="flex gap-12 items-center">
-              <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold">14.8K Seguidores @nucleodedanca</span>
-              <span className="text-white/50 text-2xl">×</span>
-              <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold text-black"> Douglas de Oliveira: Primeiro Bailarino na Polônia</span>
-              <span className="text-white/50 text-2xl">×</span>
-              <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold">Vencedores "Crustáceos" 2026</span>
-              <span className="text-white/50 text-2xl">×</span>
+              {(settings?.ticker_text?.value || '14.8K Seguidores @nucleodedanca; Douglas de Oliveira: Primeiro Bailarino na Polônia; Vencedores "Crustáceos" 2026').split(';').map((text, idx) => (
+                <React.Fragment key={idx}>
+                  <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold">{text.trim()}</span>
+                  <span className="text-white/50 text-2xl">×</span>
+                </React.Fragment>
+              ))}
             </div>
           ))}
         </div>

@@ -328,12 +328,12 @@ function ContentEditor() {
 
   const sections = [
     {
-      title: '01. Seção: A Jornada',
-      keys: ['jornada_title', 'jornada_description', 'jornada_image']
+      title: '01. Seção: Nossa Essência',
+      keys: ['essencia_title', 'essencia_text', 'essencia_image']
     },
     {
-      title: '02. Seção: Nossa Essência',
-      keys: ['essencia_title', 'essencia_text', 'essencia_image']
+      title: '02. Seção: A Jornada',
+      keys: ['jornada_title', 'jornada_description', 'jornada_image']
     },
     {
       title: '03. Seção: O Desafio',

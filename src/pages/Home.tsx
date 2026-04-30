@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Heart,
   ChevronRight,
+  ChevronLeft,
   Menu,
   X,
   CreditCard,
@@ -208,6 +209,7 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
 export default function Home() {
   const [activeModal, setActiveModal] = useState<'store' | 'raffle' | 'event' | 'donation' | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [selectedImageIdx, setSelectedImageIdx] = useState<number | null>(null);
 
   // Dynamic Data
   const { settings, loading: settingsLoading } = useSiteSettings();
@@ -226,6 +228,24 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [banners.length]);
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedImageIdx === null) return;
+      
+      if (e.key === 'ArrowRight') {
+        setSelectedImageIdx((prev) => (prev !== null && prev < images.length - 1) ? prev + 1 : 0);
+      } else if (e.key === 'ArrowLeft') {
+        setSelectedImageIdx((prev) => (prev !== null && prev > 0) ? prev - 1 : images.length - 1);
+      } else if (e.key === 'Escape') {
+        setSelectedImageIdx(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImageIdx, images.length]);
 
   const currentBanner = banners[currentBannerIdx] || { 
     id: 'static-hero', 
@@ -570,7 +590,8 @@ export default function Home() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
                   viewport={{ once: true }}
-                  className="aspect-square bg-brand-grey overflow-hidden group border border-black/5 relative"
+                  onClick={() => setSelectedImageIdx(i)}
+                  className="aspect-square bg-brand-grey overflow-hidden group border border-black/5 relative cursor-pointer"
                 >
                   <img 
                     src={img?.url || ''} 
@@ -823,8 +844,76 @@ export default function Home() {
                   <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação Junina</h2>
                 </div>
               )}
+      </AnimatePresence>
+      
+      {/* Gallery Lightbox */}
+      <AnimatePresence mode="wait">
+        {selectedImageIdx !== null && images[selectedImageIdx] && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-12"
+          >
+            <button 
+              onClick={() => setSelectedImageIdx(null)}
+              className="absolute top-8 right-8 text-white/40 hover:text-white z-50 p-2"
+            >
+              <X className="w-10 h-10" strokeWidth={1} />
+            </button>
+
+            {/* Navigation Buttons */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImageIdx((prev) => (prev !== null && prev > 0) ? prev - 1 : images.length - 1);
+              }}
+              className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 text-white/20 hover:text-brand-orange transition-all p-4 z-50 group"
+            >
+              <ChevronLeft className="w-12 h-12 md:w-20 md:h-20 group-hover:scale-110 transition-transform" strokeWidth={1} />
+            </button>
+
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImageIdx((prev) => (prev !== null && prev < images.length - 1) ? prev + 1 : 0);
+              }}
+              className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 text-white/20 hover:text-brand-orange transition-all p-4 z-50 group"
+            >
+              <ChevronRight className="w-12 h-12 md:w-20 md:h-20 group-hover:scale-110 transition-transform" strokeWidth={1} />
+            </button>
+
+            <motion.div 
+              key={selectedImageIdx}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative w-full h-full flex flex-col items-center justify-center gap-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative max-w-5xl max-h-[70vh] shadow-2xl">
+                <img 
+                  src={images[selectedImageIdx].url} 
+                  alt={images[selectedImageIdx].caption} 
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute inset-0 ring-1 ring-white/10 pointer-events-none"></div>
+              </div>
+              
+              {images[selectedImageIdx].caption && (
+                <div className="text-center max-w-2xl px-6">
+                  <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Registro da Jornada</p>
+                  <h3 className="text-white text-2xl md:text-4xl font-serif italic">{images[selectedImageIdx].caption}</h3>
+                </div>
+              )}
+              
+              {/* Image Counter */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/20 text-[10px] uppercase tracking-widest font-bold">
+                {selectedImageIdx + 1} / {images.length}
+              </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

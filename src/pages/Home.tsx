@@ -303,12 +303,19 @@ export default function Home() {
 
       {/* Hero Section Carousel */}
       <section className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-[#1A1A1A]">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src={currentBanner.image_url || '/hero-bg.jpg'} 
-            alt={currentBanner.title || "Dança"}
-            className="w-full h-full object-cover opacity-80"
-          />
+        <div className="absolute inset-0 z-0 bg-[#1A1A1A]">
+          <AnimatePresence mode="popLayout">
+            <motion.img 
+              key={currentBanner.image_url}
+              src={currentBanner.image_url || '/hero-bg.jpg'} 
+              alt={currentBanner.title || "Dança"}
+              initial={{ opacity: 0, scale: 1.1 }}
+              animate={{ opacity: 0.8, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1] }}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </AnimatePresence>
           <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/80 via-transparent to-transparent"></div>
         </div>
 
@@ -331,7 +338,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
               className="text-6xl sm:text-7xl md:text-[90px] lg:text-[110px] text-white leading-[1.1] mb-12 font-serif"
             >
               {currentBanner.title ? (

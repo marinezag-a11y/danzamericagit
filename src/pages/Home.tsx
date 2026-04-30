@@ -477,7 +477,7 @@ export default function Home() {
                     </svg>
                  </motion.div>
                  <div className="relative w-32 h-32 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-brand-orange/90 rounded-full shadow-2xl border border-white/20 backdrop-blur-[2px]"></div>
+                    <div className="absolute inset-0 bg-brand-orange/80 rounded-full shadow-2xl border border-white/20 backdrop-blur-[2px]"></div>
                     <div className="relative text-center">
                        <span className="text-5xl font-serif italic text-white block leading-none mb-1">
                          {new Date().getFullYear() - 2000}

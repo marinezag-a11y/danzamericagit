@@ -275,6 +275,18 @@ export default function Home() {
   const supportersCount = settings?.supporters_count?.value ?? '412';
   const dancersCount = settings?.dancers_count?.value ?? '22';
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // ... (keeping other hooks/logic)
+
   if (settingsLoading || bannersLoading || galleryLoading || tiersLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -285,19 +297,19 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#1A1A1A]">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-[70] bg-transparent px-6 py-4 flex justify-between items-center text-white backdrop-blur-sm">
-        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/10 z-0 pointer-events-none"></div>
+      <nav className={`fixed top-0 left-0 w-full z-[70] transition-all duration-500 px-6 py-4 flex justify-between items-center text-white ${isScrolled ? 'bg-black/80 backdrop-blur-md py-3 shadow-xl' : 'bg-transparent py-6'}`}>
+        <div className={`absolute bottom-0 left-0 w-full h-[1px] bg-white/10 z-0 pointer-events-none transition-opacity duration-500 ${isScrolled ? 'opacity-0' : 'opacity-100'}`}></div>
 
-        <div className="flex items-center cursor-pointer mix-blend-difference z-10" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <img src="/logo_branca.png" alt="Nucleo Tatiana Figueiredo" className="h-14 md:h-24 w-auto object-contain" />
+        <div className="flex items-center cursor-pointer z-10" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <img src="/logo_branca.png" alt="Nucleo Tatiana Figueiredo" className={`transition-all duration-500 object-contain ${isScrolled ? 'h-10 md:h-16' : 'h-14 md:h-24'}`} />
         </div>
         
-        <div className="hidden lg:flex gap-14 text-xs uppercase tracking-[0.25em] font-display font-medium mix-blend-difference z-10">
-          <a href="#jornada" className="hover:text-brand-orange transition-colors">A Jornada</a>
-          <a href="#desafio" className="hover:text-brand-orange transition-colors">O Desafio</a>
-          <a href="#galeria" className="hover:text-brand-orange transition-colors">Galeria</a>
-          <a href="#ajudar" className="hover:text-brand-orange transition-colors">Como Ajudar</a>
-          <a href="#patrocinio" className="hover:text-brand-orange transition-colors">Patrocínio</a>
+        <div className="hidden lg:flex gap-14 text-xs uppercase tracking-[0.25em] font-display font-medium z-10">
+          <a href="#jornada" className="hover:text-brand-orange transition-colors drop-shadow-md">A Jornada</a>
+          <a href="#desafio" className="hover:text-brand-orange transition-colors drop-shadow-md">O Desafio</a>
+          <a href="#galeria" className="hover:text-brand-orange transition-colors drop-shadow-md">Galeria</a>
+          <a href="#ajudar" className="hover:text-brand-orange transition-colors drop-shadow-md">Como Ajudar</a>
+          <a href="#patrocinio" className="hover:text-brand-orange transition-colors drop-shadow-md">Patrocínio</a>
         </div>
 
         <div className="relative z-20 flex items-center gap-2 sm:gap-4">
@@ -337,6 +349,9 @@ export default function Home() {
 
       {/* Hero Section Carousel */}
       <section className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-[#1A1A1A]">
+        {/* Top Gradient Overlay for Nav Readability */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-transparent to-transparent h-40 pointer-events-none"></div>
+
         <div className="absolute inset-0 z-0 bg-[#1A1A1A]">
           <AnimatePresence mode="popLayout">
             <motion.img 

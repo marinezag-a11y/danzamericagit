@@ -461,24 +461,30 @@ function GalleryManager() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {images.map((image) => (
-          <div key={image.id} className="group relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
-            <img src={image.url} alt={image.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <button 
-                onClick={() => setImageToDelete(image.id)}
-                className="bg-red-500 p-3 rounded-full hover:bg-red-600 transition-all transform translate-y-4 group-hover:translate-y-0 duration-300"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            {image.caption && (
-              <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/40 backdrop-blur-sm">
-                <p className="text-[8px] uppercase tracking-widest text-white/60 truncate">{image.caption}</p>
+        {images && images.length > 0 ? (
+          images.map((image) => (
+            <div key={image.id} className="group relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
+              <img src={image.url} alt={image.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <button 
+                  onClick={() => setImageToDelete(image.id)}
+                  className="bg-red-500 p-3 rounded-full hover:bg-red-600 transition-all transform translate-y-4 group-hover:translate-y-0 duration-300"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-            )}
+              {image.caption && (
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/40 backdrop-blur-sm">
+                  <p className="text-[8px] uppercase tracking-widest text-white/60 truncate">{image.caption}</p>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full py-12 text-center bg-white/5 border border-dashed border-white/10">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/20">Nenhuma foto para exibir</p>
           </div>
-        ))}
+        )}
       </div>
 
       <AnimatePresence>

@@ -562,9 +562,10 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {(images || []).map((img, i) => (
+            {images && images.length > 0 ? (
+              images.map((img, i) => (
                 <motion.div 
-                  key={img.id}
+                  key={img?.id || i}
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
@@ -572,17 +573,22 @@ export default function Home() {
                   className="aspect-square bg-brand-grey overflow-hidden group border border-black/5 relative"
                 >
                   <img 
-                    src={img.url} 
+                    src={img?.url || ''} 
                     className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-110" 
-                    alt={img.caption || `Galeria ${i}`} 
+                    alt={img?.caption || `Galeria ${i}`} 
                   />
-                  {img.caption && (
+                  {img?.caption && (
                     <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                       <p className="text-white text-[10px] uppercase tracking-widest font-bold">{img.caption}</p>
                     </div>
                   )}
                 </motion.div>
-             ))}
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center border border-dashed border-black/10">
+                <p className="text-brand-dark/20 text-xs uppercase tracking-widest font-bold">Nenhuma foto na galeria ainda</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

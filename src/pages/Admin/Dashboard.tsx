@@ -306,11 +306,26 @@ function ContentEditor() {
 }
 
 function GalleryManager() {
-  const { images, loading, addImage, deleteImage } = useGallery();
+  const { images, loading, addImage, uploadImage, deleteImage } = useGallery();
   const [newUrl, setNewUrl] = useState('');
   const [newCaption, setNewCaption] = useState('');
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<string | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const result = await uploadImage(file);
+    if (result.success && result.url) {
+      setNewUrl(result.url);
+    } else {
+      alert('Erro ao subir imagem: ' + result.error);
+    }
+    setUploading(false);
+  };
 
   const handleAdd = async () => {
     if (!newUrl) return;
@@ -335,35 +350,65 @@ function GalleryManager() {
       <div className="bg-white/5 border border-white/10 p-8">
         <h3 className="text-xl font-serif italic mb-6">Adicionar Nova Foto</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">URL da Imagem (Cloudinary)</label>
-            <input 
-              type="text"
-              className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
-              placeholder="Cole o link da foto aqui..."
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">URL da Imagem</label>
+              <input 
+                type="text"
+                className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
+                placeholder="Cole o link ou use o botão abaixo..."
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+              />
+            </div>
+            
+            <div className="relative">
+              <input 
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="gallery-upload"
+                disabled={uploading}
+              />
+              <label 
+                htmlFor="gallery-upload"
+                className={`flex items-center justify-center gap-3 w-full p-4 border border-dashed border-white/20 hover:border-brand-orange hover:bg-white/5 transition-all cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {uploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-brand-orange" />
+                ) : (
+                  <Upload className="w-4 h-4 text-brand-orange" />
+                )}
+                <span className="text-[10px] uppercase tracking-widest font-bold">
+                  {uploading ? 'Enviando...' : 'Ou selecione do computador'}
+                </span>
+              </label>
+            </div>
           </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Legenda (Opcional)</label>
-            <input 
-              type="text"
-              className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
-              placeholder="Ex: Ensaio de Gala 2026"
-              value={newCaption}
-              onChange={(e) => setNewCaption(e.target.value)}
-            />
+
+          <div className="flex flex-col justify-between">
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Legenda (Opcional)</label>
+              <input 
+                type="text"
+                className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
+                placeholder="Ex: Ensaio de Gala 2026"
+                value={newCaption}
+                onChange={(e) => setNewCaption(e.target.value)}
+              />
+            </div>
+
+            <button 
+              onClick={handleAdd}
+              disabled={adding || !newUrl || uploading}
+              className="mt-6 md:mt-0 w-full px-8 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+              Salvar na Galeria
+            </button>
           </div>
         </div>
-        <button 
-          onClick={handleAdd}
-          disabled={adding || !newUrl}
-          className="w-full md:w-auto px-8 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-          Adicionar à Galeria
-        </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">

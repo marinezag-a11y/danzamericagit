@@ -31,8 +31,34 @@ export function useGallery() {
     }
   };
 
+  const uploadImage = async (file: File) => {
+    try {
+      if (!supabase) throw new Error('Supabase not configured');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `gallery/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      return { success: true, url: publicUrl };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
   const addImage = async (url: string, caption: string = '') => {
     try {
+      if (!supabase) throw new Error('Supabase not configured');
+      
       const { data, error } = await supabase
         .from('gallery')
         .insert([{ url, caption, display_order: images.length }])
@@ -65,5 +91,5 @@ export function useGallery() {
     fetchImages();
   }, []);
 
-  return { images, loading, error, addImage, deleteImage, refresh: fetchImages };
+  return { images, loading, error, addImage, uploadImage, deleteImage, refresh: fetchImages };
 }

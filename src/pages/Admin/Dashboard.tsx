@@ -326,6 +326,11 @@ function ContentEditor() {
 
 function GalleryManager() {
   const { images, loading, addImage, uploadImage, deleteImage } = useGallery();
+  const [newUrl, setNewUrl] = useState('');
+  const [newCaption, setNewCaption] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState<string | null>(null);
   const optimizeImage = (file: File): Promise<Blob> => {
     return new Promise((resolve) => {
       const reader = new FileReader();

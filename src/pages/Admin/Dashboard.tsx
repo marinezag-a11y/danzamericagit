@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'content' | 'gallery' | 'sponsorship' | 'banners' | 'help'>('content');
   const navigate = useNavigate();
+  const { images, loading: galleryLoading, error: galleryError } = useGallery();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -126,7 +127,25 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="flex-1 p-6 md:p-12 overflow-y-auto">
-        <header className="flex justify-between items-center mb-12">
+        {/* Diagnostic Bar */}
+      <div className="mb-12 p-4 bg-brand-orange/10 border border-brand-orange/20 flex flex-wrap gap-6 text-[10px] uppercase tracking-widest font-bold">
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${supabase ? 'bg-green-500' : 'bg-red-500'}`}></span>
+          <span className="text-white/40">Supabase:</span> {supabase ? 'Conectado' : 'Desconectado'}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${galleryLoading ? 'bg-yellow-500 animate-pulse' : 'bg-blue-500'}`}></span>
+          <span className="text-white/40">Galeria:</span> {galleryLoading ? 'Carregando...' : `${images.length} fotos`}
+        </div>
+        {galleryError && (
+          <div className="flex items-center gap-2 text-red-500">
+            <AlertCircle className="w-3 h-3" />
+            <span>Erro: {galleryError}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-between items-center mb-12">
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, x: -20 }}

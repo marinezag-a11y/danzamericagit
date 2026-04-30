@@ -307,22 +307,55 @@ function ContentEditor() {
 
 function GalleryManager() {
   const { images, loading, addImage, uploadImage, deleteImage } = useGallery();
-  const [newUrl, setNewUrl] = useState('');
-  const [newCaption, setNewCaption] = useState('');
-  const [adding, setAdding] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [imageToDelete, setImageToDelete] = useState<string | null>(null);
+  const optimizeImage = (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Max width 1600px for gallery images
+          const MAX_WIDTH = 1600;
+          if (width > MAX_WIDTH) {
+            height = (MAX_WIDTH / width) * height;
+            width = MAX_WIDTH;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            resolve(blob || file);
+          }, 'image/jpeg', 0.8); // 80% quality JPEG
+        };
+      };
+    });
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
-    const result = await uploadImage(file);
-    if (result.success && result.url) {
-      setNewUrl(result.url);
-    } else {
-      alert('Erro ao subir imagem: ' + result.error);
+    try {
+      const optimizedBlob = await optimizeImage(file);
+      const optimizedFile = new File([optimizedBlob], file.name, { type: 'image/jpeg' });
+      
+      const result = await uploadImage(optimizedFile);
+      if (result.success && result.url) {
+        setNewUrl(result.url);
+      } else {
+        alert('Erro ao subir imagem: ' + result.error);
+      }
+    } catch (err) {
+      alert('Erro ao otimizar imagem.');
     }
     setUploading(false);
   };
@@ -348,65 +381,81 @@ function GalleryManager() {
   return (
     <div className="space-y-12">
       <div className="bg-white/5 border border-white/10 p-8">
-        <h3 className="text-xl font-serif italic mb-6">Adicionar Nova Foto</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">URL da Imagem</label>
-              <input 
-                type="text"
-                className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
-                placeholder="Cole o link ou use o botão abaixo..."
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-              />
-            </div>
-            
-            <div className="relative">
-              <input 
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="gallery-upload"
-                disabled={uploading}
-              />
-              <label 
-                htmlFor="gallery-upload"
-                className={`flex items-center justify-center gap-3 w-full p-4 border border-dashed border-white/20 hover:border-brand-orange hover:bg-white/5 transition-all cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {uploading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-brand-orange" />
-                ) : (
-                  <Upload className="w-4 h-4 text-brand-orange" />
-                )}
-                <span className="text-[10px] uppercase tracking-widest font-bold">
-                  {uploading ? 'Enviando...' : 'Ou selecione do computador'}
-                </span>
-              </label>
-            </div>
-          </div>
+        <h3 className="text-xl font-serif italic mb-8">Adicionar Nova Foto</h3>
+        
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div className="p-6 border border-white/5 bg-white/5 space-y-4">
+                <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Opção 1: Enviar do Computador (Otimizado)</label>
+                <input 
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="gallery-upload"
+                  disabled={uploading}
+                />
+                <label 
+                  htmlFor="gallery-upload"
+                  className={`flex flex-col items-center justify-center gap-3 w-full py-10 border-2 border-dashed border-white/10 hover:border-brand-orange hover:bg-brand-orange/5 transition-all cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+                  ) : (
+                    <Upload className="w-8 h-8 text-white/20" />
+                  )}
+                  <div className="text-center">
+                    <p className="text-[10px] uppercase tracking-widest font-bold">
+                      {uploading ? 'Otimizando e Enviando...' : 'Clique para selecionar'}
+                    </p>
+                    <p className="text-[8px] text-white/40 mt-1 italic">Imagens serão comprimidas automaticamente</p>
+                  </div>
+                </label>
+              </div>
 
-          <div className="flex flex-col justify-between">
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Legenda (Opcional)</label>
-              <input 
-                type="text"
-                className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
-                placeholder="Ex: Ensaio de Gala 2026"
-                value={newCaption}
-                onChange={(e) => setNewCaption(e.target.value)}
-              />
+              <div className="p-6 border border-white/5 bg-white/5 space-y-4">
+                <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Opção 2: Link Externo (Cloudinary/URL)</label>
+                <input 
+                  type="text"
+                  className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
+                  placeholder="https://exemplo.com/foto.jpg"
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                />
+              </div>
             </div>
 
-            <button 
-              onClick={handleAdd}
-              disabled={adding || !newUrl || uploading}
-              className="mt-6 md:mt-0 w-full px-8 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-              Salvar na Galeria
-            </button>
+            <div className="space-y-8 flex flex-col">
+              <div className="space-y-2">
+                <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Legenda da Foto</label>
+                <input 
+                  type="text"
+                  className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif focus:border-brand-orange outline-none transition-all"
+                  placeholder="Ex: Danzamerica 2026 - Noite de Gala"
+                  value={newCaption}
+                  onChange={(e) => setNewCaption(e.target.value)}
+                />
+              </div>
+
+              {newUrl && (
+                <div className="p-4 border border-brand-orange/20 bg-brand-orange/5 rounded-sm">
+                  <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-2">Prévia do Link:</p>
+                  <p className="text-[10px] text-white/40 truncate font-mono">{newUrl}</p>
+                </div>
+              )}
+
+              <div className="mt-auto pt-6">
+                <button 
+                  onClick={handleAdd}
+                  disabled={adding || !newUrl || uploading}
+                  className="w-full py-5 bg-brand-orange text-white text-[12px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Finalizar e Adicionar à Galeria
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

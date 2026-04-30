@@ -844,6 +844,9 @@ export default function Home() {
                   <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação Junina</h2>
                 </div>
               )}
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
       
       {/* Gallery Lightbox */}

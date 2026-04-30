@@ -135,7 +135,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${galleryLoading ? 'bg-yellow-500 animate-pulse' : 'bg-blue-500'}`}></span>
-          <span className="text-white/40">Galeria:</span> {galleryLoading ? 'Carregando...' : `${images.length} fotos`}
+          <span className="text-white/40">Galeria:</span> {galleryLoading ? 'Carregando...' : `${images?.length || 0} fotos`}
         </div>
         {galleryError && (
           <div className="flex items-center gap-2 text-red-500">

@@ -885,25 +885,35 @@ export default function Home() {
             <div>
               <h5 className="text-[10px] uppercase font-bold tracking-widest mb-8 text-brand-orange">Contato</h5>
               <ul className="space-y-4 text-[11px] font-serif">
-                <li className="flex gap-3">
-                  <MapPin className="w-4 h-4 text-brand-orange shrink-0" />
-                  <span>Av. Abílio Machado, 3997 – BH/MG</span>
+                <li>
+                  <a href="https://www.google.com/maps/search/?api=1&query=Av.+Abílio+Machado,+3997+–+Belo+Horizonte,+MG" target="_blank" className="flex gap-3 hover:text-brand-orange transition-colors group">
+                    <MapPin className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
+                    <span>Av. Abílio Machado, 3997 – BH/MG</span>
+                  </a>
                 </li>
-                <li className="flex gap-3">
-                  <Globe className="w-4 h-4 text-brand-orange shrink-0" />
-                  <a href="https://nucleotatianafigueiredo.com.br" target="_blank" className="hover:text-brand-orange transition-colors">nucleotatianafigueiredo.com.br</a>
+                <li>
+                  <a href="https://nucleotatianafigueiredo.com.br" target="_blank" className="flex gap-3 hover:text-brand-orange transition-colors group">
+                    <Globe className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
+                    <span>nucleotatianafigueiredo.com.br</span>
+                  </a>
                 </li>
-                <li className="flex gap-3">
-                  <Phone className="w-4 h-4 text-brand-orange shrink-0" />
-                  <a href="https://wa.me/5531993615488" target="_blank" className="hover:text-brand-orange transition-colors">(31) 99361-5488</a>
+                <li>
+                  <a href="https://wa.me/5531993615488" target="_blank" className="flex gap-3 hover:text-brand-orange transition-colors group">
+                    <Phone className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
+                    <span>(31) 99361-5488</span>
+                  </a>
                 </li>
-                <li className="flex gap-3">
-                  <Instagram className="w-4 h-4 text-brand-orange shrink-0" />
-                  <a href="https://instagram.com/nucleodedanca" target="_blank" className="hover:text-brand-orange transition-colors">@nucleodedanca</a>
+                <li>
+                  <a href="https://instagram.com/nucleodedanca" target="_blank" className="flex gap-3 hover:text-brand-orange transition-colors group">
+                    <Instagram className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
+                    <span>@nucleodedanca</span>
+                  </a>
                 </li>
-                <li className="flex gap-3">
-                  <Mail className="w-4 h-4 text-brand-orange shrink-0" />
-                  <a href="mailto:nucleodedanca@yahoo.com.br" className="hover:text-brand-orange transition-colors break-all">nucleodedanca@yahoo.com.br</a>
+                <li>
+                  <a href="mailto:nucleodedanca@yahoo.com.br" className="flex gap-3 hover:text-brand-orange transition-colors group">
+                    <Mail className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
+                    <span className="break-all">nucleodedanca@yahoo.com.br</span>
+                  </a>
                 </li>
               </ul>
             </div>

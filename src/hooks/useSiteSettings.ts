@@ -15,6 +15,7 @@ export function useSiteSettings() {
 
   const fetchSettings = async () => {
     try {
+      if (!supabase) return;
       const { data, error } = await supabase
         .from('site_settings')
         .select('*');

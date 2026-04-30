@@ -15,6 +15,7 @@ export function useHeroBanners() {
 
   const fetchBanners = async () => {
     try {
+      if (!supabase) return;
       const { data, error } = await supabase
         .from('hero_banners')
         .select('*')

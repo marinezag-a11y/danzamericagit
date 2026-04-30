@@ -16,6 +16,7 @@ export function useGallery() {
   const fetchImages = async () => {
     try {
       setLoading(true);
+      if (!supabase) return;
       const { data, error } = await supabase
         .from('gallery')
         .select('*')

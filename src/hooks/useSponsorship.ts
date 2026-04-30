@@ -16,6 +16,10 @@ export function useSponsorship() {
 
   const fetchTiers = async () => {
     setLoading(true);
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase
       .from('sponsorship_tiers')
       .select('*')

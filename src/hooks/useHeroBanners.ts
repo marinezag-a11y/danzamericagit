@@ -31,6 +31,7 @@ export function useHeroBanners() {
   };
 
   useEffect(() => {
+    if (!supabase) return;
     fetchBanners();
 
     // Realtime subscription

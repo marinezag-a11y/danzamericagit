@@ -21,7 +21,8 @@ import {
   MapPin,
   Mail,
   Phone,
-  Globe
+  Globe,
+  ArrowUp
 } from 'lucide-react';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { useGallery } from '../hooks/useGallery';
@@ -282,10 +283,12 @@ export default function Home() {
   const dancersCount = settings?.dancers_count?.value ?? '22';
 
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
+      setShowScrollTop(window.scrollY > 500);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -983,6 +986,21 @@ export default function Home() {
               )}
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+      
+      {/* Back to Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.5, y: 20 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-8 right-8 z-[80] p-4 bg-brand-orange text-white rounded-full shadow-2xl hover:bg-brand-dark transition-all group border border-white/20 backdrop-blur-sm"
+          >
+            <ArrowUp className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
+          </motion.button>
         )}
       </AnimatePresence>
       

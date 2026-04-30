@@ -22,6 +22,7 @@ import { useSiteSettings } from '../hooks/useSiteSettings';
 import { useGallery } from '../hooks/useGallery';
 import { useSponsorship } from '../hooks/useSponsorship';
 import { useHeroBanners } from '../hooks/useHeroBanners';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 // Product Types
 interface Product {
@@ -240,6 +241,20 @@ export default function Home() {
   
   const safeGoal = goalTotal > 0 ? goalTotal : 136712;
   const percentage = Math.min((currentRaised / safeGoal) * 100, 100) || 0;
+
+  if (!isSupabaseConfigured()) {
+    return (
+      <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8 text-center">
+        <h1 className="text-2xl font-serif mb-4 text-brand-orange">Erro de Configuração</h1>
+        <p className="max-w-md opacity-60 text-sm leading-relaxed mb-8">
+          As chaves do Supabase (VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY) não foram encontradas no servidor de produção.
+        </p>
+        <div className="p-4 border border-white/10 text-[10px] uppercase tracking-widest bg-white/5">
+          Verifique as variáveis de ambiente no seu painel de hospedagem.
+        </div>
+      </div>
+    );
+  }
 
   if (settingsLoading || bannersLoading || galleryLoading || tiersLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">

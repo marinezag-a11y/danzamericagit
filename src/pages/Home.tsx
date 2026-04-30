@@ -588,9 +588,9 @@ export default function Home() {
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 contrast-110"
               />
               <div className="absolute inset-0 ring-1 ring-white/20 ring-inset pointer-events-none"></div>
-              <div className="absolute bottom-12 -left-12 bg-brand-orange p-12 max-w-xs text-white">
-                <p className="text-5xl font-serif mb-4">{dancersCount}</p>
-                <p className="text-xs uppercase tracking-widest font-display leading-loose">Bailarinos Prontos para Brilhar</p>
+              <div className="absolute bottom-8 left-8 bg-brand-orange p-8 md:p-10 max-w-[200px] text-white shadow-2xl">
+                <p className="text-6xl font-serif mb-2">{dancersCount}</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] font-display font-bold leading-relaxed">Bailarinos Prontos para Brilhar</p>
               </div>
             </motion.div>
           </div>

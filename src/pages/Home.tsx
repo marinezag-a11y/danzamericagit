@@ -457,8 +457,17 @@ export default function Home() {
                   className="w-full h-full object-cover grayscale contrast-125"
                 />
               </motion.div>
-              <div className="absolute -top-12 -right-12 w-48 h-48 border border-brand-orange/20 rounded-full hidden md:flex items-center justify-center p-4">
-                 <p className="text-[10px] text-brand-orange uppercase tracking-[0.5em] font-display text-center leading-loose">26 Anos Extraordinários</p>
+              <div className="absolute -top-16 -right-16 w-56 h-56 hidden md:flex items-center justify-center pointer-events-none">
+                 <motion.div 
+                   animate={{ rotate: 360 }}
+                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                   className="absolute inset-0 border border-brand-orange/20 rounded-full"
+                 ></motion.div>
+                 <div className="relative text-center px-6">
+                    <p className="text-[10px] text-brand-orange uppercase tracking-[0.6em] font-bold font-display leading-tight mb-2">Desde 1999</p>
+                    <div className="h-[1px] w-8 bg-brand-orange/30 mx-auto mb-2"></div>
+                    <p className="text-[14px] text-brand-dark uppercase tracking-[0.3em] font-serif italic">26 Anos<br/>Extraordinários</p>
+                 </div>
               </div>
            </div>
            <div>

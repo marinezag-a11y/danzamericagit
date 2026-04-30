@@ -18,7 +18,7 @@ import {
   X,
   Heart
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { useGallery } from '../../hooks/useGallery';
 import { useSponsorship, SponsorshipTier } from '../../hooks/useSponsorship';

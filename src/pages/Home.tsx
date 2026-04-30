@@ -457,16 +457,28 @@ export default function Home() {
                   className="w-full h-full object-cover grayscale contrast-125"
                 />
               </motion.div>
-              <div className="absolute -top-16 -right-16 w-56 h-56 hidden md:flex items-center justify-center pointer-events-none">
+              <div className="absolute -top-20 -right-20 w-64 h-64 hidden md:flex items-center justify-center z-20 pointer-events-none">
                  <motion.div 
                    animate={{ rotate: 360 }}
-                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                   className="absolute inset-0 border border-brand-orange/20 rounded-full"
-                 ></motion.div>
-                 <div className="relative text-center px-6">
-                    <p className="text-[10px] text-brand-orange uppercase tracking-[0.6em] font-bold font-display leading-tight mb-2">Desde 1999</p>
-                    <div className="h-[1px] w-8 bg-brand-orange/30 mx-auto mb-2"></div>
-                    <p className="text-[14px] text-brand-dark uppercase tracking-[0.3em] font-serif italic">26 Anos<br/>Extraordinários</p>
+                   transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                   className="absolute inset-0"
+                 >
+                    <svg viewBox="0 0 200 200" className="w-full h-full">
+                      <path
+                        id="circlePath"
+                        d="M 100, 100 m -75, 0 a 75,75 0 1,1 150,0 a 75,75 0 1,1 -150,0"
+                        fill="transparent"
+                      />
+                      <text className="fill-brand-orange/40 text-[12px] uppercase tracking-[0.4em] font-bold">
+                        <textPath href="#circlePath">
+                          • 26 Anos Extraordinários • Desde 1999 • Núcleo de Dança
+                        </textPath>
+                      </text>
+                    </svg>
+                 </motion.div>
+                 <div className="text-center">
+                    <span className="text-4xl font-serif italic text-brand-dark">26</span>
+                    <p className="text-[8px] uppercase tracking-widest text-brand-orange font-bold">Anos</p>
                  </div>
               </div>
            </div>

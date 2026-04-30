@@ -332,7 +332,11 @@ function ContentEditor() {
       keys: ['jornada_title', 'jornada_description', 'jornada_image']
     },
     {
-      title: '02. Seção: O Desafio',
+      title: '02. Seção: Nossa Essência',
+      keys: ['essencia_title', 'essencia_text', 'essencia_image']
+    },
+    {
+      title: '03. Seção: O Desafio',
       keys: [
         'desafio_title', 
         'desafio_description', 
@@ -345,7 +349,7 @@ function ContentEditor() {
       ]
     },
     {
-      title: '03. Configurações de Doação Globais',
+      title: '04. Configurações de Doação Globais',
       keys: ['pix_key', 'vakinha_url']
     }
   ];
@@ -381,7 +385,7 @@ function ContentEditor() {
                       )}
                     </div>
                   </div>
-                ) : key.includes('subtitle') || key.includes('description') ? (
+                ) : key.includes('subtitle') || key.includes('description') || key.includes('text') ? (
                   <textarea 
                     rows={3} 
                     className="w-full bg-white/5 border border-white/10 p-3 text-sm font-serif focus:border-brand-orange focus:outline-none transition-all"

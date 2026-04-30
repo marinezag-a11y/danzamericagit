@@ -308,6 +308,7 @@ export default function Home() {
         
         <div className="hidden lg:flex gap-14 text-xs uppercase tracking-[0.25em] font-display font-medium z-10">
           <a href="#jornada" className="hover:text-brand-orange transition-colors drop-shadow-md">A Jornada</a>
+          <a href="#essencia" className="hover:text-brand-orange transition-colors drop-shadow-md">Nossa Essência</a>
           <a href="#desafio" className="hover:text-brand-orange transition-colors drop-shadow-md">O Desafio</a>
           <a href="#galeria" className="hover:text-brand-orange transition-colors drop-shadow-md">Galeria</a>
           <a href="#ajudar" className="hover:text-brand-orange transition-colors drop-shadow-md">Como Ajudar</a>
@@ -336,6 +337,7 @@ export default function Home() {
             >
               <div className="flex flex-col gap-8 text-2xl uppercase tracking-widest font-display text-white">
                 <a href="#jornada" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">A Jornada</a>
+                <a href="#essencia" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Nossa Essência</a>
                 <a href="#desafio" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">O Desafio</a>
                 <a href="#galeria" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Galeria</a>
                 <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Como Ajudar</a>
@@ -520,6 +522,47 @@ export default function Home() {
                     </div>
                  </motion.div>
               </div>
+           </div>
+        </div>
+      </motion.section>
+
+      {/* Essence Section */}
+      <motion.section 
+        id="essencia" 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-32 bg-white px-6 lg:px-12 overflow-hidden"
+      >
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+           <div className="order-2 lg:order-1">
+              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">O Coração do Projeto</p>
+              <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">
+                {settings.essencia_title?.value || 'Nossa Essência: A alma por trás de cada movimento'}
+              </h2>
+              <div className="prose prose-lg prose-serif text-brand-dark/70 leading-relaxed max-w-xl">
+                <p className="whitespace-pre-line">
+                  {settings.essencia_text?.value || 'No Núcleo de Dança, acreditamos que a técnica é apenas o meio, enquanto a alma é o fim. Nossa essência reside na disciplina que liberta, na paixão que contagia e no compromisso inabalável com a arte.'}
+                </p>
+              </div>
+           </div>
+           <div className="relative order-1 lg:order-2">
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.5 }}
+                className="aspect-[4/5] bg-brand-dark overflow-hidden ring-1 ring-black/10 shadow-2xl relative"
+              >
+                <img 
+                  src={settings.essencia_image?.value || "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=2669&auto=format&fit=crop"} 
+                  alt="Nossa Essência" 
+                  className="w-full h-full object-cover brightness-90 contrast-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              </motion.div>
+              {/* Decorative elements */}
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 border-2 border-brand-orange/10 rounded-full hidden md:block"></div>
+              <div className="absolute -top-6 -left-6 w-20 h-20 bg-brand-orange/5 rounded-full blur-2xl"></div>
            </div>
         </div>
       </motion.section>

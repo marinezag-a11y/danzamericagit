@@ -630,7 +630,7 @@ export default function Home() {
       >
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
            <div className="order-2 lg:order-1">
-              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">O Coração do Projeto</p>
+              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Nossa Essência</p>
               <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">
                 {settings.essencia_title?.value || 'Nossa Essência: A alma por trás de cada movimento'}
               </h2>
@@ -713,7 +713,7 @@ export default function Home() {
               </div>
            </div>
            <div>
-              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">A Nossa História</p>
+              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">A Jornada</p>
               <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">
                 {settings.jornada_title?.value || 'Excelência que Atravessa Fronteiras.'}
               </h2>
@@ -781,7 +781,7 @@ export default function Home() {
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.8 }}
             >
-              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">01. O Desafio</p>
+              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">O Desafio</p>
               <h2 className="text-5xl md:text-7xl text-white mb-8 leading-tight font-serif">
                 {settings.desafio_title?.value || 'Rumo ao Danzamerica 2026'}
               </h2>
@@ -853,7 +853,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
             <div className="max-w-xl">
-              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">03. Portfólio de Talentos</p>
+              <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Galeria</p>
               <h2 className="text-5xl md:text-7xl text-brand-dark mb-8 leading-tight font-serif">
                 Arte em <br /><span className="italic">Movimento</span>
               </h2>

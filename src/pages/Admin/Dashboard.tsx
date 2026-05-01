@@ -15,7 +15,9 @@ import {
   Upload,
   Trophy,
   X,
-  Heart
+  Heart,
+  Pencil,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
@@ -506,7 +508,7 @@ function GalleryManager() {
                 <button 
                   onClick={handleAdd}
                   disabled={adding || !newUrl}
-                  className="w-full py-5 bg-brand-orange text-white text-[12px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="w-full py-5 bg-brand-orange text-white text-[12px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-3"
                 >
                   {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Finalizar e Adicionar à Galeria
@@ -1188,11 +1190,13 @@ function HelpSectionManager() {
 }
 
 function JourneyManager() {
-  const { items, loading, addItem, deleteItem } = useJourney();
+  const { items, loading, addItem, deleteItem, updateItem } = useJourney();
   const [newLabel, setNewLabel] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<JourneyItem>>({});
 
   const handleAdd = async () => {
     if (!newLabel || !newTitle) return;
@@ -1211,6 +1215,21 @@ function JourneyManager() {
       console.error(err);
     }
     setAdding(false);
+  };
+
+  const handleStartEdit = (item: JourneyItem) => {
+    setEditingId(item.id);
+    setEditForm(item);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    try {
+      await updateItem(editingId, editForm);
+      setEditingId(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   if (loading) return <Loader2 className="w-6 h-6 animate-spin text-brand-orange mx-auto" />;
@@ -1270,23 +1289,72 @@ function JourneyManager() {
              <p className="text-sm italic opacity-30 font-serif">Nenhuma conquista cadastrada ainda.</p>
            </div>
          ) : (
-           <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-3">
              {items.map((item) => (
-               <div key={item.id} className="flex items-center justify-between p-6 bg-white/5 border border-white/5 group hover:border-white/20 transition-all">
-                 <div className="flex gap-8 items-center">
-                   <span className="text-brand-orange font-serif text-3xl opacity-80">{item.label}</span>
-                   <div>
-                     <h6 className="font-serif text-lg text-white mb-1">{item.title}</h6>
-                     <p className="text-xs opacity-40 line-clamp-1 font-serif max-w-md">{item.description}</p>
+               <div key={item.id} className="flex flex-col p-6 bg-white/5 border border-white/5 group hover:border-white/20 transition-all">
+                 {editingId === item.id ? (
+                   <div className="space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input 
+                          type="text" 
+                          value={editForm.label}
+                          onChange={(e) => setEditForm({...editForm, label: e.target.value})}
+                          className="bg-brand-dark border border-white/10 p-2 text-sm font-serif outline-none focus:border-brand-orange"
+                        />
+                        <input 
+                          type="text" 
+                          value={editForm.title}
+                          onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                          className="md:col-span-3 bg-brand-dark border border-white/10 p-2 text-sm font-serif outline-none focus:border-brand-orange"
+                        />
+                     </div>
+                     <textarea 
+                        value={editForm.description}
+                        onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                        className="w-full bg-brand-dark border border-white/10 p-2 text-sm font-serif outline-none focus:border-brand-orange min-h-[60px]"
+                     />
+                     <div className="flex gap-2">
+                        <button 
+                          onClick={handleSaveEdit}
+                          className="flex-1 bg-green-600 hover:bg-green-700 py-2 text-[10px] uppercase font-bold tracking-widest flex items-center justify-center gap-2"
+                        >
+                          <Check className="w-3 h-3" /> Salvar
+                        </button>
+                        <button 
+                          onClick={() => setEditingId(null)}
+                          className="px-6 bg-white/10 hover:bg-white/20 py-2 text-[10px] uppercase font-bold tracking-widest"
+                        >
+                          Cancelar
+                        </button>
+                     </div>
                    </div>
-                 </div>
-                 <button 
-                   onClick={() => deleteItem(item.id)}
-                   className="p-3 text-white/10 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-full"
-                   title="Remover conquista"
-                 >
-                   <Trash2 className="w-5 h-5" strokeWidth={1.5} />
-                 </button>
+                 ) : (
+                   <div className="flex items-center justify-between">
+                     <div className="flex gap-8 items-center">
+                       <span className="text-brand-orange font-serif text-3xl opacity-80">{item.label}</span>
+                       <div>
+                         <h6 className="font-serif text-lg text-white mb-1">{item.title}</h6>
+                         <p className="text-xs opacity-40 line-clamp-1 font-serif max-w-md">{item.description}</p>
+                       </div>
+                     </div>
+                     <div className="flex gap-2">
+                       <button 
+                         onClick={() => handleStartEdit(item)}
+                         className="p-3 text-white/10 hover:text-brand-orange hover:bg-white/5 transition-all rounded-full"
+                         title="Editar conquista"
+                       >
+                         <Pencil className="w-5 h-5" strokeWidth={1.5} />
+                       </button>
+                       <button 
+                         onClick={() => deleteItem(item.id)}
+                         className="p-3 text-white/10 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-full"
+                         title="Remover conquista"
+                       >
+                         <Trash2 className="w-5 h-5" strokeWidth={1.5} />
+                       </button>
+                     </div>
+                   </div>
+                 )}
                </div>
              ))}
            </div>

@@ -764,14 +764,14 @@ function BannerManager() {
         <h3 className="text-xl font-serif italic text-white/60">Slides do Topo (Máx 6)</h3>
         {banners.length < 6 && (
           <button 
-            onClick={async () => {
-              const result = await addBanner({ 
+            onClick={() => {
+              setEditingBanner({ 
+                id: 'new', 
                 image_url: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=2669&auto=format&fit=crop', 
-                title: 'Novo Título', 
-                subtitle: 'Legenda do Banner', 
+                title: '', 
+                subtitle: '', 
                 order_index: banners.length 
               });
-              if (result.success) triggerSuccess('Novo slide adicionado!');
             }}
             className="flex items-center gap-2 bg-brand-orange text-white px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all"
           >
@@ -825,7 +825,9 @@ function BannerManager() {
                 <X className="w-6 h-6" />
               </button>
 
-              <h3 className="text-3xl font-serif italic mb-8">Editar Slide</h3>
+              <h3 className="text-3xl font-serif italic mb-8">
+                {editingBanner.id === 'new' ? 'Novo Slide' : 'Editar Slide'}
+              </h3>
 
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -874,17 +876,24 @@ function BannerManager() {
                       const title = (document.getElementById('banner-title') as HTMLInputElement).value;
                       const subtitle = (document.getElementById('banner-subtitle') as HTMLInputElement).value;
                       const image_url = (document.getElementById('banner-url') as HTMLInputElement).value;
-                      const result = await updateBanner(editingBanner.id, { title, subtitle, image_url });
+                      
+                      let result;
+                      if (editingBanner.id === 'new') {
+                        result = await addBanner({ title, subtitle, image_url, order_index: editingBanner.order_index });
+                      } else {
+                        result = await updateBanner(editingBanner.id, { title, subtitle, image_url });
+                      }
+
                       if (result.success) {
                         setEditingBanner(null);
-                        triggerSuccess('Slide atualizado!');
+                        triggerSuccess(editingBanner.id === 'new' ? 'Slide criado!' : 'Slide atualizado!');
                       }
                       setSaving(false);
                     }}
                     className="flex-1 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2"
                   >
                     {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                    Salvar Alterações
+                    {editingBanner.id === 'new' ? 'Criar Slide' : 'Salvar Alterações'}
                   </button>
                 </div>
               </div>
@@ -932,6 +941,7 @@ function TickerManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [phraseToDelete, setPhraseToDelete] = useState<string | null>(null);
 
   if (loading) return <Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" />;
 
@@ -1014,7 +1024,7 @@ function TickerManager() {
                       <Settings className="w-4 h-4" />
                     </button>
                     <button 
-                      onClick={() => deletePhrase(phrase.id)}
+                      onClick={() => setPhraseToDelete(phrase.id)}
                       className="p-2 hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1029,6 +1039,40 @@ function TickerManager() {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {phraseToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-brand-dark border border-white/10 p-12 max-w-lg w-full text-center"
+            >
+              <Trash2 className="w-16 h-16 text-red-500 mx-auto mb-8" />
+              <h3 className="text-3xl font-serif italic mb-4">Excluir Frase?</h3>
+              <p className="text-white/40 mb-12 font-serif">Esta frase será removida permanentemente da barra rotativa.</p>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setPhraseToDelete(null)}
+                  className="flex-1 py-4 border border-white/10 text-[10px] uppercase tracking-widest font-bold hover:bg-white/5 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={async () => {
+                    await deletePhrase(phraseToDelete);
+                    setPhraseToDelete(null);
+                  }}
+                  className="flex-1 py-4 bg-red-500 text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-red-500 transition-all"
+                >
+                  Sim, Excluir
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1042,29 +1086,29 @@ function HelpSectionManager() {
   const helpSections = [
     {
       id: 1,
-      title: 'Opção 01',
+      title: 'Loja Oficial',
       keys: {
-        title: 'help_option1_title',
-        description: 'help_option1_description',
-        image: 'help_option1_image'
+        title: 'help_store_title',
+        description: 'help_store_description',
+        image: 'help_store_image'
       }
     },
     {
       id: 2,
-      title: 'Opção 02',
+      title: 'Rifa Digital',
       keys: {
-        title: 'help_option2_title',
-        description: 'help_option2_description',
-        image: 'help_option2_image'
+        title: 'help_raffle_title',
+        description: 'help_raffle_description',
+        image: 'help_raffle_image'
       }
     },
     {
       id: 3,
-      title: 'Opção 03',
+      title: 'Eventos & Ações',
       keys: {
-        title: 'help_option3_title',
-        description: 'help_option3_description',
-        image: 'help_option3_image'
+        title: 'help_event_title',
+        description: 'help_event_description',
+        image: 'help_event_image'
       }
     }
   ];
@@ -1123,7 +1167,7 @@ function HelpSectionManager() {
           </div>
 
           <div className="pt-4 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold opacity-40">
-            {saving?.startsWith('help_option' + sec.id) ? (
+            {saving?.startsWith('help_') && (saving === sec.keys.title || saving === sec.keys.description || saving === sec.keys.image) ? (
               <><Loader2 className="w-3 h-3 animate-spin" /> Salvando...</>
             ) : (
               <><CheckCircle2 className="w-3 h-3 text-green-500" /> Sincronizado</>

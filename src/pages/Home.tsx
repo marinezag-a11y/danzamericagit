@@ -1009,6 +1009,7 @@ export default function Home() {
       <section id="patrocinio" className="py-32 bg-brand-dark px-6 lg:px-12">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-24">
+            <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Patrocínio</p>
             <h2 className="text-5xl md:text-7xl text-white mb-8 font-serif">Invista no <span className="italic">Talento</span></h2>
             <p className="text-white/40 text-lg max-w-2xl mx-auto font-serif">
               Sua empresa pode ser a ponte que levará 22 bailarinos mineiros ao palco internacional. Conheça nossas cotas de patrocínio.

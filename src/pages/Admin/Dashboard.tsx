@@ -334,7 +334,7 @@ function ContentEditor() {
     },
     {
       title: '02. Seção: A Jornada',
-      keys: ['jornada_title', 'jornada_description', 'jornada_image']
+      keys: ['jornada_title', 'jornada_image']
     },
     {
       title: '03. Seção: O Desafio',
@@ -1215,80 +1215,83 @@ function JourneyManager() {
 
   if (loading) return <Loader2 className="w-6 h-6 animate-spin text-brand-orange mx-auto" />;
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h4 className="text-xl font-serif italic mb-6">Linha do Tempo (Conquistas)</h4>
-        
-        <div className="bg-black/20 p-6 space-y-4 border border-white/5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest opacity-40">Ano ou Sigla (Ex: 2026. ou S.P.)</label>
-              <input 
-                type="text" 
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-brand-orange"
-                placeholder="Ex: 2026."
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest opacity-40">Título Curto</label>
-              <input 
-                type="text" 
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-brand-orange"
-                placeholder="Ex: Melhor Grupo: Arte Minas"
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest opacity-40">Descrição Detalhada</label>
-            <textarea 
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-brand-orange min-h-[80px]"
-              placeholder="Descreva a conquista..."
-            />
-          </div>
-          <button 
-            onClick={handleAdd}
-            disabled={adding || !newLabel || !newTitle}
-            className="w-full bg-white/10 hover:bg-brand-orange py-3 text-[10px] uppercase font-bold tracking-widest transition-all flex items-center justify-center gap-2"
-          >
-            {adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-            Adicionar à Jornada
-          </button>
-        </div>
-      </div>
+   return (
+     <div className="space-y-8">
+       <div>
+         <h4 className="text-xl font-serif italic mb-6">Linha do Tempo (Conquistas)</h4>
+         
+         <div className="bg-white/5 p-8 space-y-8 border border-white/10">
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+             <div className="md:col-span-1 space-y-3">
+               <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Ano ou Sigla</label>
+               <input 
+                 type="text" 
+                 value={newLabel}
+                 onChange={(e) => setNewLabel(e.target.value)}
+                 className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif outline-none focus:border-brand-orange transition-all placeholder:opacity-20"
+                 placeholder="Ex: 2026."
+               />
+             </div>
+             <div className="md:col-span-3 space-y-3">
+               <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Título Curto</label>
+               <input 
+                 type="text" 
+                 value={newTitle}
+                 onChange={(e) => setNewTitle(e.target.value)}
+                 className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif outline-none focus:border-brand-orange transition-all placeholder:opacity-20"
+                 placeholder="Ex: Melhor Grupo: Arte Minas"
+               />
+             </div>
+           </div>
+           <div className="space-y-3">
+             <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Descrição Detalhada</label>
+             <textarea 
+               value={newDescription}
+               onChange={(e) => setNewDescription(e.target.value)}
+               className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif outline-none focus:border-brand-orange min-h-[100px] transition-all placeholder:opacity-20"
+               placeholder="Descreva a conquista de forma breve e impactante..."
+             />
+           </div>
+           <button 
+             onClick={handleAdd}
+             disabled={adding || !newLabel || !newTitle}
+             className="w-full bg-brand-orange hover:bg-white hover:text-brand-dark py-4 text-[10px] uppercase font-bold tracking-[0.2em] transition-all flex items-center justify-center gap-3"
+           >
+             {adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-4 h-4" />}
+             Adicionar à Jornada
+           </button>
+         </div>
+       </div>
 
-      <div className="space-y-4">
-        <h5 className="text-[10px] uppercase tracking-widest opacity-40 font-bold">Conquistas no Ar</h5>
-        {items.length === 0 ? (
-          <p className="text-sm italic opacity-30">Nenhuma conquista cadastrada.</p>
-        ) : (
-          <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 group hover:border-white/10 transition-all">
-                <div className="flex gap-6 items-start">
-                  <span className="text-brand-orange font-serif text-xl">{item.label}</span>
-                  <div>
-                    <h6 className="font-serif text-white">{item.title}</h6>
-                    <p className="text-[10px] opacity-40 line-clamp-1">{item.description}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => deleteItem(item.id)}
-                  className="p-2 text-white/20 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+       <div className="space-y-4">
+         <h5 className="text-[10px] uppercase tracking-widest text-white/20 font-bold">Conquistas Ativas no Site</h5>
+         {items.length === 0 ? (
+           <div className="p-12 border border-dashed border-white/10 text-center">
+             <p className="text-sm italic opacity-30 font-serif">Nenhuma conquista cadastrada ainda.</p>
+           </div>
+         ) : (
+           <div className="grid grid-cols-1 gap-3">
+             {items.map((item) => (
+               <div key={item.id} className="flex items-center justify-between p-6 bg-white/5 border border-white/5 group hover:border-white/20 transition-all">
+                 <div className="flex gap-8 items-center">
+                   <span className="text-brand-orange font-serif text-3xl opacity-80">{item.label}</span>
+                   <div>
+                     <h6 className="font-serif text-lg text-white mb-1">{item.title}</h6>
+                     <p className="text-xs opacity-40 line-clamp-1 font-serif max-w-md">{item.description}</p>
+                   </div>
+                 </div>
+                 <button 
+                   onClick={() => deleteItem(item.id)}
+                   className="p-3 text-white/10 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-full"
+                   title="Remover conquista"
+                 >
+                   <Trash2 className="w-5 h-5" strokeWidth={1.5} />
+                 </button>
+               </div>
+             ))}
+           </div>
+         )}
+       </div>
+     </div>
   );
 }

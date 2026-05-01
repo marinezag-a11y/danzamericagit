@@ -389,6 +389,7 @@ export default function Home() {
   const [activeModal, setActiveModal] = useState<'store' | 'raffle' | 'event' | 'donation' | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedImageIdx, setSelectedImageIdx] = useState<number | null>(null);
+  const [activeSection, setActiveSection] = useState<string>('');
 
   // Dynamic Data
   const { settings, loading: settingsLoading } = useSiteSettings();
@@ -468,7 +469,29 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // ... (keeping other hooks/logic)
+  useEffect(() => {
+    const sections = ['essencia', 'jornada', 'desafio', 'galeria', 'ajudar', 'patrocinio'];
+    const observerOptions = {
+      root: null,
+      rootMargin: '-40% 0px -40% 0px',
+      threshold: 0
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    }, observerOptions);
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
@@ -488,12 +511,12 @@ export default function Home() {
         </div>
         
         <div className="hidden lg:flex gap-14 text-xs uppercase tracking-[0.25em] font-display font-medium z-10">
-          <a href="#essencia" className="hover:text-brand-orange transition-colors drop-shadow-md">Nossa Essência</a>
-          <a href="#jornada" className="hover:text-brand-orange transition-colors drop-shadow-md">A Jornada</a>
-          <a href="#desafio" className="hover:text-brand-orange transition-colors drop-shadow-md">O Desafio</a>
-          <a href="#galeria" className="hover:text-brand-orange transition-colors drop-shadow-md">Galeria</a>
-          <a href="#ajudar" className="hover:text-brand-orange transition-colors drop-shadow-md">Como Ajudar</a>
-          <a href="#patrocinio" className="hover:text-brand-orange transition-colors drop-shadow-md">Patrocínio</a>
+          <a href="#essencia" className={`${activeSection === 'essencia' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Nossa Essência</a>
+          <a href="#jornada" className={`${activeSection === 'jornada' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>A Jornada</a>
+          <a href="#desafio" className={`${activeSection === 'desafio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>O Desafio</a>
+          <a href="#galeria" className={`${activeSection === 'galeria' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Galeria</a>
+          <a href="#ajudar" className={`${activeSection === 'ajudar' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Como Ajudar</a>
+          <a href="#patrocinio" className={`${activeSection === 'patrocinio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Patrocínio</a>
         </div>
 
         <div className="relative z-20 flex items-center gap-2 sm:gap-4">
@@ -517,12 +540,12 @@ export default function Home() {
               className="fixed inset-0 bg-brand-dark z-[60] flex flex-col p-8 pt-32"
             >
               <div className="flex flex-col gap-8 text-2xl uppercase tracking-widest font-display text-white">
-                <a href="#essencia" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Nossa Essência</a>
-                <a href="#jornada" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">A Jornada</a>
-                <a href="#desafio" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">O Desafio</a>
-                <a href="#galeria" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Galeria</a>
-                <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Como Ajudar</a>
-                <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className="hover:text-brand-orange">Patrocínio</a>
+                <a href="#essencia" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'essencia' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>Nossa Essência</a>
+                <a href="#jornada" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'jornada' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>A Jornada</a>
+                <a href="#desafio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'desafio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>O Desafio</a>
+                <a href="#galeria" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'galeria' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>Galeria</a>
+                <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'ajudar' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>Como Ajudar</a>
+                <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'patrocinio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>Patrocínio</a>
               </div>
               
               <div className="mt-auto pt-12 border-t border-white/10">
@@ -897,9 +920,16 @@ export default function Home() {
       </section>
 
       {/* How to Help - Interative Cards */}
-      <section id="ajudar" className="py-12 bg-brand-white px-6 lg:px-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+       <section id="ajudar" className="py-32 bg-brand-white px-6 lg:px-12">
+         <div className="max-w-7xl mx-auto">
+           <div className="text-center mb-24">
+             <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Como Ajudar</p>
+             <h2 className="text-5xl md:text-7xl text-brand-dark mb-8 font-serif">Maneiras de <span className="italic">Apoiar</span></h2>
+             <p className="text-brand-dark/40 text-lg max-w-2xl mx-auto font-serif">
+               Escolha a forma que melhor se adapta a você e ajude nossos bailarinos a alcançarem seus sonhos.
+             </p>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Loja */}
             <motion.div 
               whileHover={{ y: -10 }}

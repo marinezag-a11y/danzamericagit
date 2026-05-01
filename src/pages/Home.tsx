@@ -34,6 +34,7 @@ import { useGallery } from '../hooks/useGallery';
 import { useSponsorship } from '../hooks/useSponsorship';
 import { useHeroBanners } from '../hooks/useHeroBanners';
 import { useTicker } from '../hooks/useTicker';
+import { useJourney } from '../hooks/useJourney';
 
 // Product Types
 interface Product {
@@ -397,6 +398,7 @@ export default function Home() {
   const { tiers, loading: tiersLoading } = useSponsorship();
   const { banners, loading: bannersLoading } = useHeroBanners();
   const { phrases, loading: phrasesLoading } = useTicker();
+  const { items: journeyItems, loading: journeyLoading } = useJourney();
   
   const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
   const [selectedTierData, setSelectedTierData] = useState<{name: string, price: string, benefits: string[]} | null>(null);
@@ -493,7 +495,7 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading) return (
+  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
       <p className="text-[10px] uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
@@ -741,33 +743,24 @@ export default function Home() {
                 {settings.jornada_title?.value || 'Excelência que Atravessa Fronteiras.'}
               </h2>
               <div className="space-y-12">
-                 <motion.div 
-                   initial={{ opacity: 0, x: 20 }}
-                   whileInView={{ opacity: 1, x: 0 }}
-                   transition={{ delay: 0.2 }}
-                   className="flex gap-8"
-                 >
-                    <span className="text-brand-orange text-4xl font-serif">2026.</span>
-                    <div>
-                       <h4 className="text-2xl font-serif mb-2 text-brand-dark">Melhor Grupo: Arte Minas</h4>
-                       <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">
-                         {settings.jornada_description?.value || 'Premiados pela coreografia "Crustáceos", consolidando nossa posição como referência técnica no estado.'}
-                       </p>
-                    </div>
-                 </motion.div>
-                 <motion.div 
-                   initial={{ opacity: 0, x: 20 }}
-                   whileInView={{ opacity: 1, x: 0 }}
-                   transition={{ delay: 0.4 }}
-                   className="flex gap-8"
-                 >
-                    <span className="text-brand-orange text-4xl font-serif">S.P.</span>
-                    <div>
-                       <h4 className="text-2xl font-serif mb-2 text-brand-dark">Social Proof: Douglas de Oliveira</h4>
-                       <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">Ex-aluno do Núcleo que hoje brilha como Primeiro Bailarino na Polônia, provando que nosso método forma cidadãos globais.</p>
-                    </div>
-                 </motion.div>
-              </div>
+                  {(journeyItems || []).map((item, idx) => (
+                    <motion.div 
+                      key={item.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.2 }}
+                      className="flex gap-8"
+                    >
+                       <span className="text-brand-orange text-4xl font-serif">{item.label}</span>
+                       <div>
+                          <h4 className="text-2xl font-serif mb-2 text-brand-dark">{item.title}</h4>
+                          <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">
+                            {item.description}
+                          </p>
+                       </div>
+                    </motion.div>
+                  ))}
+               </div>
            </div>
         </div>
       </motion.section>

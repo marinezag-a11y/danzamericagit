@@ -23,6 +23,7 @@ import { useGallery } from '../../hooks/useGallery';
 import { useSponsorship, SponsorshipTier } from '../../hooks/useSponsorship';
 import { useHeroBanners, HeroBanner } from '../../hooks/useHeroBanners';
 import { useTicker, TickerPhrase } from '../../hooks/useTicker';
+import { useJourney, JourneyItem } from '../../hooks/useJourney';
 import { uploadImage } from '../../lib/upload';
 
 // Global Image Optimization Utility
@@ -404,21 +405,28 @@ function ContentEditor() {
             ))}
           </div>
 
-          <div className="pt-6 mt-6 border-t border-white/5">
-            <button 
-              onClick={() => handleSaveSection(section.title, section.keys)}
-              disabled={saving === section.title}
-              className={`w-full py-4 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all ${
-                success === section.title ? 'bg-green-500' : 'bg-brand-orange hover:bg-white hover:text-brand-dark'
-              } disabled:opacity-50`}
-            >
-              {saving === section.title ? <Loader2 className="w-3 h-3 animate-spin" /> : success === section.title ? <CheckCircle2 className="w-3 h-3" /> : <Save className="w-3 h-3" />}
-              {saving === section.title ? 'Salvando...' : success === section.title ? 'Salvo com Sucesso' : 'Salvar Alterações'}
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
+           <div className="pt-6 mt-6 border-t border-white/5">
+             <button 
+               onClick={() => handleSaveSection(section.title, section.keys)}
+               disabled={saving === section.title}
+               className={`w-full py-4 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all ${
+                 success === section.title ? 'bg-green-500' : 'bg-brand-orange hover:bg-white hover:text-brand-dark'
+               } disabled:opacity-50`}
+             >
+               {saving === section.title ? <Loader2 className="w-3 h-3 animate-spin" /> : success === section.title ? <CheckCircle2 className="w-3 h-3" /> : <Save className="w-3 h-3" />}
+               {saving === section.title ? 'Salvando...' : success === section.title ? 'Salvo com Sucesso' : 'Salvar Alterações'}
+             </button>
+           </div>
+
+           {/* Add Journey Manager for Section 02 */}
+           {section.title === '02. Seção: A Jornada' && (
+             <div className="mt-12 pt-12 border-t border-white/10">
+               <JourneyManager />
+             </div>
+           )}
+         </div>
+       ))}
+     </div>
   );
 }
 
@@ -1175,6 +1183,112 @@ function HelpSectionManager() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function JourneyManager() {
+  const { items, loading, addItem, deleteItem } = useJourney();
+  const [newLabel, setNewLabel] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const handleAdd = async () => {
+    if (!newLabel || !newTitle) return;
+    setAdding(true);
+    try {
+      await addItem({ 
+        label: newLabel, 
+        title: newTitle, 
+        description: newDescription,
+        order: items.length 
+      });
+      setNewLabel('');
+      setNewTitle('');
+      setNewDescription('');
+    } catch (err) {
+      console.error(err);
+    }
+    setAdding(false);
+  };
+
+  if (loading) return <Loader2 className="w-6 h-6 animate-spin text-brand-orange mx-auto" />;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h4 className="text-xl font-serif italic mb-6">Linha do Tempo (Conquistas)</h4>
+        
+        <div className="bg-black/20 p-6 space-y-4 border border-white/5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-widest opacity-40">Ano ou Sigla (Ex: 2026. ou S.P.)</label>
+              <input 
+                type="text" 
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-brand-orange"
+                placeholder="Ex: 2026."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-widest opacity-40">Título Curto</label>
+              <input 
+                type="text" 
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-brand-orange"
+                placeholder="Ex: Melhor Grupo: Arte Minas"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-widest opacity-40">Descrição Detalhada</label>
+            <textarea 
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 p-3 text-sm outline-none focus:border-brand-orange min-h-[80px]"
+              placeholder="Descreva a conquista..."
+            />
+          </div>
+          <button 
+            onClick={handleAdd}
+            disabled={adding || !newLabel || !newTitle}
+            className="w-full bg-white/10 hover:bg-brand-orange py-3 text-[10px] uppercase font-bold tracking-widest transition-all flex items-center justify-center gap-2"
+          >
+            {adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+            Adicionar à Jornada
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h5 className="text-[10px] uppercase tracking-widest opacity-40 font-bold">Conquistas no Ar</h5>
+        {items.length === 0 ? (
+          <p className="text-sm italic opacity-30">Nenhuma conquista cadastrada.</p>
+        ) : (
+          <div className="space-y-3">
+            {items.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 group hover:border-white/10 transition-all">
+                <div className="flex gap-6 items-start">
+                  <span className="text-brand-orange font-serif text-xl">{item.label}</span>
+                  <div>
+                    <h6 className="font-serif text-white">{item.title}</h6>
+                    <p className="text-[10px] opacity-40 line-clamp-1">{item.description}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => deleteItem(item.id)}
+                  className="p-2 text-white/20 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

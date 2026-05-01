@@ -742,25 +742,39 @@ export default function Home() {
               <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">
                 {settings.jornada_title?.value || 'Excelência que Atravessa Fronteiras.'}
               </h2>
-              <div className="space-y-12">
-                  {(journeyItems || []).map((item, idx) => (
-                    <motion.div 
-                      key={item.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.2 }}
-                      className="flex gap-8"
-                    >
-                       <span className="text-brand-orange text-4xl font-serif">{item.label}</span>
-                       <div>
-                          <h4 className="text-2xl font-serif mb-2 text-brand-dark">{item.title}</h4>
-                          <p className="text-brand-dark/50 text-sm leading-relaxed font-serif">
-                            {item.description}
-                          </p>
-                       </div>
-                    </motion.div>
-                  ))}
-               </div>
+               <div className="relative h-[480px] overflow-hidden">
+                  <motion.div 
+                    className="space-y-12 py-10"
+                    animate={{
+                      y: ["0%", "-50%"]
+                    }}
+                    transition={{
+                      duration: Math.max(25, (journeyItems?.length || 0) * 12),
+                      repeat: Infinity,
+                      ease: "linear"
+                    }}
+                  >
+                      {[...(journeyItems || []), ...(journeyItems || [])].map((item, idx) => (
+                        <div 
+                          key={`${item.id}-${idx}`}
+                          className="flex gap-8 group/item transition-all duration-500 hover:translate-x-2"
+                        >
+                           <div className="flex-shrink-0 w-24">
+                              <span className="text-brand-orange text-4xl font-serif block leading-none">{item.label}</span>
+                           </div>
+                           <div className="flex-1">
+                              <h4 className="text-2xl font-serif mb-2 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
+                              <p className="text-brand-dark/50 text-sm leading-relaxed font-serif max-w-lg">
+                                {item.description}
+                              </p>
+                           </div>
+                        </div>
+                      ))}
+                   </motion.div>
+                   
+                   <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white via-white/80 to-transparent z-10 pointer-events-none" />
+                   <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/80 to-transparent z-10 pointer-events-none" />
+                </div>
            </div>
         </div>
       </motion.section>

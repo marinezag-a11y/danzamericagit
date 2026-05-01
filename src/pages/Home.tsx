@@ -399,6 +399,7 @@ export default function Home() {
   const { banners, loading: bannersLoading } = useHeroBanners();
   const { phrases, loading: phrasesLoading } = useTicker();
   const { items: journeyItems, loading: journeyLoading } = useJourney();
+  const [isJourneyPaused, setIsJourneyPaused] = useState(false);
   
   const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
   const [selectedTierData, setSelectedTierData] = useState<{name: string, price: string, benefits: string[]} | null>(null);
@@ -742,39 +743,47 @@ export default function Home() {
               <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">
                 {settings.jornada_title?.value || 'Excelência que Atravessa Fronteiras.'}
               </h2>
-               <div className="relative h-[480px] overflow-hidden">
-                  <motion.div 
-                    className="space-y-12 py-10"
-                    animate={{
-                      y: ["0%", "-50%"]
-                    }}
-                    transition={{
-                      duration: Math.max(25, (journeyItems?.length || 0) * 12),
-                      repeat: Infinity,
-                      ease: "linear"
-                    }}
-                  >
-                      {[...(journeyItems || []), ...(journeyItems || [])].map((item, idx) => (
-                        <div 
-                          key={`${item.id}-${idx}`}
-                          className="flex gap-8 group/item transition-all duration-500 hover:translate-x-2"
-                        >
-                           <div className="flex-shrink-0 w-24">
-                              <span className="text-brand-orange text-4xl font-serif block leading-none">{item.label}</span>
-                           </div>
-                           <div className="flex-1">
-                              <h4 className="text-2xl font-serif mb-2 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
-                              <p className="text-brand-dark/50 text-sm leading-relaxed font-serif max-w-lg">
-                                {item.description}
-                              </p>
-                           </div>
-                        </div>
-                      ))}
-                   </motion.div>
-                   
-                   <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white via-white/80 to-transparent z-10 pointer-events-none" />
-                   <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/80 to-transparent z-10 pointer-events-none" />
-                </div>
+               <div 
+                  className="relative h-[480px] overflow-hidden [perspective:1000px]"
+                  onMouseEnter={() => setIsJourneyPaused(true)}
+                  onMouseLeave={() => setIsJourneyPaused(false)}
+                >
+                   <motion.div 
+                     className="space-y-12 py-10"
+                     animate={{
+                       y: isJourneyPaused ? "var(--current-y)" : ["0%", "-50%"]
+                     }}
+                     transition={{
+                       duration: Math.max(25, (journeyItems?.length || 0) * 12),
+                       repeat: Infinity,
+                       ease: "linear"
+                     }}
+                   >
+                       {[...(journeyItems || []), ...(journeyItems || [])].map((item, idx) => (
+                         <motion.div 
+                           key={`${item.id}-${idx}`}
+                           className="flex gap-8 group/item transition-all duration-500 hover:translate-x-4"
+                           initial={{ opacity: 0.4, scale: 0.95, rotateX: 10 }}
+                           whileInView={{ opacity: 1, scale: 1, rotateX: 0 }}
+                           viewport={{ margin: "-100px 0px -100px 0px" }}
+                         >
+                            <div className="flex-shrink-0 w-24">
+                               <span className="text-brand-orange text-5xl font-serif block leading-none transition-transform group-hover/item:scale-110">{item.label}</span>
+                            </div>
+                            <div className="flex-1">
+                               <h4 className="text-2xl font-serif mb-2 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
+                               <p className="text-brand-dark/50 text-sm leading-relaxed font-serif max-w-lg">
+                                 {item.description}
+                               </p>
+                            </div>
+                         </motion.div>
+                       ))}
+                    </motion.div>
+                    
+                    {/* Enhanced Gradient Masks */}
+                    <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white via-white/95 to-transparent z-10 pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/95 to-transparent z-10 pointer-events-none" />
+                 </div>
            </div>
         </div>
       </motion.section>

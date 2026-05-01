@@ -1221,8 +1221,8 @@ function JourneyManager() {
          <h4 className="text-xl font-serif italic mb-6">Linha do Tempo (Conquistas)</h4>
          
          <div className="bg-white/5 p-8 space-y-8 border border-white/10">
-           <div className="flex flex-col md:flex-row gap-12">
-             <div className="w-full md:w-40 space-y-3">
+           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+             <div className="md:col-span-3 space-y-3">
                <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Ano ou Sigla</label>
                <input 
                  type="text" 
@@ -1232,7 +1232,7 @@ function JourneyManager() {
                  placeholder="2026."
                />
              </div>
-             <div className="flex-1 space-y-3">
+             <div className="md:col-span-9 space-y-3">
                <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Título Curto</label>
                <input 
                  type="text" 

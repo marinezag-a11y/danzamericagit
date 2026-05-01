@@ -8,6 +8,14 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  section[id] {
+    scroll-margin-top: 120px;
+  }
+
   body {
     background-color: #1A1A1A;
     color: #FFFFFF;

@@ -1221,19 +1221,19 @@ function JourneyManager() {
          <h4 className="text-xl font-serif italic mb-6">Linha do Tempo (Conquistas)</h4>
          
          <div className="bg-white/5 p-8 space-y-8 border border-white/10">
-           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-             <div className="md:col-span-3 space-y-3">
-               <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Ano ou Sigla</label>
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-end">
+             <div className="space-y-3">
+               <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold block min-h-[1.5em]">Ano ou Sigla</label>
                <input 
                  type="text" 
                  value={newLabel}
                  onChange={(e) => setNewLabel(e.target.value)}
-                 className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif outline-none focus:border-brand-orange transition-all placeholder:opacity-20 text-center"
+                 className="w-full bg-white/5 border border-white/10 p-4 text-sm font-serif outline-none focus:border-brand-orange transition-all placeholder:opacity-20"
                  placeholder="2026."
                />
              </div>
-             <div className="md:col-span-9 space-y-3">
-               <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Título Curto</label>
+             <div className="md:col-span-3 space-y-3">
+               <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold block min-h-[1.5em]">Título Curto</label>
                <input 
                  type="text" 
                  value={newTitle}

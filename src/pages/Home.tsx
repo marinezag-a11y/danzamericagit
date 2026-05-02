@@ -601,12 +601,12 @@ export default function Home() {
               className="fixed inset-0 bg-brand-dark z-[60] flex flex-col p-8 pt-32"
             >
               <div className="flex flex-col gap-8 text-2xl uppercase tracking-widest font-display text-white">
-                <a href="#essencia" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'essencia' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>Nossa Essência</a>
-                <a href="#jornada" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'jornada' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>A Jornada</a>
-                <a href="#desafio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'desafio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>O Desafio</a>
-                <a href="#galeria" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'galeria' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>Galeria</a>
-                <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'ajudar' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>Como Ajudar</a>
-                <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'patrocinio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange`}>Patrocínio</a>
+                <a href="#essencia" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'essencia' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Nossa Essência</a>
+                <a href="#jornada" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'jornada' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>A Jornada</a>
+                <a href="#desafio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'desafio' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>O Desafio</a>
+                <a href="#galeria" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'galeria' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Galeria</a>
+                <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'ajudar' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Como Ajudar</a>
+                <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'patrocinio' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Patrocínio</a>
               </div>
               
               <div className="mt-auto pt-12 border-t border-white/10">
@@ -803,12 +803,14 @@ export default function Home() {
                 {settings.jornada_title?.value || 'Excelência que Atravessa Fronteiras.'}
               </h2>
                                <div 
-                  className="relative h-[550px] overflow-hidden group/container"
+                  className="relative h-[600px] md:h-[550px] overflow-hidden group/container"
                   onMouseEnter={() => setIsJourneyPaused(true)}
                   onMouseLeave={() => setIsJourneyPaused(false)}
+                  onTouchStart={() => setIsJourneyPaused(true)}
+                  onTouchEnd={() => setIsJourneyPaused(false)}
                 >
                    <motion.div 
-                     className="space-y-24 py-32"
+                     className="space-y-16 md:space-y-24 py-32"
                      animate={isJourneyPaused ? {} : { y: ["0%", "-50%"] }}
                      transition={{
                        duration: Math.max(35, (journeyItems?.length || 0) * 12),
@@ -819,17 +821,17 @@ export default function Home() {
                        {[...(journeyItems || []), ...(journeyItems || [])].map((item, idx) => (
                          <motion.div 
                            key={`${item.id}-${idx}`}
-                           className="flex gap-12 items-center group/item transition-all duration-1000"
+                           className="flex flex-col md:flex-row gap-6 md:gap-12 items-center md:items-center group/item transition-all duration-1000 px-4 md:px-0"
                            initial={{ opacity: 0.1, scale: 0.8, filter: 'blur(8px)', y: 50 }}
                            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
                            viewport={{ amount: 0.5, margin: "-20% 0px -20% 0px" }}
                          >
-                            <div className="flex-shrink-0 w-40 text-right">
-                               <span className="text-brand-orange text-7xl font-serif block leading-none transition-all group-hover/item:text-brand-dark group-hover/item:scale-105">{item.label}</span>
+                            <div className="flex-shrink-0 w-full md:w-40 text-center md:text-right">
+                               <span className="text-brand-orange text-5xl md:text-7xl font-serif block leading-none transition-all group-hover/item:text-brand-dark group-hover/item:scale-105">{item.label}</span>
                             </div>
-                            <div className="flex-1 border-l-2 border-brand-orange/10 pl-12 transition-all group-hover/item:border-brand-orange group-hover/item:translate-x-4">
-                               <h4 className="text-3xl font-serif mb-4 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
-                               <p className="text-brand-dark/50 text-lg leading-relaxed font-serif max-w-xl group-hover/item:text-brand-dark transition-colors">
+                            <div className="flex-1 md:border-l-2 md:border-brand-orange/10 md:pl-12 text-center md:text-left transition-all group-hover/item:border-brand-orange md:group-hover/item:translate-x-4">
+                               <h4 className="text-2xl md:text-3xl font-serif mb-2 md:mb-4 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
+                               <p className="text-brand-dark/70 text-base md:text-lg leading-relaxed font-serif max-w-xl group-hover/item:text-brand-dark transition-colors">
                                  {item.description}
                                </p>
                             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { 
   Users, 
   ShoppingBag, 
@@ -35,6 +35,9 @@ import { useSponsorship } from '../hooks/useSponsorship';
 import { useHeroBanners } from '../hooks/useHeroBanners';
 import { useTicker } from '../hooks/useTicker';
 import { useJourney } from '../hooks/useJourney';
+import { useFundraising } from '../hooks/useFundraising';
+import { usePageTracking } from '../hooks/usePageTracking';
+import { useEventTracking } from '../hooks/useEventTracking';
 
 // Product Types
 interface Product {
@@ -43,6 +46,42 @@ interface Product {
   price: number;
   image: string;
   description: string;
+}
+
+function VerticalTicker({ phrases }: { phrases: any[] }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (phrases.length <= 1) return;
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % phrases.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [phrases.length]);
+
+  if (phrases.length === 0) return null;
+
+  return (
+    <div className="bg-brand-orange py-3 overflow-hidden border-y border-black/10 flex justify-center items-center h-10 relative">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -20, opacity: 0 }}
+          transition={{ 
+            y: { type: "spring", stiffness: 300, damping: 30 },
+            opacity: { duration: 0.2 }
+          }}
+          className="text-white text-[10px] uppercase tracking-[0.3em] font-bold text-center absolute w-full px-4 flex items-center justify-center gap-4"
+        >
+          <span className="opacity-50">×</span>
+          {phrases[index].text}
+          <span className="opacity-50">×</span>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
 }
 
 const PRODUCTS: Product[] = [
@@ -63,6 +102,7 @@ const PRODUCTS: Product[] = [
 ];
 
 function TierCard({ name, price, benefits, highlight = false, onSelect }: { name: string, price: string, benefits: string[], highlight?: boolean, onSelect: (name: string) => void }) {
+  const { trackEvent } = useEventTracking();
   return (
     <div className={`p-12 border border-white/10 flex flex-col justify-between transition-all group ${highlight ? 'bg-brand-orange' : 'bg-white/5 hover:bg-white/10'}`}>
        <div>
@@ -83,7 +123,10 @@ function TierCard({ name, price, benefits, highlight = false, onSelect }: { name
        <motion.button 
          whileHover={{ scale: 1.02 }}
          whileTap={{ scale: 0.98 }}
-         onClick={() => onSelect(name)}
+         onClick={() => {
+           trackEvent('Solicitar Proposta', 'click', { tier: name });
+           onSelect(name);
+         }}
          className={`w-full py-4 text-[10px] uppercase tracking-widest font-bold border transition-all ${highlight ? 'bg-white text-brand-orange border-white hover:bg-brand-dark hover:text-white hover:border-brand-dark' : 'text-white border-white/20 hover:border-brand-orange hover:text-brand-orange'}`}>
          Solicitar Proposta
        </motion.button>
@@ -263,6 +306,7 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<any>(null);
+  const { trackEvent } = useEventTracking();
 
   const finalPixKey = pixKey || "6093259@vakinha.com.br";
   const finalVakinhaUrl = vakinhaUrl || "https://www.vakinha.com.br/vaquinha/talentos-de-minas-nossa-turma-no-palco-internacional";
@@ -271,6 +315,7 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
     try {
       await navigator.clipboard.writeText(finalPixKey);
       setCopied(true);
+      trackEvent('Copiar PIX', 'click');
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => setCopied(false), 3000);
     } catch (err) {
@@ -307,7 +352,7 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
          className={
            variant === 'large' 
            ? "bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"
-           : "bg-brand-orange text-white px-10 py-4 text-xs uppercase tracking-widest font-bold hover:bg-black transition-all"
+           : "bg-brand-orange text-white px-4 sm:px-10 py-3 sm:py-4 text-[10px] sm:text-xs uppercase tracking-widest font-bold hover:bg-black transition-all"
          }
        >
          {variant === 'large' ? 'Apoie Agora' : 'Doar Agora'}
@@ -370,6 +415,7 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
                 href={finalVakinhaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEvent('Acessar Vakinha', 'click')}
                 className="w-full bg-brand-dark text-white py-4 text-center font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all flex items-center justify-center gap-3"
               >
                 Acessar Vakinha <ExternalLink className="w-3 h-3" />
@@ -399,7 +445,13 @@ export default function Home() {
   const { banners, loading: bannersLoading } = useHeroBanners();
   const { phrases, loading: phrasesLoading } = useTicker();
   const { items: journeyItems, loading: journeyLoading } = useJourney();
+  const { expenses, loading: fundraisingLoading } = useFundraising();
+
+  // Analytics: track page view
+  usePageTracking();
+  const { trackEvent } = useEventTracking();
   const [isJourneyPaused, setIsJourneyPaused] = useState(false);
+
   
   const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
   const [selectedTierData, setSelectedTierData] = useState<{name: string, price: string, benefits: string[]} | null>(null);
@@ -439,12 +491,15 @@ export default function Home() {
     image_url: '/hero-bg.jpg' 
   };
 
-  // Safety checks for settings
-  const goalTotalValue = Number(settings?.target_amount?.value);
-  const goalTotal = !isNaN(goalTotalValue) && settings?.target_amount?.value ? goalTotalValue : 136712;
+  // Custom totals calculation for UI
+  const expensesGoal = expenses.reduce((acc, exp) => acc + exp.goal_amount, 0);
+  const expensesRaised = expenses.reduce((acc, exp) => acc + exp.raised_amount, 0);
 
-  const currentRaisedValue = Number(settings?.current_amount?.value);
-  const currentRaised = !isNaN(currentRaisedValue) && settings?.current_amount?.value ? currentRaisedValue : 88862;
+  const goalTotalValue = parseFloat(settings?.target_amount?.value || '0');
+  const currentRaisedValue = parseFloat(settings?.current_amount?.value || '0');
+  
+  const goalTotal = expenses.length > 0 ? expensesGoal : (!isNaN(goalTotalValue) && settings?.target_amount?.value ? goalTotalValue : 136712);
+  const currentRaised = expenses.length > 0 ? expensesRaised : (!isNaN(currentRaisedValue) && settings?.current_amount?.value ? currentRaisedValue : 88862);
   
   const safeGoal = goalTotal > 0 ? goalTotal : 136712;
   const percentage = Math.min((currentRaised / safeGoal) * 100, 100) || 0;
@@ -495,8 +550,11 @@ export default function Home() {
 
     return () => observer.disconnect();
   }, []);
+  
+  // Custom totals calculation for UI
 
-  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading) return (
+
+  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || fundraisingLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
       <p className="text-[10px] uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
@@ -506,14 +564,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#1A1A1A]">
       {/* Navigation */}
-      <nav className={`fixed top-0 left-0 w-full z-[70] transition-all duration-500 px-6 py-4 flex justify-between items-center text-white ${isScrolled ? 'bg-black/80 backdrop-blur-md py-3 shadow-xl' : 'bg-transparent py-6'}`}>
+      <nav aria-label="Navegação principal" className={`fixed top-0 left-0 w-full z-[70] transition-all duration-500 px-4 md:px-8 xl:px-12 py-4 flex justify-between items-center text-white ${isScrolled ? 'bg-black/80 backdrop-blur-md py-3 shadow-xl' : 'bg-transparent py-6'}`}>
         <div className={`absolute bottom-0 left-0 w-full h-[1px] bg-white/10 z-0 pointer-events-none transition-opacity duration-500 ${isScrolled ? 'opacity-0' : 'opacity-100'}`}></div>
 
         <div className="flex items-center cursor-pointer z-10" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <img src="/logo_branca.png" alt="Nucleo Tatiana Figueiredo" className={`transition-all duration-500 object-contain ${isScrolled ? 'h-10 md:h-16' : 'h-14 md:h-24'}`} />
+          <img src="/logo_branca.png" alt="Nucleo Tatiana Figueiredo" className={`transition-all duration-500 object-contain ${isScrolled ? 'h-10 md:h-14' : 'h-12 md:h-20'}`} />
         </div>
         
-        <div className="hidden lg:flex gap-14 text-xs uppercase tracking-[0.25em] font-display font-medium z-10">
+        <div className="hidden lg:flex gap-6 xl:gap-12 text-[10px] xl:text-xs uppercase tracking-[0.2em] xl:tracking-[0.25em] font-display font-medium z-10">
           <a href="#essencia" className={`${activeSection === 'essencia' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Nossa Essência</a>
           <a href="#jornada" className={`${activeSection === 'jornada' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>A Jornada</a>
           <a href="#desafio" className={`${activeSection === 'desafio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>O Desafio</a>
@@ -559,7 +617,7 @@ export default function Home() {
         </AnimatePresence>
 
       {/* Hero Section Carousel */}
-      <section className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-[#1A1A1A]">
+      <header role="banner" className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-[#1A1A1A]">
         {/* Top Gradient Overlay for Nav Readability */}
         <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-transparent to-transparent h-40 pointer-events-none"></div>
 
@@ -599,7 +657,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 1.2, ease: "easeOut" }}
-              className="text-6xl sm:text-7xl md:text-[90px] lg:text-[110px] text-white leading-[1.1] mb-12 font-serif"
+              className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[110px] text-white leading-[1.1] mb-12 font-serif"
             >
               {currentBanner.title ? (
                 currentBanner.title.includes(':') ? (
@@ -642,8 +700,9 @@ export default function Home() {
             </div>
           )}
         </div>
-      </section>
+      </header>
 
+      <main>
       {/* History & Social Proof Details */}
       {/* Essence Section */}
       <motion.section 
@@ -743,18 +802,16 @@ export default function Home() {
               <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">
                 {settings.jornada_title?.value || 'Excelência que Atravessa Fronteiras.'}
               </h2>
-               <div 
-                  className="relative h-[480px] overflow-hidden [perspective:1000px]"
+                               <div 
+                  className="relative h-[550px] overflow-hidden group/container"
                   onMouseEnter={() => setIsJourneyPaused(true)}
                   onMouseLeave={() => setIsJourneyPaused(false)}
                 >
                    <motion.div 
-                     className="space-y-12 py-10"
-                     animate={{
-                       y: isJourneyPaused ? "var(--current-y)" : ["0%", "-50%"]
-                     }}
+                     className="space-y-24 py-32"
+                     animate={isJourneyPaused ? {} : { y: ["0%", "-50%"] }}
                      transition={{
-                       duration: Math.max(25, (journeyItems?.length || 0) * 12),
+                       duration: Math.max(35, (journeyItems?.length || 0) * 12),
                        repeat: Infinity,
                        ease: "linear"
                      }}
@@ -762,17 +819,17 @@ export default function Home() {
                        {[...(journeyItems || []), ...(journeyItems || [])].map((item, idx) => (
                          <motion.div 
                            key={`${item.id}-${idx}`}
-                           className="flex gap-8 group/item transition-all duration-500 hover:translate-x-4"
-                           initial={{ opacity: 0.4, scale: 0.95, rotateX: 10 }}
-                           whileInView={{ opacity: 1, scale: 1, rotateX: 0 }}
-                           viewport={{ margin: "-100px 0px -100px 0px" }}
+                           className="flex gap-12 items-center group/item transition-all duration-1000"
+                           initial={{ opacity: 0.1, scale: 0.8, filter: 'blur(8px)', y: 50 }}
+                           whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
+                           viewport={{ amount: 0.5, margin: "-20% 0px -20% 0px" }}
                          >
-                            <div className="flex-shrink-0 w-24">
-                               <span className="text-brand-orange text-5xl font-serif block leading-none transition-transform group-hover/item:scale-110">{item.label}</span>
+                            <div className="flex-shrink-0 w-40 text-right">
+                               <span className="text-brand-orange text-7xl font-serif block leading-none transition-all group-hover/item:text-brand-dark group-hover/item:scale-105">{item.label}</span>
                             </div>
-                            <div className="flex-1">
-                               <h4 className="text-2xl font-serif mb-2 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
-                               <p className="text-brand-dark/50 text-sm leading-relaxed font-serif max-w-lg">
+                            <div className="flex-1 border-l-2 border-brand-orange/10 pl-12 transition-all group-hover/item:border-brand-orange group-hover/item:translate-x-4">
+                               <h4 className="text-3xl font-serif mb-4 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
+                               <p className="text-brand-dark/50 text-lg leading-relaxed font-serif max-w-xl group-hover/item:text-brand-dark transition-colors">
                                  {item.description}
                                </p>
                             </div>
@@ -780,29 +837,16 @@ export default function Home() {
                        ))}
                     </motion.div>
                     
-                    {/* Enhanced Gradient Masks */}
-                    <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white via-white/95 to-transparent z-10 pointer-events-none" />
-                    <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/95 to-transparent z-10 pointer-events-none" />
+                    {/* Modern Glassy Mask */}
+                    <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white via-white/90 to-transparent z-10 pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white via-white/90 to-transparent z-10 pointer-events-none" />
                  </div>
-           </div>
+            </div>
         </div>
       </motion.section>
 
-      {/* Marquee Social Proof */}
-      <div className="bg-brand-orange py-4 overflow-hidden whitespace-nowrap border-y border-black/10">
-        <div className="flex animate-marquee gap-12 items-center">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="flex gap-12 items-center">
-              {phrases.map((phrase) => (
-                <React.Fragment key={phrase.id}>
-                  <span className="text-white text-[10px] uppercase tracking-[0.3em] font-bold">{phrase.text}</span>
-                  <span className="text-white/50 text-2xl">×</span>
-                </React.Fragment>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Premium Vertical Ticker */}
+      <VerticalTicker phrases={phrases} />
 
       {/* Goal Tracker Section */}
       <motion.section 
@@ -846,24 +890,26 @@ export default function Home() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
                 <div>
                   <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Arrecadado</p>
-                  <p className="text-white text-2xl font-serif">R$ {currentRaised.toLocaleString()}</p>
+                  <p className="text-white text-2xl font-display font-medium">R$ {currentRaised.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Meta Final</p>
-                  <p className="text-white text-2xl font-serif">R$ {goalTotal.toLocaleString()}</p>
+                  <p className="text-white text-2xl font-display font-medium">R$ {goalTotal.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Apoiadores</p>
-                  <p className="text-white text-2xl font-serif">{Number(supportersCount).toLocaleString()}</p>
+                  <p className="text-white text-2xl font-display font-medium">{Number(supportersCount).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Dias Restantes</p>
-                  <p className="text-white text-2xl font-serif">{remainingDays}</p>
+                  <p className="text-white text-2xl font-display font-medium">{remainingDays}</p>
                 </div>
               </div>
+
+
             </motion.div>
 
             <motion.div 
@@ -879,7 +925,7 @@ export default function Home() {
               />
               <div className="absolute inset-0 ring-1 ring-white/20 ring-inset pointer-events-none"></div>
               <div className="absolute bottom-8 left-8 bg-brand-orange p-8 md:p-10 max-w-[200px] text-white shadow-2xl">
-                <p className="text-6xl font-serif mb-2">{dancersCount}</p>
+                <p className="text-6xl font-display font-bold mb-2">{dancersCount}</p>
                 <p className="text-[10px] uppercase tracking-[0.2em] font-display font-bold leading-relaxed">Bailarinos Prontos para Brilhar</p>
               </div>
             </motion.div>
@@ -949,7 +995,10 @@ export default function Home() {
             {/* Loja */}
             <motion.div 
               whileHover={{ y: -10 }}
-              onClick={() => setActiveModal('store')}
+              onClick={() => {
+                trackEvent('Abrir Loja', 'click');
+                setActiveModal('store');
+              }}
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
               <div>
@@ -973,7 +1022,10 @@ export default function Home() {
             {/* Rifa */}
             <motion.div 
               whileHover={{ y: -10 }}
-              onClick={() => setActiveModal('raffle')}
+              onClick={() => {
+                trackEvent('Abrir Rifa', 'click');
+                setActiveModal('raffle');
+              }}
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
               <div>
@@ -997,7 +1049,10 @@ export default function Home() {
             {/* Eventos */}
             <motion.div 
               whileHover={{ y: -10 }}
-              onClick={() => setActiveModal('event')}
+              onClick={() => {
+                trackEvent('Abrir Evento', 'click');
+                setActiveModal('event');
+              }}
               className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
             >
               <div>
@@ -1081,6 +1136,8 @@ export default function Home() {
       </section>
 
       {/* Footer */}
+      </main>
+
       <footer className="bg-brand-white pt-32 pb-12 px-6 lg:px-12 border-t border-brand-dark/5">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-32 text-brand-dark/80">

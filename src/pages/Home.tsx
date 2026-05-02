@@ -433,7 +433,7 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
 }
 
 export default function Home() {
-  const [activeModal, setActiveModal] = useState<'store' | 'raffle' | 'event' | 'donation' | null>(null);
+  const [activeModal, setActiveModal] = useState<'store' | 'raffle' | 'event' | 'donation' | 'contact' | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedImageIdx, setSelectedImageIdx] = useState<number | null>(null);
   const [activeSection, setActiveSection] = useState<string>('');
@@ -578,6 +578,7 @@ export default function Home() {
           <a href="#galeria" className={`${activeSection === 'galeria' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Galeria</a>
           <a href="#ajudar" className={`${activeSection === 'ajudar' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Como Ajudar</a>
           <a href="#patrocinio" className={`${activeSection === 'patrocinio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Patrocínio</a>
+          <button onClick={() => setActiveModal('contact')} className="text-white hover:text-brand-orange transition-colors drop-shadow-md uppercase">Contatos</button>
         </div>
 
         <div className="relative z-20 flex items-center gap-2 sm:gap-4">
@@ -607,6 +608,7 @@ export default function Home() {
                 <a href="#galeria" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'galeria' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Galeria</a>
                 <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'ajudar' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Como Ajudar</a>
                 <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'patrocinio' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Patrocínio</a>
+                <button onClick={() => { setIsMenuOpen(false); setActiveModal('contact'); }} className="text-white hover:text-brand-orange text-left uppercase transition-all duration-300">Contatos</button>
               </div>
               
               <div className="mt-auto pt-12 border-t border-white/10">
@@ -1263,6 +1265,85 @@ export default function Home() {
                 <div className="max-w-xl mx-auto text-center">
                   <Calendar className="w-16 h-16 text-brand-orange mx-auto mb-8" strokeWidth={1} />
                   <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação Junina</h2>
+                </div>
+              )}
+
+              {activeModal === 'contact' && (
+                <div className="max-w-4xl mx-auto">
+                  <div className="text-center mb-12">
+                    <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Entre em Contato</p>
+                    <h2 className="text-4xl md:text-6xl font-serif text-brand-dark italic">Fale Conosco</h2>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                    {/* WhatsApp */}
+                    <a 
+                      href="https://wa.me/5531993615488" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500"
+                    >
+                      <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
+                        <Phone className="w-6 h-6 text-brand-orange" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">WhatsApp</p>
+                        <p className="text-xl font-serif text-brand-dark group-hover:text-white">(31) 99361-5488</p>
+                      </div>
+                    </a>
+
+                    {/* Instagram */}
+                    <a 
+                      href="https://instagram.com/nucleodedanca" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500"
+                    >
+                      <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
+                        <Instagram className="w-6 h-6 text-brand-orange" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">Instagram</p>
+                        <p className="text-xl font-serif text-brand-dark group-hover:text-white">@nucleodedanca</p>
+                      </div>
+                    </a>
+
+                    {/* E-mail */}
+                    <a 
+                      href="mailto:nucleodedanca@yahoo.com.br" 
+                      className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500"
+                    >
+                      <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
+                        <Mail className="w-6 h-6 text-brand-orange" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">E-mail</p>
+                        <p className="text-base md:text-xl font-serif text-brand-dark group-hover:text-white break-all">nucleodedanca@yahoo.com.br</p>
+                      </div>
+                    </a>
+
+                    {/* Localização */}
+                    <a 
+                      href="https://www.google.com/maps/search/?api=1&query=Av.+Abílio+Machado,+3997+–+Belo+Horizonte,+MG" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500"
+                    >
+                      <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
+                        <MapPin className="w-6 h-6 text-brand-orange" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">Endereço</p>
+                        <p className="text-sm md:text-base font-serif text-brand-dark group-hover:text-white leading-tight">Av. Abílio Machado, 3997 – BH</p>
+                      </div>
+                    </a>
+                  </div>
+
+                  <div className="mt-12 pt-8 border-t border-brand-dark/5 text-center">
+                    <p className="text-[11px] uppercase tracking-[0.3em] font-bold text-brand-dark/20 italic">
+                      Danzamerica 2026 • Talentos de Minas • Córdoba, Argentina
+                    </p>
+                  </div>
                 </div>
               )}
             </motion.div>

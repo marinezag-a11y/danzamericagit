@@ -32,7 +32,9 @@ import {
   CalendarDays,
   FileText,
   Printer,
-  Menu
+  Menu,
+  MessageCircle,
+  Code2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
@@ -1552,7 +1554,7 @@ export default function Dashboard() {
             className="flex items-center gap-3 group transition-all"
           >
             <div className="w-8 h-8 rounded-full bg-brand-orange/10 flex items-center justify-center group-hover:bg-brand-orange/20 transition-all">
-              <Code2 className="w-4 h-4 text-brand-orange" />
+              <MessageCircle className="w-4 h-4 text-brand-orange" />
             </div>
             <div>
               <p className="text-[8px] uppercase tracking-widest text-white/20 font-bold mb-0.5">Desenvolvedor</p>

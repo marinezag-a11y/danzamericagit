@@ -26,7 +26,8 @@ import {
   Loader2,
   CheckCircle2,
   Building2,
-  User
+  User,
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useSiteSettings } from '../hooks/useSiteSettings';
@@ -1206,9 +1207,10 @@ export default function Home() {
               href="https://wa.me/5531984211900?text=Quero%20fazer%20meu%20site"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 md:mt-0 text-brand-dark/40 hover:text-brand-orange transition-colors flex items-center gap-2"
+              className="mt-4 md:mt-0 text-brand-dark/40 hover:text-brand-orange transition-colors flex items-center gap-2 group"
             >
-              Desenvolvido por Farizo
+              <MessageCircle className="w-3 h-3 group-hover:scale-110 transition-transform" />
+              <span>Desenvolvido por Farizo — (31) 98421-1900</span>
             </a>
           </div>
         </div>

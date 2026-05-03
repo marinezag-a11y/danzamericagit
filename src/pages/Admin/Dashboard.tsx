@@ -31,7 +31,8 @@ import {
   Share2,
   CalendarDays,
   FileText,
-  Printer
+  Printer,
+  Menu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
@@ -144,7 +145,7 @@ function ConfirmSaveModal({
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-brand-dark border border-white/10 p-8 shadow-2xl rounded-sm"
+        className="w-full max-w-md bg-brand-dark border border-white/10 p-6 md:p-8 shadow-2xl rounded-sm"
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-brand-orange/10 rounded-full">
@@ -904,7 +905,7 @@ function AnalyticsDashboard() {
               const dayLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' });
               return (
                 <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] text-white/40 font-bold opacity-0 group-hover:opacity-100 transition-all">
+                  <span className="text-[10px] text-white/40 font-bold lg:opacity-0 lg:group-hover:opacity-100 transition-all">
                     {day.count}
                   </span>
                   <motion.div
@@ -1406,6 +1407,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'analytics' | 'banners' | 'content' | 'gallery' | 'help' | 'sponsorship' | 'fundraising' | 'ticker'>('analytics');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { images, loading: galleryLoading } = useGallery();
 
   const handleLogout = async () => {
@@ -1426,66 +1428,93 @@ export default function Dashboard() {
   if (loading) return <Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto mt-20" />;
 
   return (
-    <div className="min-h-screen bg-brand-dark text-white flex font-sans">
+    <div className="min-h-screen bg-brand-dark text-white flex font-sans relative">
+      {/* Mobile Toggle Button */}
+      <div className="lg:hidden fixed top-6 right-6 z-[60]">
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-3 bg-brand-orange text-white shadow-2xl rounded-sm hover:scale-110 active:scale-95 transition-all"
+        >
+          {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </div>
+
+      {/* Backdrop */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
-      <aside className="w-72 bg-black border-r border-white/5 p-8 flex flex-col sticky top-0 h-screen">
-        <div className="mb-12">
+      <aside className={`
+        fixed lg:sticky top-0 left-0 h-screen w-72 bg-black border-r border-white/5 p-8 flex flex-col z-50 
+        transition-transform duration-500 ease-in-out overflow-y-auto
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="mb-12 flex-shrink-0">
           <img src="/logo_branca.png" alt="Logo" className="h-16 w-auto object-contain mb-8" />
           <p className="text-[10px] uppercase tracking-[0.4em] text-brand-orange font-bold">Painel de Gestão</p>
         </div>
 
         <nav className="flex-1 space-y-2">
           <button 
-            onClick={() => setActiveTab('analytics')}
+            onClick={() => { setActiveTab('analytics'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'analytics' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <BarChart3 className="w-4 h-4" />
             Analytics
           </button>
           <button 
-            onClick={() => setActiveTab('banners')}
+            onClick={() => { setActiveTab('banners'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'banners' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <ImageIcon className="w-4 h-4" />
             Banners do Hero
           </button>
           <button 
-            onClick={() => setActiveTab('content')}
+            onClick={() => { setActiveTab('content'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'content' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <LayoutDashboard className="w-4 h-4" />
             Conteúdo Geral
           </button>
           <button 
-            onClick={() => setActiveTab('fundraising')}
+            onClick={() => { setActiveTab('fundraising'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'fundraising' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <TrendingUp className="w-4 h-4" />
             Planilha de Custos
           </button>
           <button 
-            onClick={() => setActiveTab('ticker')}
+            onClick={() => { setActiveTab('ticker'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'ticker' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <Settings className="w-4 h-4" />
             Frases da Barra
           </button>
           <button 
-            onClick={() => setActiveTab('gallery')}
+            onClick={() => { setActiveTab('gallery'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'gallery' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <Images className="w-4 h-4" />
             Galeria de Fotos
           </button>
           <button 
-            onClick={() => setActiveTab('help')}
+            onClick={() => { setActiveTab('help'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'help' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <Heart className="w-4 h-4" />
             Como Ajudar
           </button>
           <button 
-            onClick={() => setActiveTab('sponsorship')}
+            onClick={() => { setActiveTab('sponsorship'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'sponsorship' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
             <Trophy className="w-4 h-4" />
@@ -1517,9 +1546,9 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-12 overflow-y-auto">
-        <header className="mb-12">
-          <h2 className="text-4xl font-sans italic mb-2 capitalize">
+      <main className="flex-1 p-4 md:p-12 overflow-y-auto">
+        <header className="mb-8 md:mb-12 pt-12 lg:pt-0">
+          <h2 className="text-2xl md:text-4xl font-sans italic mb-2 capitalize">
             {activeTab === 'analytics' ? 'Analytics — Acessos ao Site' :
              activeTab === 'content' ? 'Conteúdo Geral' : 
              activeTab === 'gallery' ? 'Galeria de Fotos' :
@@ -1669,13 +1698,18 @@ function ContentEditor() {
       keys: ['jornada_title', 'jornada_image']
     },
     {
-      title: '03. Configurações de Doação Globais',
+      title: '03. Seção: O Desafio',
+      keys: []
+    },
+    {
+      title: '04. Configurações Globais',
       keys: ['pix_key', 'vakinha_url']
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="flex flex-col gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {sections.map(section => (
         <div key={section.title} className="bg-white/5 border border-white/10 p-8 space-y-6 flex flex-col">
           <h3 className="text-xl font-sans italic mb-4">{section.title}</h3>
@@ -1750,15 +1784,16 @@ function ContentEditor() {
              </div>
            )}
 
-           {section.title === '04. Configurações de Doação Globais' && (
+           {section.title === '04. Configurações Globais' && (
              <div className="mt-16 pt-16 border-t border-white/10">
                <h3 className="text-2xl font-sans italic mb-8">Gerenciador de Frases (Barra de Links)</h3>
                <TickerManager />
              </div>
            )}
-         </div>
-       ))}
-     </div>
+        </div>
+      ))}
+      </div>
+    </div>
   );
 }
 
@@ -1862,10 +1897,10 @@ function GalleryManager() {
         {images?.map((image) => (
           <div key={image.id} className="group relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
             <img src={image.url} alt={image.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 lg:bg-black/60 lg:opacity-0 lg:group-hover:opacity-100 transition-all flex items-center justify-center">
               <button 
                 onClick={() => setImageToDelete(image.id)}
-                className="p-3 bg-red-500 text-white rounded-full hover:bg-white hover:text-red-500 transition-all transform translate-y-4 group-hover:translate-y-0"
+                className="p-3 bg-red-500 text-white rounded-full hover:bg-white hover:text-red-500 transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -1977,7 +2012,7 @@ function SponsorshipManager() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-brand-dark border border-white/10 p-12 max-w-2xl w-full relative"
+              className="bg-brand-dark border border-white/10 p-6 md:p-12 max-w-2xl w-full relative overflow-y-auto max-h-[90vh]"
             >
               <button 
                 onClick={() => {
@@ -2126,16 +2161,16 @@ function BannerManager() {
           <div key={banner.id} className="bg-white/5 border border-white/10 overflow-hidden flex flex-col">
             <div className="aspect-video relative group">
               <img src={banner.image_url} alt="" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+              <div className="absolute inset-0 bg-black/40 lg:bg-black/60 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                  <button 
                   onClick={() => setEditingBanner(banner)}
-                  className="bg-brand-orange p-3 rounded-full hover:bg-white hover:text-brand-dark transition-all"
+                  className="bg-brand-orange p-3 rounded-full hover:bg-white hover:text-brand-dark transition-all transform lg:scale-90 lg:group-hover:scale-100"
                  >
                    <Settings className="w-4 h-4" />
                  </button>
                  <button 
                   onClick={() => setBannerToDelete(banner)}
-                  className="bg-red-500 p-3 rounded-full hover:bg-white hover:text-red-500 transition-all"
+                  className="bg-red-500 p-3 rounded-full hover:bg-white hover:text-red-500 transition-all transform lg:scale-90 lg:group-hover:scale-100"
                  >
                    <Trash2 className="w-4 h-4" />
                  </button>
@@ -2156,7 +2191,7 @@ function BannerManager() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-brand-dark border border-white/10 p-12 max-w-2xl w-full relative"
+              className="bg-brand-dark border border-white/10 p-6 md:p-12 max-w-2xl w-full relative overflow-y-auto max-h-[90vh]"
             >
               <button 
                 onClick={() => setEditingBanner(null)}
@@ -2353,7 +2388,7 @@ function TickerManager() {
               ) : (
                 <>
                   <p className="font-sans italic text-lg">{phrase.text}</p>
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => {
                         setEditingId(phrase.id);
@@ -2387,7 +2422,7 @@ function TickerManager() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-brand-dark border border-white/10 p-12 max-w-lg w-full text-center"
+              className="bg-brand-dark border border-white/10 p-6 md:p-12 max-w-lg w-full text-center"
             >
               <Trash2 className="w-16 h-16 text-red-500 mx-auto mb-8" />
               <h3 className="text-3xl font-sans italic mb-4">Excluir Frase?</h3>

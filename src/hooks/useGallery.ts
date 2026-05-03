@@ -89,9 +89,26 @@ export function useGallery() {
     }
   };
 
+  const updateImage = async (id: string, updates: Partial<{ url: string, caption: string }>) => {
+    try {
+      if (!supabase) throw new Error('Supabase not configured');
+      
+      const { error } = await supabase
+        .from('gallery')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      await fetchImages();
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
   useEffect(() => {
     fetchImages();
   }, []);
 
-  return { images, loading, error, addImage, uploadImage, deleteImage, refresh: fetchImages };
+  return { images, loading, error, addImage, updateImage, uploadImage, deleteImage, refresh: fetchImages };
 }

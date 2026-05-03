@@ -1824,22 +1824,44 @@ function ContentEditor() {
 }
 
 function GalleryManager() {
-  const { images, loading, addImage, deleteImage } = useGallery();
+  const { images, loading, addImage, updateImage, deleteImage } = useGallery();
+  const [editingImage, setEditingImage] = useState<any>(null);
   const [newUrl, setNewUrl] = useState('');
   const [newCaption, setNewCaption] = useState('');
   const [adding, setAdding] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<string | null>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
 
-  const handleAdd = async () => {
+  const handleStartEdit = (image: any) => {
+    setEditingImage(image);
+    setNewUrl(image.url);
+    setNewCaption(image.caption);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingImage(null);
+    setNewUrl('');
+    setNewCaption('');
+  };
+
+  const handleSave = async () => {
     if (!newUrl) return;
     setAdding(true);
-    setStatus({ type: 'info', message: 'Salvando na galeria...' });
-    const result = await addImage(newUrl, newCaption);
+    setStatus({ type: 'info', message: editingImage ? 'Atualizando foto...' : 'Salvando na galeria...' });
+    
+    let result;
+    if (editingImage) {
+      result = await updateImage(editingImage.id, { url: newUrl, caption: newCaption });
+    } else {
+      result = await addImage(newUrl, newCaption);
+    }
+
     if (result.success) {
       setNewUrl('');
       setNewCaption('');
-      setStatus({ type: 'success', message: 'Foto adicionada com sucesso!' });
+      setEditingImage(null);
+      setStatus({ type: 'success', message: editingImage ? 'Foto atualizada!' : 'Foto adicionada com sucesso!' });
       setTimeout(() => setStatus(null), 3000);
     } else {
       setStatus({ type: 'error', message: 'Erro ao salvar: ' + result.error });
@@ -1851,8 +1873,20 @@ function GalleryManager() {
 
   return (
     <div className="space-y-12">
-      <div className="bg-white/5 border border-white/10 p-8">
-        <h3 className="text-xl font-sans italic mb-8">Adicionar Nova Foto</h3>
+      <div className={`bg-white/5 border p-8 transition-all duration-500 ${editingImage ? 'border-brand-orange ring-1 ring-brand-orange/20' : 'border-white/10'}`}>
+        <div className="flex justify-between items-center mb-8">
+          <h3 className="text-xl font-sans italic">
+            {editingImage ? 'Editando Foto' : 'Adicionar Nova Foto'}
+          </h3>
+          {editingImage && (
+            <button 
+              onClick={handleCancelEdit}
+              className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+            >
+              Cancelar Edição
+            </button>
+          )}
+        </div>
         
         <div className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1897,12 +1931,14 @@ function GalleryManager() {
 
               <div className="mt-auto pt-6">
                 <button 
-                  onClick={handleAdd}
-                  disabled={adding || !newUrl}
-                  className="w-full py-5 bg-brand-orange text-white text-[12px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-3"
+                   onClick={handleSave}
+                   disabled={adding || !newUrl}
+                   className={`w-full py-5 text-white text-[12px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-3 ${
+                     editingImage ? 'bg-brand-orange' : 'bg-brand-orange'
+                   }`}
                 >
-                  {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Finalizar e Adicionar à Galeria
+                  {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : editingImage ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {editingImage ? 'Salvar Alterações' : 'Finalizar e Adicionar à Galeria'}
                 </button>
               </div>
             </div>
@@ -1923,7 +1959,13 @@ function GalleryManager() {
         {images?.map((image) => (
           <div key={image.id} className="group relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
             <img src={image.url} alt={image.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-            <div className="absolute inset-0 bg-black/40 lg:bg-black/60 lg:opacity-0 lg:group-hover:opacity-100 transition-all flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 lg:bg-black/60 lg:opacity-0 lg:group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
+              <button 
+                onClick={() => handleStartEdit(image)}
+                className="p-3 bg-brand-orange text-white rounded-full hover:bg-white hover:text-brand-dark transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
               <button 
                 onClick={() => setImageToDelete(image.id)}
                 className="p-3 bg-red-500 text-white rounded-full hover:bg-white hover:text-red-500 transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0"

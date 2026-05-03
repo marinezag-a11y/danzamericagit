@@ -1543,6 +1543,23 @@ export default function Dashboard() {
             Sair do Sistema
           </button>
         </div>
+        {/* Developer Credit */}
+        <div className="mt-auto pt-8 border-t border-white/5">
+          <a 
+            href="https://wa.me/5531984211900?text=Quero%20fazer%20meu%20site"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 group transition-all"
+          >
+            <div className="w-8 h-8 rounded-full bg-brand-orange/10 flex items-center justify-center group-hover:bg-brand-orange/20 transition-all">
+              <Code2 className="w-4 h-4 text-brand-orange" />
+            </div>
+            <div>
+              <p className="text-[8px] uppercase tracking-widest text-white/20 font-bold mb-0.5">Desenvolvedor</p>
+              <p className="text-[10px] text-white/60 group-hover:text-brand-orange transition-colors font-sans">Farizo — (31) 98421-1900</p>
+            </div>
+          </a>
+        </div>
       </aside>
 
       {/* Main Content */}

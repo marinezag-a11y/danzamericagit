@@ -1200,8 +1200,15 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          <div className="flex flex-col md:flex-row justify-between items-center py-12 border-t border-brand-dark/5 text-[10px] uppercase tracking-widest font-bold">
             <p className="text-brand-dark/40">© 2026 Núcleo Tatiana Figueiredo. Todos os direitos reservados.</p>
+            <a 
+              href="https://wa.me/5531984211900?text=Quero%20fazer%20meu%20site"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 md:mt-0 text-brand-dark/40 hover:text-brand-orange transition-colors flex items-center gap-2"
+            >
+              Desenvolvido por Farizo
+            </a>
           </div>
         </div>
       </footer>

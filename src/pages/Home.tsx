@@ -339,12 +339,7 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
   };
 
   return (
-    <div 
-      className="relative"
-      onMouseEnter={() => !('ontouchstart' in window) && setIsOpen(true)}
-      onMouseLeave={() => !('ontouchstart' in window) && setIsOpen(false)}
-      ref={dropdownRef}
-    >
+    <div className="relative" ref={dropdownRef}>
        <motion.button 
          whileHover={{ scale: 1.05 }}
          whileTap={{ scale: 0.95 }}
@@ -361,25 +356,26 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className={`
-              absolute left-0 lg:left-auto lg:right-0 mt-4 w-[calc(100vw-2rem)] sm:w-96 
-              bg-white text-brand-dark shadow-2xl p-6 lg:p-8 z-[100]
-              border border-black/5
-            `}
-            style={{
-              bottom: variant === 'large' ? '100%' : 'auto',
-              top: variant === 'large' ? 'auto' : '100%',
-              marginBottom: variant === 'large' ? '1rem' : '0',
-              marginTop: variant === 'large' ? '0' : '1rem',
-              left: variant === 'large' ? '0' : 'auto',
-              right: variant === 'large' ? 'auto' : '0'
-            }}
-          >
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white text-brand-dark shadow-2xl p-6 md:p-10 border border-black/5 overflow-y-auto max-h-[90vh]"
+            >
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="absolute top-4 right-4 p-2 text-brand-dark/40 hover:text-brand-orange transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-4 border-b border-black/5 pb-4">
                 <div className="w-10 h-10 bg-brand-orange/10 rounded-full flex items-center justify-center">
@@ -429,7 +425,8 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
                 Sua ajuda cobre custos de 22 bailarinos mineiros em Córdoba, Argentina.
               </p>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

@@ -1,33 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { 
-  Users, 
-  ShoppingBag, 
-  Ticket, 
-  Calendar, 
-  Award, 
-  Instagram, 
-  ArrowRight,
   Heart,
   ChevronRight,
-  ChevronLeft,
-  Menu,
-  X,
-  CreditCard,
-  Target,
-  Copy,
-  ExternalLink,
-  RefreshCw,
-  MapPin,
-  Mail,
-  Phone,
-  Globe,
-  ArrowUp,
-  Loader2,
-  CheckCircle2,
-  Building2,
-  User,
-  MessageCircle
+  ChevronLeft
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useSiteSettings } from '../hooks/useSiteSettings';
@@ -39,15 +15,14 @@ import { useJourney } from '../hooks/useJourney';
 import { useFundraising } from '../hooks/useFundraising';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useEventTracking } from '../hooks/useEventTracking';
+import { Header } from '../components/layout/Header';
+import { DonationDropdown } from '../components/DonationDropdown';
+import { Footer } from '../components/layout/Footer';
+import { BackToTop } from '../components/BackToTop';
+import { MainModal, ModalType } from '../components/modals/MainModal';
+import { ProposalModal } from '../components/modals/ProposalModal';
 
-// Product Types
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  description: string;
-}
+
 
 function VerticalTicker({ phrases }: { phrases: any[] }) {
   const [index, setIndex] = useState(0);
@@ -85,23 +60,6 @@ function VerticalTicker({ phrases }: { phrases: any[] }) {
   );
 }
 
-const PRODUCTS: Product[] = [
-  {
-    id: 'mug-01',
-    name: 'Caneca do Bem',
-    price: 45.00,
-    image: 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop',
-    description: 'Caneca oficial do projeto Talentos de Minas. Edição limitada.'
-  },
-  {
-    id: 'shirt-01',
-    name: 'Camiseta do Projeto',
-    price: 85.00,
-    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=2670&auto=format&fit=crop',
-    description: 'Camiseta técnica em tecido respirável, com logo oficial.'
-  }
-];
-
 function TierCard({ name, price, benefits, highlight = false, onSelect }: { name: string, price: string, benefits: string[], highlight?: boolean, onSelect: (name: string) => void }) {
   const { trackEvent } = useEventTracking();
   return (
@@ -135,307 +93,11 @@ function TierCard({ name, price, benefits, highlight = false, onSelect }: { name
   );
 }
 
-function ProposalModal({ tierName, tierPrice, tierBenefits, onClose }: { tierName: string, tierPrice: string, tierBenefits: string[], onClose: () => void }) {
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      name: formData.get('name') as string,
-      company: formData.get('company') as string,
-      phone: formData.get('phone') as string,
-      email: formData.get('email') as string,
-      tier_name: tierName,
-      tier_price: tierPrice,
-      tier_benefits: tierBenefits
-    };
-
-    try {
-      const { error: insertError } = await supabase
-        .from('proposal_requests')
-        .insert([{
-          name: data.name,
-          company: data.company,
-          phone: data.phone,
-          email: data.email,
-          tier_name: data.tier_name
-        }]);
-
-      if (insertError) throw insertError;
-
-      // Call Edge Function
-      await supabase.functions.invoke('send-proposal', { body: data });
-
-      setSuccess(true);
-      setTimeout(onClose, 4000);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao enviar solicitação.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-brand-dark border border-white/10 p-8 md:p-12 max-w-xl w-full relative overflow-hidden"
-      >
-        <button onClick={onClose} className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors">
-          <X className="w-6 h-6" />
-        </button>
-
-        <div className="mb-12">
-          <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Solicitação de Proposta</p>
-          <h3 className="text-3xl md:text-4xl text-white font-serif italic">{tierName}</h3>
-          <div className="h-[1px] w-12 bg-brand-orange mt-6"></div>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {success ? (
-            <motion.div 
-              key="success"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center py-12"
-            >
-              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-green-500/20">
-                <CheckCircle2 className="w-10 h-10 text-green-500" />
-              </div>
-              <h4 className="text-2xl font-serif text-white mb-4">Solicitação Enviada!</h4>
-              <p className="text-white/40 font-serif leading-relaxed">
-                Obrigado pelo seu interesse. Enviamos uma confirmação para seu e-mail e nossa equipe entrará em contato em breve.
-              </p>
-            </motion.div>
-          ) : (
-            <motion.form 
-              key="form"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onSubmit={handleSubmit}
-              className="space-y-6"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Seu Nome</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                    <input 
-                      required
-                      name="name"
-                      type="text" 
-                      className="w-full bg-white/5 border border-white/10 p-4 pl-12 text-sm font-serif focus:border-brand-orange outline-none transition-all"
-                      placeholder="Ex: João Silva"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Empresa/Pessoa física</label>
-                  <div className="relative">
-                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                    <input 
-                      name="company"
-                      type="text" 
-                      className="w-full bg-white/5 border border-white/10 p-4 pl-12 text-sm font-serif focus:border-brand-orange outline-none transition-all"
-                      placeholder="Razão Social ou Nome"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Telefone / WhatsApp</label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                    <input 
-                      required
-                      name="phone"
-                      type="tel" 
-                      className="w-full bg-white/5 border border-white/10 p-4 pl-12 text-sm font-serif focus:border-brand-orange outline-none transition-all"
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">E-mail para Contato</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                    <input 
-                      required
-                      name="email"
-                      type="email" 
-                      className="w-full bg-white/5 border border-white/10 p-4 pl-12 text-sm font-serif focus:border-brand-orange outline-none transition-all"
-                      placeholder="exemplo@email.com"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {error && <p className="text-red-500 text-xs font-serif italic">{error}</p>}
-
-              <button 
-                type="submit"
-                disabled={loading}
-                className="w-full py-5 bg-brand-orange text-white text-[12px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-8"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                Solicitar Proposta Agora
-              </button>
-              
-              <p className="text-[9px] uppercase tracking-widest text-white/20 text-center leading-relaxed">
-                Ao solicitar, nossa equipe preparará um documento personalizado com todas as <br /> contrapartidas e benefícios da cota {tierName}.
-              </p>
-            </motion.form>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </div>
-  );
-}
-
-function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant?: 'default' | 'large', pixKey?: string, vakinhaUrl?: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<any>(null);
-  const { trackEvent } = useEventTracking();
-
-  const finalPixKey = pixKey || "6093259@vakinha.com.br";
-  const finalVakinhaUrl = vakinhaUrl || "https://www.vakinha.com.br/vaquinha/talentos-de-minas-nossa-turma-no-palco-internacional";
-
-  const handleCopyPix = async () => {
-    try {
-      await navigator.clipboard.writeText(finalPixKey);
-      setCopied(true);
-      trackEvent('Copiar PIX', 'click');
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => setCopied(false), 3000);
-    } catch (err) {
-      console.error('Falha ao copiar:', err);
-    }
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const toggleOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsOpen(!isOpen);
-  };
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-       <motion.button 
-         whileHover={{ scale: 1.05 }}
-         whileTap={{ scale: 0.95 }}
-         onClick={toggleOpen}
-         className={
-           variant === 'large' 
-           ? "bg-brand-orange text-white px-12 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-dark transition-all flex items-center gap-4 group"
-           : "bg-brand-orange text-white px-4 sm:px-10 py-3 sm:py-4 text-[10px] sm:text-xs uppercase tracking-widest font-bold hover:bg-black transition-all"
-         }
-       >
-         {variant === 'large' ? 'Apoie Agora' : 'Doar Agora'}
-         {variant === 'large' && <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />}
-       </motion.button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white text-brand-dark shadow-2xl p-6 md:p-10 border border-black/5 overflow-y-auto max-h-[90vh]"
-            >
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="absolute top-4 right-4 p-2 text-brand-dark/40 hover:text-brand-orange transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            <div className="flex flex-col gap-6">
-              <div className="flex items-center gap-4 border-b border-black/5 pb-4">
-                <div className="w-10 h-10 bg-brand-orange/10 rounded-full flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-brand-orange" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">Opção 01</p>
-                  <h4 className="text-lg font-serif">Doação via PIX</h4>
-                </div>
-              </div>
-              
-              <div className="bg-brand-grey p-4 flex flex-col gap-3">
-                <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">Chave PIX</p>
-                <div className="flex justify-between items-center bg-white p-3 border border-black/5">
-                  <code className="text-xs font-mono">{finalPixKey}</code>
-                  <button 
-                    onClick={handleCopyPix}
-                    className="p-2 hover:bg-brand-grey transition-colors text-brand-orange"
-                    title="Copiar Chave"
-                  >
-                    {copied ? <span className="text-[9px] font-bold uppercase tracking-tighter">Copiado!</span> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 border-b border-black/5 pb-4 pt-2">
-                <div className="w-10 h-10 bg-brand-orange/10 rounded-full flex items-center justify-center">
-                  <Target className="w-5 h-5 text-brand-orange" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">Opção 02</p>
-                  <h4 className="text-lg font-serif">Campanha Vakinha</h4>
-                </div>
-              </div>
-
-              <a 
-                href={finalVakinhaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackEvent('Acessar Vakinha', 'click')}
-                className="w-full bg-brand-dark text-white py-4 text-center font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all flex items-center justify-center gap-3"
-              >
-                Acessar Vakinha <ExternalLink className="w-3 h-3" />
-              </a>
-
-              <p className="text-[9px] uppercase tracking-widest opacity-40 leading-relaxed text-center italic">
-                Sua ajuda cobre custos de 22 bailarinos mineiros em Córdoba, Argentina.
-              </p>
-            </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 export default function Home() {
-  const [activeModal, setActiveModal] = useState<'store' | 'raffle' | 'event' | 'donation' | 'contact' | null>(null);
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedImageIdx, setSelectedImageIdx] = useState<number | null>(null);
   const [activeSection, setActiveSection] = useState<string>('');
@@ -565,60 +227,27 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#1A1A1A]">
-      {/* Navigation */}
-      <nav aria-label="Navegação principal" className={`fixed top-0 left-0 w-full z-[70] transition-all duration-500 px-4 md:px-8 xl:px-12 py-4 flex justify-between items-center text-white ${isScrolled ? 'bg-black/80 backdrop-blur-md py-3 shadow-xl' : 'bg-transparent py-6'}`}>
-        <div className={`absolute bottom-0 left-0 w-full h-[1px] bg-white/10 z-0 pointer-events-none transition-opacity duration-500 ${isScrolled ? 'opacity-0' : 'opacity-100'}`}></div>
+      <Header
+        isScrolled={isScrolled}
+        isMenuOpen={isMenuOpen}
+        activeSection={activeSection}
+        setIsMenuOpen={setIsMenuOpen}
+        onContactClick={() => setActiveModal('contact')}
+        donationSlot={
+          <DonationDropdown
+            pixKey={settings?.pix_key?.value}
+            vakinhaUrl={settings?.vakinha_url?.value}
+          />
+        }
+        mobileDonationSlot={
+          <DonationDropdown
+            variant="large"
+            pixKey={settings?.pix_key?.value}
+            vakinhaUrl={settings?.vakinha_url?.value}
+          />
+        }
+      />
 
-        <div className="flex items-center cursor-pointer z-10" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <img src="/logo_branca.png" alt="Nucleo Tatiana Figueiredo" className={`transition-all duration-500 object-contain ${isScrolled ? 'h-10 md:h-14' : 'h-12 md:h-20'}`} />
-        </div>
-        
-        <div className="hidden lg:flex gap-6 xl:gap-12 text-[10px] xl:text-xs uppercase tracking-[0.2em] xl:tracking-[0.25em] font-display font-medium z-10">
-          <a href="#essencia" className={`${activeSection === 'essencia' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Nossa Essência</a>
-          <a href="#jornada" className={`${activeSection === 'jornada' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>A Jornada</a>
-          <a href="#desafio" className={`${activeSection === 'desafio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>O Desafio</a>
-          <a href="#galeria" className={`${activeSection === 'galeria' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Galeria</a>
-          <a href="#ajudar" className={`${activeSection === 'ajudar' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Como Ajudar</a>
-          <a href="#patrocinio" className={`${activeSection === 'patrocinio' ? 'text-brand-orange' : 'text-white'} hover:text-brand-orange transition-colors drop-shadow-md`}>Patrocínio</a>
-          <button onClick={() => setActiveModal('contact')} className="text-white hover:text-brand-orange transition-colors drop-shadow-md uppercase">Contatos</button>
-        </div>
-
-        <div className="relative z-20 flex items-center gap-2 sm:gap-4">
-          <DonationDropdown pixKey={settings?.pix_key?.value} vakinhaUrl={settings?.vakinha_url?.value} />
-          
-          <button 
-            className="lg:hidden text-white p-1 sm:p-2"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="w-7 h-7 sm:w-8 h-8" /> : <Menu className="w-7 h-7 sm:w-8 h-8" />}
-          </button>
-        </div>
-      </nav>
-
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, x: '100%' }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: '100%' }}
-              className="fixed inset-0 bg-brand-dark z-[60] flex flex-col p-8 pt-32"
-            >
-              <div className="flex flex-col gap-8 text-2xl uppercase tracking-widest font-display text-white">
-                <a href="#essencia" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'essencia' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Nossa Essência</a>
-                <a href="#jornada" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'jornada' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>A Jornada</a>
-                <a href="#desafio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'desafio' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>O Desafio</a>
-                <a href="#galeria" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'galeria' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Galeria</a>
-                <a href="#ajudar" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'ajudar' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Como Ajudar</a>
-                <a href="#patrocinio" onClick={() => setIsMenuOpen(false)} className={`${activeSection === 'patrocinio' ? 'text-brand-orange pl-4 border-l-2 border-brand-orange' : 'text-white'} hover:text-brand-orange transition-all duration-300`}>Patrocínio</a>
-                <button onClick={() => { setIsMenuOpen(false); setActiveModal('contact'); }} className="text-white hover:text-brand-orange text-left uppercase transition-all duration-300">Contatos</button>
-              </div>
-              
-              <div className="mt-auto pt-12 border-t border-white/10">
-                <DonationDropdown variant="large" pixKey={settings?.pix_key?.value} vakinhaUrl={settings?.vakinha_url?.value} />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
       {/* Hero Section Carousel */}
       <header role="banner" className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-[#1A1A1A]">
@@ -1144,243 +773,16 @@ export default function Home() {
       {/* Footer */}
       </main>
 
-      <footer className="bg-brand-white pt-32 pb-12 px-6 lg:px-12 border-t border-brand-dark/5">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-32 text-brand-dark/80">
-            <div className="col-span-1 md:col-span-2">
-              <h4 className="font-serif text-3xl mb-8 uppercase italic font-bold">Núcleo de Dança</h4>
-              <p className="max-w-sm text-sm font-serif leading-relaxed mb-8">
-                Há 26 anos construindo carreiras e sonhos através da disciplina e da arte. Sediados em Belo Horizonte, somos o berço dos novos talentos de Minas.
-              </p>
-              </div>
-            <div>
-              <h5 className="text-[10px] uppercase font-bold tracking-widest mb-8 text-brand-orange">Navegação</h5>
-              <ul className="space-y-4 text-xs font-display">
-                <li><a href="#essencia" className="hover:text-brand-orange">Nossa Essência</a></li>
-                <li><a href="#jornada" className="hover:text-brand-orange">A Jornada</a></li>
-                <li><a href="#desafio" className="hover:text-brand-orange">O Desafio</a></li>
-                <li><a href="#galeria" className="hover:text-brand-orange">Galeria</a></li>
-                <li><a href="#ajudar" className="hover:text-brand-orange">Como Ajudar</a></li>
-                <li><a href="#patrocinio" className="hover:text-brand-orange">Patrocínio</a></li>
-                <li className="pt-4 border-t border-brand-dark/5"><a href="/admin" className="hover:text-brand-orange">Painel Administrativo</a></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="text-[10px] uppercase font-bold tracking-widest mb-8 text-brand-orange">Contato</h5>
-              <ul className="space-y-4 text-[11px] font-serif">
-                <li>
-                  <a href="https://www.google.com/maps/search/?api=1&query=Av.+Abílio+Machado,+3997+–+Belo+Horizonte,+MG" target="_blank" className="flex gap-3 hover:text-brand-orange transition-colors group">
-                    <MapPin className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
-                    <span>Av. Abílio Machado, 3997 – BH/MG</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="https://nucleotatianafigueiredo.com.br" target="_blank" className="flex gap-3 hover:text-brand-orange transition-colors group">
-                    <Globe className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
-                    <span>nucleotatianafigueiredo.com.br</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="https://wa.me/5531993615488" target="_blank" className="flex gap-3 hover:text-brand-orange transition-colors group">
-                    <Phone className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
-                    <span>(31) 99361-5488</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="https://instagram.com/nucleodedanca" target="_blank" className="flex gap-3 hover:text-brand-orange transition-colors group">
-                    <Instagram className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
-                    <span>@nucleodedanca</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="mailto:nucleodedanca@yahoo.com.br" className="flex gap-3 hover:text-brand-orange transition-colors group">
-                    <Mail className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
-                    <span className="break-all">nucleodedanca@yahoo.com.br</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="flex flex-col md:flex-row justify-between items-center py-12 border-t border-brand-dark/5 text-[10px] uppercase tracking-widest font-bold">
-            <p className="text-brand-dark/40">© 2026 Núcleo Tatiana Figueiredo. Todos os direitos reservados.</p>
-            <a 
-              href="https://wa.me/5531984211900?text=Quero%20fazer%20meu%20site"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 md:mt-0 text-brand-dark/40 hover:text-brand-orange transition-colors flex items-center gap-2 group"
-            >
-              <svg 
-                viewBox="0 0 24 24" 
-                className="w-3.5 h-3.5 fill-current group-hover:scale-110 transition-transform"
-              >
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.396.015 12.035c0 2.123.554 4.197 1.608 6.022L0 24l6.117-1.605a11.847 11.847 0 005.932 1.577h.005c6.631 0 12.032-5.396 12.035-12.035.002-3.217-1.253-6.241-3.535-8.522z"/>
-              </svg>
-              <span>Desenvolvido por Farizo — (31) 98421-1900</span>
-            </a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
+
 
       {/* Modals Rendering */}
-      <AnimatePresence>
-        {activeModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-brand-dark/95 backdrop-blur-md"
-              onClick={() => setActiveModal(null)}
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-brand-white w-full max-w-4xl p-8 md:p-16 max-h-[90vh] overflow-y-auto"
-            >
-              <button 
-                onClick={() => setActiveModal(null)}
-                className="absolute top-8 right-8 text-brand-dark/20 hover:text-brand-orange"
-              >
-                <X className="w-8 h-8" strokeWidth={1} />
-              </button>
+      <MainModal activeModal={activeModal} onClose={() => setActiveModal(null)} />
 
-              {activeModal === 'store' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                  <div>
-                    <h2 className="text-4xl mb-8 font-serif text-brand-dark">Itens Solidários</h2>
-                    <div className="space-y-4">
-                      {PRODUCTS.map(product => (
-                        <div key={product.id} className="p-6 bg-brand-grey group flex gap-6 items-center">
-                          <img src={product.image} className="w-24 h-24 object-cover" alt={product.name} />
-                          <div className="flex-1">
-                            <h4 className="font-serif text-xl text-brand-dark">{product.name}</h4>
-                            <p className="text-brand-orange font-display">R$ {product.price.toFixed(2)}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-brand-grey p-8 flex flex-col justify-between">
-                    <button className="w-full bg-brand-orange text-white py-5 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all">
-                      Solicitar via WhatsApp
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {activeModal === 'raffle' && (
-                <div className="max-w-xl mx-auto text-center">
-                  <Ticket className="w-16 h-16 text-brand-orange mx-auto mb-8" strokeWidth={1} />
-                  <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação entre Amigos</h2>
-                  <div className="bg-brand-grey p-12 mb-8 text-5xl font-display text-brand-orange">R$ 25,00</div>
-                </div>
-              )}
-
-              {activeModal === 'event' && (
-                <div className="max-w-xl mx-auto text-center">
-                  <Calendar className="w-16 h-16 text-brand-orange mx-auto mb-8" strokeWidth={1} />
-                  <h2 className="text-5xl mb-4 font-serif text-brand-dark">Ação Junina</h2>
-                </div>
-              )}
-
-              {activeModal === 'contact' && (
-                <div className="max-w-4xl mx-auto">
-                  <div className="text-center mb-12">
-                    <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Entre em Contato</p>
-                    <h2 className="text-4xl md:text-6xl font-serif text-brand-dark italic">Fale Conosco</h2>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-                    {/* WhatsApp */}
-                    <a 
-                      href="https://wa.me/5531993615488" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500"
-                    >
-                      <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
-                        <Phone className="w-6 h-6 text-brand-orange" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">WhatsApp</p>
-                        <p className="text-xl font-serif text-brand-dark group-hover:text-white">(31) 99361-5488</p>
-                      </div>
-                    </a>
-
-                    {/* Instagram */}
-                    <a 
-                      href="https://instagram.com/nucleodedanca" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500"
-                    >
-                      <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
-                        <Instagram className="w-6 h-6 text-brand-orange" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">Instagram</p>
-                        <p className="text-xl font-serif text-brand-dark group-hover:text-white">@nucleodedanca</p>
-                      </div>
-                    </a>
-
-                    {/* E-mail */}
-                    <a 
-                      href="mailto:nucleodedanca@yahoo.com.br" 
-                      className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500"
-                    >
-                      <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
-                        <Mail className="w-6 h-6 text-brand-orange" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">E-mail</p>
-                        <p className="text-base md:text-xl font-serif text-brand-dark group-hover:text-white break-all">nucleodedanca@yahoo.com.br</p>
-                      </div>
-                    </a>
-
-                    {/* Localização */}
-                    <a 
-                      href="https://www.google.com/maps/search/?api=1&query=Av.+Abílio+Machado,+3997+–+Belo+Horizonte,+MG" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500"
-                    >
-                      <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
-                        <MapPin className="w-6 h-6 text-brand-orange" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">Endereço</p>
-                        <p className="text-sm md:text-base font-serif text-brand-dark group-hover:text-white leading-tight">Av. Abílio Machado, 3997 – BH</p>
-                      </div>
-                    </a>
-                  </div>
-
-                  <div className="mt-12 pt-8 border-t border-brand-dark/5 text-center">
-                    <p className="text-[11px] uppercase tracking-[0.3em] font-bold text-brand-dark/20 italic">
-                      Danzamerica 2026 • Talentos de Minas • Córdoba, Argentina
-                    </p>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
       
       {/* Back to Top Button */}
-      <AnimatePresence>
-        {showScrollTop && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.5, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.5, y: 20 }}
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="fixed bottom-8 right-8 z-[80] p-4 bg-brand-orange text-white rounded-full shadow-2xl hover:bg-brand-dark transition-all group border border-white/20 backdrop-blur-sm"
-          >
-            <ArrowUp className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <BackToTop show={showScrollTop} />
+
       
       {/* Gallery Lightbox */}
       <AnimatePresence mode="wait">

@@ -367,13 +367,17 @@ function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={`
-              fixed lg:absolute left-4 right-4 lg:left-auto lg:right-0 mt-4 lg:w-96 
+              absolute left-0 lg:left-auto lg:right-0 mt-4 w-[calc(100vw-2rem)] sm:w-96 
               bg-white text-brand-dark shadow-2xl p-6 lg:p-8 z-[100]
               border border-black/5
             `}
             style={{
-              top: '100%',
-              margin: '1rem'
+              bottom: variant === 'large' ? '100%' : 'auto',
+              top: variant === 'large' ? 'auto' : '100%',
+              marginBottom: variant === 'large' ? '1rem' : '0',
+              marginTop: variant === 'large' ? '0' : '1rem',
+              left: variant === 'large' ? '0' : 'auto',
+              right: variant === 'large' ? 'auto' : '0'
             }}
           >
             <div className="flex flex-col gap-6">

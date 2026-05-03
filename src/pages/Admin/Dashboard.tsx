@@ -97,7 +97,9 @@ function OptimizedImageUploader({ onUploadSuccess, label = "Subir Imagem (Otimiz
     setUploading(true);
     try {
       const optimizedBlob = await optimizeImage(file);
-      const optimizedFile = new File([optimizedBlob], file.name, { type: 'image/jpeg' });
+      // Force .jpg extension even if original was .png
+      const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      const optimizedFile = new File([optimizedBlob], `${baseName}.jpg`, { type: 'image/jpeg' });
       const result = await uploadImage(optimizedFile, folder);
       if (result.success && result.url) {
         onUploadSuccess(result.url);

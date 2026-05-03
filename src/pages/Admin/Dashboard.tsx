@@ -1955,24 +1955,29 @@ function GalleryManager() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
         {images?.map((image) => (
-          <div key={image.id} className="group relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
-            <img src={image.url} alt={image.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-            <div className="absolute inset-0 bg-black/40 lg:bg-black/60 lg:opacity-0 lg:group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
-              <button 
-                onClick={() => handleStartEdit(image)}
-                className="p-3 bg-brand-orange text-white rounded-full hover:bg-white hover:text-brand-dark transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setImageToDelete(image.id)}
-                className="p-3 bg-red-500 text-white rounded-full hover:bg-white hover:text-red-500 transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+          <div key={image.id} className="group flex flex-col">
+            <div className="relative aspect-square bg-white/5 border border-white/10 overflow-hidden mb-3">
+              <img src={image.url} alt={image.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <div className="absolute inset-0 bg-black/40 lg:bg-black/60 lg:opacity-0 lg:group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
+                <button 
+                  onClick={() => handleStartEdit(image)}
+                  className="p-3 bg-brand-orange text-white rounded-full hover:bg-white hover:text-brand-dark transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setImageToDelete(image.id)}
+                  className="p-3 bg-red-500 text-white rounded-full hover:bg-white hover:text-red-500 transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+            <p className="text-[10px] text-white/50 font-sans italic line-clamp-2 px-1 leading-relaxed" title={image.caption}>
+              {image.caption || 'Sem legenda'}
+            </p>
           </div>
         ))}
       </div>

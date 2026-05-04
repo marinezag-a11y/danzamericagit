@@ -163,12 +163,14 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         </button>
 
         {(activeModal === 'store' || activeModal === 'raffle' || activeModal === 'event' || activeModal === 'donation') && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-            <div>
-              <div className="mb-8">
-                <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-bold mb-2">Seleção Solidária</p>
-                <h2 className="text-4xl font-serif text-brand-dark italic">Itens para Apoiar</h2>
-              </div>
+          <div className={`${success ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 lg:grid-cols-2 gap-16'}`}>
+            <div className={success ? 'w-full' : ''}>
+              {!success && (
+                <div className="mb-8">
+                  <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-bold mb-2">Seleção Solidária</p>
+                  <h2 className="text-4xl font-serif text-brand-dark italic">Itens para Apoiar</h2>
+                </div>
+              )}
 
               {!success ? (
                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
@@ -199,101 +201,111 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                   })}
                 </div>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-xl animate-bounce">
-                    <CheckCircle className="w-10 h-10 text-white" />
+                <div className="h-full flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-8 shadow-2xl shadow-green-500/20 animate-bounce">
+                    <CheckCircle className="w-12 h-12 text-white" />
                   </div>
-                  <h3 className="text-3xl font-serif text-brand-dark mb-4 italic">Pedido Recebido!</h3>
-                  <p className="text-brand-dark/60 font-serif max-w-sm">Obrigado por seu apoio. Enviamos uma confirmação para seu e-mail e entraremos em contato via WhatsApp.</p>
+                  <h3 className="text-4xl font-serif text-brand-dark mb-6 italic">Pedido Recebido!</h3>
+                  <p className="text-xl text-brand-dark/60 font-serif leading-relaxed mb-8">
+                    Obrigado por seu apoio. Enviamos uma confirmação para seu e-mail e nossa equipe entrará em contato via WhatsApp em breve.
+                  </p>
+                  <button 
+                    onClick={onClose}
+                    className="px-12 py-4 bg-brand-dark text-white font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all shadow-xl"
+                  >
+                    Fechar Janela
+                  </button>
                 </div>
               )}
             </div>
 
-            <div className="bg-brand-grey p-8 md:p-12 flex flex-col min-h-[500px]">
-              {selectedProducts.length > 0 && !success ? (
-                <div className="h-full flex flex-col">
-                  <div className="mb-8">
-                    <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-bold mb-4">Resumo do Carrinho</p>
-                    <div className="space-y-3 mb-6">
-                      {selectedProducts.map(p => (
-                        <div key={p.id} className="flex justify-between items-center text-sm font-serif italic text-brand-dark/60">
-                          <span>{p.name}</span>
-                          <span>R$ {p.price.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between items-center py-6 border-y border-brand-dark/10">
-                      <span className="text-brand-dark font-serif font-bold uppercase tracking-widest text-[10px]">Total do Pedido</span>
-                      <span className="text-3xl font-display text-brand-orange">R$ {totalPrice.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  <form onSubmit={handleOrder} className="space-y-6 flex-1">
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">Seu Nome</label>
-                      <input 
-                        type="text"
-                        required
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="Nome completo"
-                        className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">E-mail para Confirmação</label>
-                      <input 
-                        type="email"
-                        required
-                        value={customerEmail}
-                        onChange={(e) => setCustomerEmail(e.target.value)}
-                        placeholder="seu@email.com"
-                        className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">WhatsApp</label>
-                      <input 
-                        type="tel"
-                        required
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(maskPhone(e.target.value))}
-                        placeholder="(00) 00000-0000"
-                        className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif text-brand-dark"
-                      />
-                    </div>
-                    
-                    {error && (
-                      <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-serif italic mb-6">
-                        {error}
+            {!success && (
+              <div className="bg-brand-grey p-8 md:p-12 flex flex-col min-h-[500px]">
+                {selectedProducts.length > 0 ? (
+                  <div className="h-full flex flex-col">
+                    <div className="mb-8">
+                      <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-bold mb-4">Resumo do Carrinho</p>
+                      <div className="space-y-3 mb-6">
+                        {selectedProducts.map(p => (
+                          <div key={p.id} className="flex justify-between items-center text-sm font-serif italic text-brand-dark/60">
+                            <span>{p.name}</span>
+                            <span>R$ {p.price.toFixed(2)}</span>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                    
-                    <button 
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full bg-brand-orange text-white py-6 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all shadow-lg flex items-center justify-center gap-4 group disabled:opacity-50"
-                    >
-                      {submitting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          Finalizar Pedido Solidário <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
-                        </>
+                      <div className="flex justify-between items-center py-6 border-y border-brand-dark/10">
+                        <span className="text-brand-dark font-serif font-bold uppercase tracking-widest text-[10px]">Total do Pedido</span>
+                        <span className="text-3xl font-display text-brand-orange">R$ {totalPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleOrder} className="space-y-6 flex-1">
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">Seu Nome</label>
+                        <input 
+                          type="text"
+                          required
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          placeholder="Nome completo"
+                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">E-mail para Confirmação</label>
+                        <input 
+                          type="email"
+                          required
+                          value={customerEmail}
+                          onChange={(e) => setCustomerEmail(e.target.value)}
+                          placeholder="seu@email.com"
+                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">WhatsApp</label>
+                        <input 
+                          type="tel"
+                          required
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(maskPhone(e.target.value))}
+                          placeholder="(00) 00000-0000"
+                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif text-brand-dark"
+                        />
+                      </div>
+                      
+                      {error && (
+                        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-serif italic mb-6">
+                          {error}
+                        </div>
                       )}
-                    </button>
-                  </form>
-                </div>
-              ) : !success && (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                  <div className="w-20 h-20 bg-brand-dark/5 rounded-full flex items-center justify-center mb-6">
-                    <ShoppingBag className="w-8 h-8 text-brand-dark" strokeWidth={1} />
+                      
+                      <button 
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full bg-brand-orange text-white py-6 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all shadow-lg flex items-center justify-center gap-4 group disabled:opacity-50"
+                      >
+                        {submitting ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            Finalizar Pedido Solidário <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
+                          </>
+                        )}
+                      </button>
+                    </form>
                   </div>
-                  <h4 className="text-xl font-serif italic mb-2">Seu carrinho está vazio</h4>
-                  <p className="text-sm font-serif max-w-[200px]">Selecione um ou mais itens ao lado para apoiar nossa jornada.</p>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                    <div className="w-20 h-20 bg-brand-dark/5 rounded-full flex items-center justify-center mb-6">
+                      <ShoppingBag className="w-8 h-8 text-brand-dark" strokeWidth={1} />
+                    </div>
+                    <h4 className="text-xl font-serif italic mb-2">Seu carrinho está vazio</h4>
+                    <p className="text-sm font-serif max-w-[200px]">Selecione um ou mais itens ao lado para apoiar nossa jornada.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

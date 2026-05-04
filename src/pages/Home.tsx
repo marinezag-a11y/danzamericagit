@@ -5,7 +5,8 @@ import {
   ChevronRight,
   ChevronLeft,
   X,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useSiteSettings } from '../hooks/useSiteSettings';
@@ -660,6 +661,16 @@ export default function Home() {
             <p className="text-white/40 text-lg max-w-2xl mx-auto font-serif">
               Sua empresa pode ser a ponte que levará 22 bailarinos mineiros ao palco internacional. Conheça nossas cotas de patrocínio.
             </p>
+            <motion.a
+              href="https://drive.google.com/uc?export=download&id=1QrbtvJ1rXMwHn1VBI0BciDCObfbdGvcU"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => trackEvent('Download PDF Patrocínio', 'click')}
+              className="mt-10 inline-flex items-center gap-3 px-8 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-orange transition-all duration-300 shadow-xl"
+            >
+              <Download className="w-4 h-4" />
+              Baixar Plano de Patrocínio
+            </motion.a>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-white/10 border border-white/10">

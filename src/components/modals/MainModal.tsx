@@ -248,7 +248,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
                           placeholder="Nome completo"
-                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif"
+                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif text-brand-dark"
                         />
                       </div>
                       <div className="space-y-2">
@@ -259,7 +259,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                           value={customerEmail}
                           onChange={(e) => setCustomerEmail(e.target.value)}
                           placeholder="seu@email.com"
-                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif"
+                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif text-brand-dark"
                         />
                       </div>
                       <div className="space-y-2">

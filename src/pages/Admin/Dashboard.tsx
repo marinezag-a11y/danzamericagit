@@ -163,41 +163,57 @@ function OptimizedImageUploader({ onUploadSuccess, label = "Subir Imagem (Otimiz
   );
 }
 
-function ConfirmSaveModal({ 
+function GenericConfirmModal({ 
   onConfirm, 
   onCancel, 
-  oldData, 
-  newData 
+  title = "Confirmar Exclusão",
+  message = "Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.",
+  confirmText = "Excluir",
+  cancelText = "Cancelar",
+  isDestructive = true
 }: { 
   onConfirm: () => void, 
   onCancel: () => void, 
-  oldData: any, 
-  newData: any 
+  title?: string,
+  message?: string,
+  confirmText?: string,
+  cancelText?: string,
+  isDestructive?: boolean
 }) {
-  const formatValue = (val: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val));
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-brand-dark border border-white/10 p-6 md:p-8 shadow-2xl rounded-sm"
+        className="w-full max-w-sm bg-brand-dark border border-white/10 p-8 shadow-2xl rounded-sm text-center"
       >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-brand-orange/10 rounded-full">
-            <Save className="w-5 h-5 text-brand-orange" />
-          </div>
-          <h3 className="text-lg font-bold text-white uppercase tracking-widest">Confirmar Alterações</h3>
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${isDestructive ? 'bg-red-500/10' : 'bg-brand-orange/10'}`}>
+          {isDestructive ? <Trash2 className="w-8 h-8 text-red-500" /> : <CheckCircle2 className="w-8 h-8 text-brand-orange" />}
         </div>
         
-        <p className="text-xs text-white/60 mb-8 leading-relaxed">
-          Você está prestes a atualizar os valores desta despesa. Verifique as mudanças abaixo antes de confirmar:
+        <h3 className="text-xl font-serif text-white mb-4 italic">{title}</h3>
+        <p className="text-sm text-white/60 mb-8 font-serif">
+          {message}
         </p>
-
-        <div className="space-y-6">
-          {oldData.title !== newData.title && (
-            <div className="space-y-2 p-3 bg-white/5 border border-white/5 rounded-sm">
-              <p className="text-xs uppercase tracking-wider text-brand-orange font-bold">Título do Item</p>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <button 
+            onClick={onCancel}
+            className="py-3 px-4 bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest font-bold text-white transition-all border border-white/5"
+          >
+            {cancelText}
+          </button>
+          <button 
+            onClick={onConfirm}
+            className={`py-3 px-4 text-[10px] uppercase tracking-widest font-bold text-white transition-all shadow-lg ${isDestructive ? 'bg-red-500 hover:bg-red-600' : 'bg-brand-orange hover:bg-brand-dark'}`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/30 line-through truncate max-w-[120px]">{oldData.title}</span>
                 <ArrowRight className="w-3 h-3 text-brand-orange flex-shrink-0" />
@@ -2010,39 +2026,17 @@ function GalleryManager() {
         ))}
       </div>
 
-      <AnimatePresence>
-        {imageToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-brand-dark border border-white/10 p-12 max-w-lg w-full text-center"
-            >
-              <Trash2 className="w-16 h-16 text-red-500 mx-auto mb-8" />
-              <h3 className="text-3xl font-sans italic mb-4">Excluir Foto?</h3>
-              <p className="text-white/40 mb-12 font-sans">Esta ação não pode ser desfeita. A imagem será removida permanentemente da galeria.</p>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setImageToDelete(null)}
-                  className="flex-1 py-4 border border-white/10 text-[10px] uppercase tracking-widest font-bold hover:bg-white/5 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={async () => {
-                    await deleteImage(imageToDelete);
-                    setImageToDelete(null);
-                  }}
-                  className="flex-1 py-4 bg-red-500 text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-red-500 transition-all"
-                >
-                  Sim, Excluir
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {imageToDelete && (
+        <GenericConfirmModal 
+          onConfirm={async () => {
+            await deleteImage(imageToDelete);
+            setImageToDelete(null);
+          }}
+          onCancel={() => setImageToDelete(null)}
+          title="Excluir Foto?"
+          message="Esta ação não pode ser desfeita. A imagem será removida permanentemente da galeria."
+        />
+      )}
     </div>
   );
 }
@@ -2052,6 +2046,7 @@ function SponsorshipManager() {
   const [editingTier, setEditingTier] = useState<SponsorshipTier | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [tierToDelete, setTierToDelete] = useState<string | null>(null);
 
   const handleSave = async (data: any) => {
     setSaving(true);
@@ -2090,7 +2085,7 @@ function SponsorshipManager() {
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setEditingTier(tier)} className="p-2 hover:text-brand-orange transition-all"><Settings className="w-4 h-4" /></button>
-                <button onClick={() => deleteTier(tier.id)} className="p-2 hover:text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                <button onClick={() => setTierToDelete(tier.id)} className="p-2 hover:text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
             <p className="text-3xl font-sans mb-8">{tier.price}</p>
@@ -2105,6 +2100,18 @@ function SponsorshipManager() {
           </div>
         ))}
       </div>
+
+      {tierToDelete && (
+        <GenericConfirmModal 
+          onConfirm={async () => {
+            await deleteTier(tierToDelete);
+            setTierToDelete(null);
+          }}
+          onCancel={() => setTierToDelete(null)}
+          title="Excluir Cota"
+          message="Tem certeza que deseja excluir esta cota? Esta ação não pode ser desfeita."
+        />
+      )}
 
       <AnimatePresence>
         {(editingTier || isAdding) && (
@@ -2392,33 +2399,12 @@ function BannerManager() {
         )}
 
         {bannerToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-brand-dark border border-white/10 p-12 max-w-lg w-full text-center"
-            >
-              <Trash2 className="w-16 h-16 text-red-500 mx-auto mb-8" />
-              <h3 className="text-3xl font-sans italic mb-4">Excluir Slide?</h3>
-              <p className="text-white/40 mb-12 font-sans">Este slide será removido permanentemente do carrossel do topo.</p>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setBannerToDelete(null)}
-                  className="flex-1 py-4 border border-white/10 text-[10px] uppercase tracking-widest font-bold hover:bg-white/5 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  disabled={deleting}
-                  onClick={handleDelete}
-                  className="flex-1 py-4 bg-red-500 text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-red-500 transition-all flex items-center justify-center gap-2"
-                >
-                  {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Sim, Excluir'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
+          <GenericConfirmModal 
+            onConfirm={handleDelete}
+            onCancel={() => setBannerToDelete(null)}
+            title="Excluir Slide?"
+            message="Este slide será removido permanentemente do carrossel do topo."
+          />
         )}
       </AnimatePresence>
     </div>
@@ -2530,39 +2516,17 @@ function TickerManager() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {phraseToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-brand-dark border border-white/10 p-6 md:p-12 max-w-lg w-full text-center"
-            >
-              <Trash2 className="w-16 h-16 text-red-500 mx-auto mb-8" />
-              <h3 className="text-3xl font-sans italic mb-4">Excluir Frase?</h3>
-              <p className="text-white/40 mb-12 font-sans">Esta frase será removida permanentemente da barra rotativa.</p>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setPhraseToDelete(null)}
-                  className="flex-1 py-4 border border-white/10 text-[10px] uppercase tracking-widest font-bold hover:bg-white/5 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={async () => {
-                    await deletePhrase(phraseToDelete);
-                    setPhraseToDelete(null);
-                  }}
-                  className="flex-1 py-4 bg-red-500 text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-red-500 transition-all"
-                >
-                  Sim, Excluir
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {phraseToDelete && (
+        <GenericConfirmModal 
+          onConfirm={async () => {
+            await deletePhrase(phraseToDelete);
+            setPhraseToDelete(null);
+          }}
+          onCancel={() => setPhraseToDelete(null)}
+          title="Excluir Frase?"
+          message="Esta frase será removida permanentemente da barra rotativa."
+        />
+      )}
     </div>
   );
 }
@@ -2576,8 +2540,8 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
   const [localImageUrl, setLocalImageUrl] = useState(item.image_url);
   const [localPrice, setLocalPrice] = useState(item.price || 0);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  // Sync state with props when item changes (e.g. after refresh)
   useEffect(() => {
     if (!isEditing) {
       setLocalTitle(item.title);
@@ -2594,17 +2558,6 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
       return () => clearTimeout(timer);
     }
   }, [showSuccess]);
-
-  // Sync state with props when item changes (e.g. after refresh)
-  useEffect(() => {
-    if (!isEditing) {
-      setLocalTitle(item.title);
-      setLocalDescription(item.description);
-      setLocalButtonText(item.button_text);
-      setLocalImageUrl(item.image_url);
-      setLocalPrice(item.price || 0);
-    }
-  }, [item, isEditing]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -2626,6 +2579,17 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
 
   return (
     <div className="bg-white/5 border border-white/10 p-6 md:p-8 space-y-6 flex flex-col relative group">
+      {itemToDelete && (
+        <GenericConfirmModal 
+          onConfirm={async () => {
+            await onDelete(itemToDelete);
+            setItemToDelete(null);
+          }}
+          onCancel={() => setItemToDelete(null)}
+          title="Excluir Item"
+          message="Tem certeza que deseja excluir este item de ajuda? Esta ação removerá o item da loja solidária."
+        />
+      )}
       <div className="flex justify-between items-start">
         {isEditing ? (
           <input 
@@ -2649,11 +2613,7 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
             </button>
           )}
           <button 
-            onClick={() => {
-              if (window.confirm('Tem certeza que deseja excluir este item de ajuda?')) {
-                onDelete(item.id);
-              }
-            }}
+            onClick={() => setItemToDelete(item.id)}
             className="p-2 text-white/20 hover:text-red-500 transition-all"
             title="Excluir"
           >
@@ -2889,6 +2849,8 @@ function OrderManager() {
   const { orders, loading, updateOrder, deleteOrder, addOrder } = useHelpOrders();
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'sent' | 'cancelled'>('all');
   const [isAddingManually, setIsAddingManually] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const stats = {
     total: orders.length,
@@ -2900,8 +2862,24 @@ function OrderManager() {
 
   const filteredOrders = orders.filter(o => filter === 'all' || o.status === filter);
 
+  const confirmDelete = async () => {
+    if (!orderToDelete) return;
+    setDeleting(true);
+    await deleteOrder(orderToDelete);
+    setDeleting(false);
+    setOrderToDelete(null);
+  };
+
   return (
     <div className="space-y-12">
+      {orderToDelete && (
+        <GenericConfirmModal 
+          onConfirm={confirmDelete}
+          onCancel={() => setOrderToDelete(null)}
+          title="Excluir Pedido"
+          message="Tem certeza que deseja excluir este registro de pedido? Esta ação removerá o pedido permanentemente do sistema."
+        />
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white/5 border border-white/10 p-6 rounded-sm">
           <div className="flex items-center gap-4 mb-4">
@@ -3002,7 +2980,7 @@ function OrderManager() {
                   key={order.id} 
                   order={order} 
                   onUpdate={updateOrder} 
-                  onDelete={deleteOrder} 
+                  onDelete={() => setOrderToDelete(order.id)} 
                 />
               ))
             ) : (
@@ -3154,11 +3132,7 @@ function OrderRow({ order, onUpdate, onDelete }: { order: any, onUpdate: any, on
             </button>
           )}
           <button 
-            onClick={() => {
-              if(confirm('Tem certeza que deseja excluir este registro de pedido?')) {
-                onDelete(order.id);
-              }
-            }}
+            onClick={onDelete}
             className="p-2 text-white/20 hover:text-red-500 transition-colors"
           >
             <Trash2 className="w-4 h-4" />

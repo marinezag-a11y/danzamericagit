@@ -85,7 +85,7 @@ serve(async (req) => {
     `
 
     // Send to Admin
-    await fetch('https://api.resend.com/emails', {
+    const adminRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -99,9 +99,17 @@ serve(async (req) => {
         html: adminEmailHtml,
       }),
     })
+    
+    const adminResData = await adminRes.json()
+    console.log('Resend Admin Response Status:', adminRes.status)
+    console.log('Resend Admin Response Data:', adminResData)
+
+    if (!adminRes.ok) {
+      throw new Error(`Resend Admin Error: ${JSON.stringify(adminResData)}`)
+    }
 
     // Send to Customer
-    await fetch('https://api.resend.com/emails', {
+    const customerRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -114,6 +122,14 @@ serve(async (req) => {
         html: customerEmailHtml,
       }),
     })
+    
+    const customerResData = await customerRes.json()
+    console.log('Resend Customer Response Status:', customerRes.status)
+    console.log('Resend Customer Response Data:', customerResData)
+
+    if (!customerRes.ok) {
+      throw new Error(`Resend Customer Error: ${JSON.stringify(customerResData)}`)
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -121,6 +137,7 @@ serve(async (req) => {
     })
 
   } catch (error: any) {
+    console.error('Edge Function Error:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,

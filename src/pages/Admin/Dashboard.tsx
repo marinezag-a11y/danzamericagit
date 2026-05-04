@@ -18,8 +18,10 @@ import {
   Heart,
   Pencil,
   Check,
-  TrendingUp,
+  ShoppingBag,
   ArrowRight,
+  Edit2,
+  TrendingUp,
   RefreshCw,
   BarChart3,
   Eye,
@@ -36,6 +38,30 @@ import {
   MessageCircle,
   Code2
 } from 'lucide-react';
+
+const maskBRL = (value: string | number) => {
+  if (value === undefined || value === null || value === '') return 'R$ 0,00';
+  
+  // If it's a number, it's the actual value (e.g. 30.5)
+  // If it's a string, it's the raw digits from the input (e.g. "3050")
+  let cleanValue = '';
+  if (typeof value === 'number') {
+    cleanValue = Math.round(value * 100).toString();
+  } else {
+    cleanValue = value.replace(/\D/g, '');
+  }
+  
+  const numberValue = Number(cleanValue) / 100;
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(numberValue);
+};
+
+const parseBRL = (formattedValue: string) => {
+  const cleanValue = formattedValue.replace(/\D/g, '');
+  return Number(cleanValue) / 100;
+};
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { useGallery } from '../../hooks/useGallery';
@@ -45,6 +71,7 @@ import { useTicker, TickerPhrase } from '../../hooks/useTicker';
 import { useJourney, JourneyItem } from '../../hooks/useJourney';
 import { useFundraising, FundraisingExpense } from '../../hooks/useFundraising';
 import { useHelpItems, HelpItem } from '../../hooks/useHelpItems';
+import { useHelpOrders } from '../../hooks/useHelpOrders';
 import { useAnalytics, AnalyticsPeriod } from '../../hooks/useAnalytics';
 import { uploadImage } from '../../lib/upload';
 
@@ -223,23 +250,23 @@ function ConfirmSaveModal({
 
 function FundraisingRow({ expense, onUpdate, onDelete, isSaving }: { expense: FundraisingExpense, onUpdate: (updates: any) => Promise<void>, onDelete: () => void, isSaving: boolean }) {
   const [localTitle, setLocalTitle] = useState(expense.title);
-  const [localGoal, setLocalGoal] = useState(expense.goal_amount.toString());
-  const [localRaised, setLocalRaised] = useState(expense.raised_amount.toString());
+  const [localGoal, setLocalGoal] = useState<number>(expense.goal_amount);
+  const [localRaised, setLocalRaised] = useState<number>(expense.raised_amount);
   const [showConfirm, setShowConfirm] = useState(false);
   
-  const hasChanges = localTitle !== expense.title || localGoal !== expense.goal_amount.toString() || localRaised !== expense.raised_amount.toString();
+  const hasChanges = localTitle !== expense.title || localGoal !== expense.goal_amount || localRaised !== expense.raised_amount;
 
   useEffect(() => {
     setLocalTitle(expense.title);
-    setLocalGoal(expense.goal_amount.toString());
-    setLocalRaised(expense.raised_amount.toString());
+    setLocalGoal(expense.goal_amount);
+    setLocalRaised(expense.raised_amount);
   }, [expense]);
 
   const handleConfirmSave = () => {
     onUpdate({ 
       title: localTitle, 
-      goal_amount: parseFloat(localGoal) || 0, 
-      raised_amount: parseFloat(localRaised) || 0 
+      goal_amount: localGoal, 
+      raised_amount: localRaised 
     });
     setShowConfirm(false);
   };
@@ -257,25 +284,21 @@ function FundraisingRow({ expense, onUpdate, onDelete, isSaving }: { expense: Fu
         </td>
         <td className="p-4">
           <div className="flex items-center gap-2 bg-black/20 border border-white/5 px-3 py-1 rounded-sm focus-within:border-brand-orange transition-all">
-            <span className="text-xs text-brand-orange font-bold">R$</span>
             <input 
               type="text"
-              inputMode="decimal"
-              value={localGoal}
-              onChange={(e) => setLocalGoal(e.target.value.replace(/[^0-9.]/g, ''))}
-              className="bg-transparent border-none outline-none text-sm w-full text-white"
+              value={maskBRL(localGoal)}
+              onChange={(e) => setLocalGoal(parseBRL(e.target.value))}
+              className="bg-transparent border-none outline-none text-sm w-full text-white font-mono"
             />
           </div>
         </td>
         <td className="p-4">
           <div className="flex items-center gap-2 bg-black/20 border border-white/5 px-3 py-1 rounded-sm focus-within:border-brand-orange transition-all">
-            <span className="text-xs text-brand-orange font-bold">R$</span>
             <input 
               type="text"
-              inputMode="decimal"
-              value={localRaised}
-              onChange={(e) => setLocalRaised(e.target.value.replace(/[^0-9.]/g, ''))}
-              className="bg-transparent border-none outline-none text-sm w-full text-white"
+              value={maskBRL(localRaised)}
+              onChange={(e) => setLocalRaised(parseBRL(e.target.value))}
+              className="bg-transparent border-none outline-none text-sm w-full text-white font-mono"
             />
           </div>
         </td>
@@ -2085,100 +2108,114 @@ function SponsorshipManager() {
 
       <AnimatePresence>
         {(editingTier || isAdding) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="bg-brand-dark border border-white/10 p-6 md:p-12 max-w-2xl w-full relative overflow-y-auto max-h-[90vh]"
-            >
-              <button 
-                onClick={() => {
-                  setEditingTier(null);
-                  setIsAdding(false);
-                }}
-                className="absolute top-8 right-8 text-white/20 hover:text-white"
-              >
-                <X className="w-6 h-6" />
-              </button>
-
-              <h3 className="text-3xl font-sans italic mb-8">
-                {isAdding ? 'Nova Cota' : 'Editar Cota'}
-              </h3>
-
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Nome da Cota</label>
-                    <input 
-                      type="text" 
-                      defaultValue={editingTier?.name || ''}
-                      id="tier-name"
-                      className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Valor (R$)</label>
-                    <input 
-                      type="text" 
-                      defaultValue={editingTier?.price || ''}
-                      id="tier-price"
-                      placeholder="0.000,00"
-                      className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Benefícios (um por linha)</label>
-                  <textarea 
-                    rows={5}
-                    defaultValue={editingTier?.benefits.join('\n') || ''}
-                    id="tier-benefits"
-                    className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
-                  />
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="checkbox" 
-                    id="tier-highlight"
-                    defaultChecked={editingTier?.highlight || false}
-                    className="w-5 h-5 accent-brand-orange"
-                  />
-                  <label htmlFor="tier-highlight" className="text-sm font-sans">Destacar esta cota (ex: Diamante)</label>
-                </div>
-
-                <div className="pt-8 border-t border-white/5 flex gap-4">
-                   <button 
-                    onClick={() => {
-                      setEditingTier(null);
-                      setIsAdding(false);
-                    }}
-                    className="flex-1 py-4 text-[10px] uppercase tracking-widest font-bold border border-white/10 hover:bg-white/5 transition-all"
-                   >
-                     Cancelar
-                   </button>
-                   <button 
-                    disabled={saving}
-                    onClick={() => {
-                      const name = (document.getElementById('tier-name') as HTMLInputElement).value;
-                      const price = (document.getElementById('tier-price') as HTMLInputElement).value;
-                      const benefits = (document.getElementById('tier-benefits') as HTMLTextAreaElement).value.split('\n').filter(b => b.trim());
-                      const highlight = (document.getElementById('tier-highlight') as HTMLInputElement).checked;
-                      handleSave({ name, price, benefits, highlight });
-                    }}
-                    className="flex-1 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2"
-                   >
-                     {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                     Salvar Cota
-                   </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+          <TierEditModal 
+            tier={editingTier} 
+            isAdding={isAdding}
+            onClose={() => {
+              setEditingTier(null);
+              setIsAdding(false);
+            }}
+            onSave={handleSave}
+            saving={saving}
+          />
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function TierEditModal({ tier, isAdding, onClose, onSave, saving }: { tier: any, isAdding: boolean, onClose: () => void, onSave: (data: any) => void, saving: boolean }) {
+  const [name, setName] = useState(tier?.name || '');
+  const [price, setPrice] = useState(tier?.price || '');
+  const [benefits, setBenefits] = useState(tier?.benefits.join('\n') || '');
+  const [highlight, setHighlight] = useState(tier?.highlight || false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="bg-brand-dark border border-white/10 p-6 md:p-12 max-w-2xl w-full relative overflow-y-auto max-h-[90vh]"
+      >
+        <button 
+          onClick={onClose}
+          className="absolute top-8 right-8 text-white/20 hover:text-white"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
+        <h3 className="text-3xl font-sans italic mb-8">
+          {isAdding ? 'Nova Cota' : 'Editar Cota'}
+        </h3>
+
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Nome da Cota</label>
+              <input 
+                type="text" 
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Valor (R$)</label>
+              <input 
+                type="text" 
+                value={maskBRL(price)}
+                onChange={e => setPrice(parseBRL(e.target.value).toString())}
+                placeholder="R$ 0,00"
+                className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-brand-orange font-bold"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2">Benefícios (um por linha)</label>
+            <textarea 
+              rows={5}
+              value={benefits}
+              onChange={e => setBenefits(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <input 
+              type="checkbox" 
+              checked={highlight}
+              onChange={e => setHighlight(e.target.checked)}
+              id="tier-highlight"
+              className="w-5 h-5 accent-brand-orange"
+            />
+            <label htmlFor="tier-highlight" className="text-sm font-sans">Destacar esta cota (ex: Diamante)</label>
+          </div>
+
+          <div className="pt-8 border-t border-white/5 flex gap-4">
+              <button 
+                onClick={onClose}
+                className="flex-1 py-4 text-[10px] uppercase tracking-widest font-bold border border-white/10 hover:bg-white/5 transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={saving || !name}
+                onClick={() => onSave({ 
+                  name, 
+                  price: price, // Keep as string for DB
+                  benefits: benefits.split('\n').filter(b => b.trim()), 
+                  highlight 
+                })}
+                className="flex-1 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2"
+              >
+                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                Salvar Cota
+              </button>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -2537,6 +2574,37 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
   const [localDescription, setLocalDescription] = useState(item.description);
   const [localButtonText, setLocalButtonText] = useState(item.button_text);
   const [localImageUrl, setLocalImageUrl] = useState(item.image_url);
+  const [localPrice, setLocalPrice] = useState(item.price || 0);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Sync state with props when item changes (e.g. after refresh)
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalTitle(item.title);
+      setLocalDescription(item.description);
+      setLocalButtonText(item.button_text);
+      setLocalImageUrl(item.image_url);
+      setLocalPrice(item.price || 0);
+    }
+  }, [item, isEditing]);
+
+  useEffect(() => {
+    if (showSuccess) {
+      const timer = setTimeout(() => setShowSuccess(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess]);
+
+  // Sync state with props when item changes (e.g. after refresh)
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalTitle(item.title);
+      setLocalDescription(item.description);
+      setLocalButtonText(item.button_text);
+      setLocalImageUrl(item.image_url);
+      setLocalPrice(item.price || 0);
+    }
+  }, [item, isEditing]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -2544,12 +2612,13 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
       title: localTitle,
       description: localDescription,
       button_text: localButtonText,
-      image_url: localImageUrl
+      image_url: localImageUrl,
+      price: localPrice
     });
     setSaving(false);
     if (result.success) {
       setIsEditing(false);
-      alert('Item atualizado com sucesso!');
+      setShowSuccess(true);
     } else {
       alert('Erro ao atualizar item: ' + result.error);
     }
@@ -2570,16 +2639,7 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
         )}
         
         <div className="flex items-center gap-2">
-          {isEditing ? (
-            <button 
-              onClick={handleSave}
-              disabled={saving}
-              className="p-2 bg-green-500/20 text-green-500 rounded-full hover:bg-green-500 hover:text-white transition-all"
-              title="Salvar"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-            </button>
-          ) : (
+          {!isEditing && (
             <button 
               onClick={() => setIsEditing(true)}
               className="p-2 text-white/20 hover:text-brand-orange transition-all"
@@ -2618,6 +2678,21 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
         </div>
 
         <div className="space-y-2">
+          <label className="block text-[10px] uppercase tracking-widest text-white/40">Valor do Item (R$)</label>
+          {isEditing ? (
+            <input 
+              type="text"
+              value={maskBRL(localPrice)}
+              onChange={(e) => setLocalPrice(parseBRL(e.target.value))}
+              className="w-full bg-white/5 border border-white/10 p-3 text-sm font-sans focus:border-brand-orange outline-none transition-all text-brand-orange font-bold"
+              placeholder="R$ 0,00"
+            />
+          ) : (
+            <p className="text-xl font-display text-brand-orange">R$ {(item.price || 0).toFixed(2)}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <label className="block text-[10px] uppercase tracking-widest text-white/40">Imagem da Seção</label>
           <div className="space-y-4">
             <div className="aspect-video bg-black/50 border border-white/10 overflow-hidden relative group-hover:border-brand-orange/20 transition-all">
@@ -2648,13 +2723,28 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
         )}
       </div>
 
-      {isEditing && (
-        <button 
-          onClick={() => setIsEditing(false)}
-          className="w-full py-2 text-[10px] uppercase tracking-widest font-bold text-white/20 hover:text-white transition-all"
-        >
-          Cancelar Edição
-        </button>
+      {isEditing ? (
+        <div className="flex gap-4 pt-4 border-t border-white/10">
+          <button 
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 bg-brand-orange text-white py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            Salvar Alterações
+          </button>
+          <button 
+            onClick={() => setIsEditing(false)}
+            className="px-6 py-3 border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white/40 hover:text-white transition-all"
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : showSuccess && (
+        <div className="pt-4 border-t border-green-500/20 flex items-center gap-3 text-green-500 text-[10px] uppercase tracking-widest font-bold">
+          <CheckCircle2 className="w-4 h-4" />
+          Alterado com sucesso!
+        </div>
       )}
     </div>
   );
@@ -2666,6 +2756,7 @@ function HelpSectionManager() {
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [adding, setAdding] = useState(false);
+  const [newPrice, setNewPrice] = useState(0);
   const [newImageUrl, setNewImageUrl] = useState('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
 
   const handleAddNew = async () => {
@@ -2675,8 +2766,9 @@ function HelpSectionManager() {
       title: newTitle,
       description: newDescription,
       image_url: newImageUrl,
-      button_text: 'Ver Mais',
-      modal_type: 'event',
+      price: newPrice,
+      button_text: 'Fazer Pedido',
+      modal_type: 'store',
       order: (items || []).length + 1
     });
     setAdding(false);
@@ -2684,6 +2776,7 @@ function HelpSectionManager() {
       setIsAdding(false);
       setNewTitle('');
       setNewDescription('');
+      setNewPrice(0);
       setNewImageUrl('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
       alert('Item adicionado com sucesso!');
     } else {
@@ -2725,6 +2818,16 @@ function HelpSectionManager() {
                       onChange={(e) => setNewTitle(e.target.value)}
                       className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
                       placeholder="Ex: Doação de Materiais"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Valor do Item (R$)</label>
+                    <input 
+                      type="text"
+                      value={maskBRL(newPrice)}
+                      onChange={(e) => setNewPrice(parseBRL(e.target.value))}
+                      className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-brand-orange font-bold"
+                      placeholder="R$ 0,00"
                     />
                   </div>
                   <div className="space-y-2">
@@ -2774,6 +2877,424 @@ function HelpSectionManager() {
           />
         ))}
       </div>
+
+      <div className="mt-24 pt-24 border-t border-white/10">
+        <OrderManager />
+      </div>
+    </div>
+  );
+}
+
+function OrderManager() {
+  const { orders, loading, updateOrder, deleteOrder, addOrder } = useHelpOrders();
+  const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'sent' | 'cancelled'>('all');
+  const [isAddingManually, setIsAddingManually] = useState(false);
+
+  const stats = {
+    total: orders.length,
+    pending: orders.filter(o => o.status === 'pending').length,
+    paid: orders.filter(o => o.status === 'paid').length,
+    cancelled: orders.filter(o => o.status === 'cancelled').length,
+    totalValue: orders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? Number(o.total_price || o.product_price) : 0), 0)
+  };
+
+  const filteredOrders = orders.filter(o => filter === 'all' || o.status === filter);
+
+  return (
+    <div className="space-y-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-2 bg-brand-orange/20 rounded-sm">
+              <Clock className="w-5 h-5 text-brand-orange" />
+            </div>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Pendentes</p>
+          </div>
+          <p className="text-3xl font-display text-white">{stats.pending}</p>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-2 bg-green-500/20 rounded-sm">
+              <CheckCircle2 className="w-5 h-5 text-green-500" />
+            </div>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Pagos</p>
+          </div>
+          <p className="text-3xl font-display text-white">{stats.paid}</p>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-2 bg-white/5 rounded-sm">
+              <ShoppingBag className="w-5 h-5 text-white/40" />
+            </div>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Total Pedidos</p>
+          </div>
+          <p className="text-3xl font-display text-white">{stats.total}</p>
+        </div>
+
+        <div className="bg-brand-orange border border-brand-orange p-6 rounded-sm shadow-xl shadow-brand-orange/10">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-2 bg-white/20 rounded-sm">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <p className="text-[10px] uppercase tracking-widest text-white/80 font-bold">Valor Total Arrecadado</p>
+          </div>
+          <p className="text-3xl font-display text-white">R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mt-12">
+        <div>
+          <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Gestão Financeira</p>
+          <h2 className="text-4xl font-serif text-white italic">Controle de Pedidos</h2>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          <div className="bg-white/5 border border-white/10 p-6 flex flex-col min-w-[200px]">
+            <span className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Valor Total (Vendas)</span>
+            <span className="text-2xl font-display text-brand-orange">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalValue)}
+            </span>
+          </div>
+          <div className="bg-white/5 border border-white/10 p-6 flex flex-col min-w-[140px]">
+            <span className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Total Pedidos</span>
+            <span className="text-2xl font-display text-white">{orders.length}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white/5 border border-white/10 p-4">
+        <div className="flex flex-wrap gap-2">
+          {(['all', 'pending', 'paid', 'sent', 'cancelled'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all ${filter === f ? 'bg-brand-orange text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+            >
+              {f === 'all' ? 'Todos' : f === 'pending' ? 'Pendentes' : f === 'paid' ? 'Pagos' : f === 'sent' ? 'Enviados' : 'Cancelados'}
+            </button>
+          ))}
+        </div>
+        <button 
+          onClick={() => setIsAddingManually(true)}
+          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-all border border-white/10"
+        >
+          <Plus className="w-3 h-3" /> Incluir Manualmente
+        </button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-white/10 text-left">
+              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Data</th>
+              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Cliente</th>
+              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Produto</th>
+              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor</th>
+              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Status</th>
+              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {filteredOrders.length > 0 ? (
+              filteredOrders.map(order => (
+                <OrderRow 
+                  key={order.id} 
+                  order={order} 
+                  onUpdate={updateOrder} 
+                  onDelete={deleteOrder} 
+                />
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="py-20 text-center text-white/20 italic font-serif">Nenhum pedido encontrado com este filtro.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {isAddingManually && (
+        <ManualOrderModal 
+          onClose={() => setIsAddingManually(false)} 
+          onSave={addOrder}
+        />
+      )}
+    </div>
+  );
+}
+
+function OrderRow({ order, onUpdate, onDelete }: { order: any, onUpdate: any, onDelete: any }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  
+  // Local state for editing
+  const [customerName, setCustomerName] = useState(order.customer_name);
+  const [customerPhone, setCustomerPhone] = useState(order.customer_phone);
+  const [customerEmail, setCustomerEmail] = useState(order.customer_email);
+  const [productName, setProductName] = useState(order.product_name);
+  const [productPrice, setProductPrice] = useState(order.product_price);
+  const [status, setStatus] = useState(order.status);
+
+  const handleSave = async () => {
+    setUpdating(true);
+    const result = await onUpdate(order.id, {
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      customer_email: customerEmail,
+      product_name: productName,
+      product_price: Number(productPrice),
+      total_price: Number(productPrice),
+      status: status
+    });
+    setUpdating(false);
+    if (result.success) {
+      setIsEditing(false);
+    } else {
+      alert('Erro ao atualizar pedido: ' + result.error);
+    }
+  };
+
+  const statusColors = {
+    pending: 'text-yellow-500 bg-yellow-500/10',
+    paid: 'text-green-500 bg-green-500/10',
+    sent: 'text-blue-500 bg-blue-500/10',
+    cancelled: 'text-red-500 bg-red-500/10'
+  };
+
+  return (
+    <tr className="group hover:bg-white/5 transition-colors">
+      <td className="py-6 px-6 text-sm text-white/60 font-sans">
+        {new Date(order.created_at).toLocaleDateString('pt-BR')}
+      </td>
+      <td className="py-6 px-6">
+        {isEditing ? (
+          <div className="space-y-2">
+            <input 
+              value={customerName} 
+              onChange={e => setCustomerName(e.target.value)}
+              className="bg-white/5 border border-white/10 p-1 text-sm text-white w-full"
+            />
+            <input 
+              value={customerPhone} 
+              onChange={e => setCustomerPhone(e.target.value)}
+              className="bg-white/5 border border-white/10 p-1 text-[10px] text-white/60 w-full"
+            />
+            <input 
+              value={customerEmail} 
+              onChange={e => setCustomerEmail(e.target.value)}
+              className="bg-white/5 border border-white/10 p-1 text-[10px] text-brand-orange/60 w-full"
+            />
+          </div>
+        ) : (
+          <>
+            <p className="text-white font-bold text-sm mb-1">{order.customer_name}</p>
+            <p className="text-[10px] text-white/40 font-mono tracking-wider mb-1">{order.customer_phone}</p>
+            <p className="text-[10px] text-brand-orange/60 font-mono tracking-wider">{order.customer_email}</p>
+          </>
+        )}
+      </td>
+      <td className="py-6 px-6 text-sm text-white/80 font-serif italic">
+        {isEditing ? (
+          <textarea 
+            value={productName} 
+            onChange={e => setProductName(e.target.value)}
+            className="bg-white/5 border border-white/10 p-1 text-sm text-white w-full h-20"
+          />
+        ) : (
+          order.product_name
+        )}
+      </td>
+      <td className="py-6 px-6 text-sm font-display text-brand-orange">
+        {isEditing ? (
+          <input 
+            type="text"
+            value={maskBRL(productPrice)} 
+            onChange={e => setProductPrice(parseBRL(e.target.value))}
+            className="bg-white/5 border border-white/10 p-1 text-sm text-brand-orange w-32"
+          />
+        ) : (
+          new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.product_price)
+        )}
+      </td>
+      <td className="py-6 px-6">
+        <select 
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            if (!isEditing) {
+              onUpdate(order.id, { status: e.target.value });
+            }
+          }}
+          disabled={updating}
+          className={`text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-sm outline-none cursor-pointer transition-all ${statusColors[status as keyof typeof statusColors]} border border-white/10 bg-black/40`}
+        >
+          <option value="pending">Pendente</option>
+          <option value="paid">Pago</option>
+          <option value="sent">Enviado</option>
+          <option value="cancelled">Cancelado</option>
+        </select>
+      </td>
+      <td className="py-6 px-6 text-right">
+        <div className="flex items-center justify-end gap-2">
+          {isEditing ? (
+            <button 
+              onClick={handleSave}
+              disabled={updating}
+              className="p-2 text-green-500 hover:bg-green-500/10 transition-colors"
+            >
+              {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            </button>
+          ) : (
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="p-2 text-white/20 hover:text-brand-orange transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
+          <button 
+            onClick={() => {
+              if(confirm('Tem certeza que deseja excluir este registro de pedido?')) {
+                onDelete(order.id);
+              }
+            }}
+            className="p-2 text-white/20 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function ManualOrderModal({ onClose, onSave }: { onClose: () => void, onSave: any }) {
+  const { items: helpItems } = useHelpItems();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [product, setProduct] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (helpItems && helpItems.length > 0 && !product) {
+      setProduct(helpItems[0]);
+    }
+  }, [helpItems]);
+
+  useEffect(() => {
+    if (showSuccess) {
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+        onClose();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess, onClose]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product) return;
+    
+    setSaving(true);
+    const result = await onSave({
+      customer_name: name,
+      customer_phone: phone,
+      customer_email: email,
+      product_id: product?.id,
+      product_name: product?.title,
+      product_price: product?.price || 0,
+      total_price: product?.price || 0,
+      status: 'pending'
+    });
+    setSaving(false);
+    
+    if (result.success) {
+      setShowSuccess(true);
+    } else {
+      alert('Erro ao incluir pedido: ' + result.error);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-brand-dark border border-white/10 p-12 max-w-lg w-full shadow-2xl relative"
+      >
+        <button onClick={onClose} className="absolute top-6 right-6 text-white/20 hover:text-white transition-colors">
+          <X className="w-6 h-6" />
+        </button>
+        
+        <h3 className="text-3xl font-serif text-white mb-8 italic">Incluir Pedido Manual</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Cliente</label>
+            <input 
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none"
+              placeholder="Nome completo"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">E-mail</label>
+            <input 
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none"
+              placeholder="seu@email.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">WhatsApp</label>
+            <input 
+              type="text"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none"
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Produto</label>
+            <select 
+              value={product?.id || ''}
+              onChange={(e) => setProduct(helpItems.find(p => p.id === e.target.value) || helpItems[0])}
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none cursor-pointer"
+            >
+              {(helpItems || []).map(p => (
+                <option key={p.id} value={p.id}>{p.title} - R$ {(p.price || 0).toFixed(2)}</option>
+              ))}
+            </select>
+          </div>
+          
+          <button 
+            type="submit"
+            disabled={saving || showSuccess}
+            className={`w-full py-5 font-bold uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 ${showSuccess ? 'bg-green-500 text-white' : 'bg-brand-orange text-white hover:bg-brand-dark'}`}
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : showSuccess ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" /> Pedido Incluído!
+              </>
+            ) : (
+              'Salvar Pedido'
+            )}
+          </button>
+        </form>
+      </motion.div>
     </div>
   );
 }

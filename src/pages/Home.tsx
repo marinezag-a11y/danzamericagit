@@ -99,6 +99,7 @@ export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedImageIdx, setSelectedImageIdx] = useState<number | null>(null);
   const [activeSection, setActiveSection] = useState<string>('');
+  const [selectedHelpItemId, setSelectedHelpItemId] = useState<string | null>(null);
 
   // Dynamic Data
   const { settings, loading: settingsLoading } = useSiteSettings();
@@ -615,6 +616,7 @@ export default function Home() {
                 whileHover={{ y: -10 }}
                 onClick={() => {
                   trackEvent(`Abrir ${item.title}`, 'click');
+                  setSelectedHelpItemId(item.id);
                   setActiveModal(item.modal_type as ModalType);
                 }}
                 className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
@@ -632,6 +634,11 @@ export default function Home() {
                     />
                   </div>
                   <h3 className="text-3xl mb-4 text-brand-dark group-hover:text-white font-serif transition-colors leading-tight">{item.title}</h3>
+                  {item.price && Number(item.price) > 0 && (
+                    <p className="text-brand-orange group-hover:text-white text-xl font-display font-medium mb-4 transition-colors">
+                      R$ {Number(item.price).toFixed(2)}
+                    </p>
+                  )}
                   <p className="text-brand-dark/60 text-sm font-serif leading-relaxed group-hover:text-white/80 mb-8 transition-colors">
                     {item.description}
                   </p>
@@ -706,7 +713,19 @@ export default function Home() {
 
       <Footer />
 
-      <MainModal activeModal={activeModal} onClose={() => setActiveModal(null)} />
+      <AnimatePresence>
+        {activeModal && (
+          <MainModal 
+            activeModal={activeModal} 
+            selectedItemId={selectedHelpItemId}
+            helpItems={helpItems}
+            onClose={() => {
+              setActiveModal(null);
+              setSelectedHelpItemId(null);
+            }} 
+          />
+        )}
+      </AnimatePresence>
       
       <BackToTop show={showScrollTop} />
 

@@ -31,6 +31,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   const [customerPhone, setCustomerPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const products = useMemo(() => (helpItems || []).map(item => ({
     id: item.id,
@@ -64,6 +65,17 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
     );
   };
 
+  const maskPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/^(\d{2})(\d)/g, '($1) $2')
+        .replace(/(\d{5})(\d)/g, '$1-$2')
+        .substring(0, 15);
+    }
+    return numbers.substring(0, 11);
+  };
+
   const resetForm = () => {
     setSelectedProductIds([]);
     setCustomerName('');
@@ -71,6 +83,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
     setCustomerPhone('');
     setSuccess(false);
     setSubmitting(false);
+    setError(null);
   };
 
   const handleOrder = async (e: React.FormEvent) => {
@@ -78,6 +91,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
     if (selectedProducts.length === 0) return;
 
     setSubmitting(true);
+    setError(null);
     try {
       const orderData = {
         customer_name: customerName,
@@ -95,16 +109,22 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
       if (result.success) {
         // 2. Send Emails via Edge Function
-        await supabase.functions.invoke('send-order', {
-          body: orderData
-        });
+        try {
+          await supabase.functions.invoke('send-order', {
+            body: orderData
+          });
+        } catch (e) {
+          console.error('Edge function error:', e);
+          // Don't fail the UI if just the email fails
+        }
         
         setSuccess(true);
       } else {
-        alert('Erro ao processar pedido.');
+        setError('Ocorreu um erro ao salvar seu pedido. Por favor, tente novamente ou nos chame no WhatsApp.');
       }
-    } catch (error) {
-      console.error('Error adding order:', error);
+    } catch (err: any) {
+      console.error('Error adding order:', err);
+      setError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setSubmitting(false);
     }
@@ -237,11 +257,17 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                         type="tel"
                         required
                         value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        onChange={(e) => setCustomerPhone(maskPhone(e.target.value))}
                         placeholder="(00) 00000-0000"
-                        className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif"
+                        className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif text-brand-dark"
                       />
                     </div>
+                    
+                    {error && (
+                      <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-serif italic mb-6">
+                        {error}
+                      </div>
+                    )}
                     
                     <button 
                       type="submit"

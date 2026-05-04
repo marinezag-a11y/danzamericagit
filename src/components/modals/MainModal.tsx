@@ -211,10 +211,11 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     <p className="text-sm text-brand-dark/70 font-serif mb-6 leading-relaxed">
                       Faça o PIX do valor total do seu pedido e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>. Você receberá um contato em seguida para finalização e envio.
                     </p>
-                    <div className="bg-white p-4 border border-brand-dark/5 flex flex-col gap-2">
-                      <span className="text-[9px] uppercase tracking-widest opacity-40 font-bold">Chave PIX</span>
-                      <code className="text-brand-orange font-bold text-sm break-all">ballettatianafigueiredo@gmail.com</code>
+                    <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-2 text-center">
+                      <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold">Chave PIX para Pagamento</span>
+                      <code className="text-brand-dark font-bold text-base md:text-lg break-all">ballettatianafigueiredo@gmail.com</code>
                     </div>
+
                   </div>
 
                   <button 

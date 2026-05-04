@@ -44,6 +44,7 @@ import { useHeroBanners, HeroBanner } from '../../hooks/useHeroBanners';
 import { useTicker, TickerPhrase } from '../../hooks/useTicker';
 import { useJourney, JourneyItem } from '../../hooks/useJourney';
 import { useFundraising, FundraisingExpense } from '../../hooks/useFundraising';
+import { useHelpItems, HelpItem } from '../../hooks/useHelpItems';
 import { useAnalytics, AnalyticsPeriod } from '../../hooks/useAnalytics';
 import { uploadImage } from '../../lib/upload';
 
@@ -2525,104 +2526,223 @@ function TickerManager() {
   );
 }
 
-function HelpSectionManager() {
-  const { settings, loading, updateSetting } = useSiteSettings();
-  const [saving, setSaving] = useState<string | null>(null);
+function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: (id: string, updates: any) => Promise<any>, onDelete: (id: string) => Promise<any> }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [localTitle, setLocalTitle] = useState(item.title);
+  const [localDescription, setLocalDescription] = useState(item.description);
+  const [localButtonText, setLocalButtonText] = useState(item.button_text);
+  const [localImageUrl, setLocalImageUrl] = useState(item.image_url);
 
-  if (loading) return <Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" />;
-
-  const helpSections = [
-    {
-      id: 1,
-      title: 'Loja Oficial',
-      keys: {
-        title: 'help_store_title',
-        description: 'help_store_description',
-        image: 'help_store_image'
-      }
-    },
-    {
-      id: 2,
-      title: 'Rifa Digital',
-      keys: {
-        title: 'help_raffle_title',
-        description: 'help_raffle_description',
-        image: 'help_raffle_image'
-      }
-    },
-    {
-      id: 3,
-      title: 'Eventos & Ações',
-      keys: {
-        title: 'help_event_title',
-        description: 'help_event_description',
-        image: 'help_event_image'
-      }
-    }
-  ];
+  const handleSave = async () => {
+    setSaving(true);
+    await onUpdate(item.id, {
+      title: localTitle,
+      description: localDescription,
+      button_text: localButtonText,
+      image_url: localImageUrl
+    });
+    setSaving(false);
+    setIsEditing(false);
+  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {helpSections.map((sec) => (
-        <div key={sec.id} className="bg-white/5 border border-white/10 p-8 space-y-6 flex flex-col">
-          <h3 className="text-xl font-sans italic text-brand-orange">{sec.title}</h3>
-          
-          <div className="space-y-6 flex-1">
-            <div className="space-y-2">
-              <label className="block text-[10px] uppercase tracking-widest text-white/40">Título</label>
-              <input 
-                type="text"
-                className="w-full bg-white/5 border border-white/10 p-3 text-sm font-sans focus:border-brand-orange outline-none transition-all"
-                defaultValue={settings[sec.keys.title]?.value || ''}
-                onBlur={async (e) => {
-                  setSaving(sec.keys.title);
-                  await updateSetting(sec.keys.title, e.target.value);
-                  setSaving(null);
-                }}
-              />
-            </div>
+    <div className="bg-white/5 border border-white/10 p-6 md:p-8 space-y-6 flex flex-col relative group">
+      <div className="flex justify-between items-start">
+        {isEditing ? (
+          <input 
+            type="text"
+            value={localTitle}
+            onChange={(e) => setLocalTitle(e.target.value)}
+            className="text-xl font-sans italic text-brand-orange bg-white/5 border-b border-brand-orange/30 outline-none w-full"
+          />
+        ) : (
+          <h3 className="text-xl font-sans italic text-brand-orange">{item.title}</h3>
+        )}
+        
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <button 
+              onClick={handleSave}
+              disabled={saving}
+              className="p-2 bg-green-500/20 text-green-500 rounded-full hover:bg-green-500 hover:text-white transition-all"
+              title="Salvar"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            </button>
+          ) : (
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="p-2 text-white/20 hover:text-brand-orange transition-all"
+              title="Editar"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
+          <button 
+            onClick={() => {
+              if (window.confirm('Tem certeza que deseja excluir este item de ajuda?')) {
+                onDelete(item.id);
+              }
+            }}
+            className="p-2 text-white/20 hover:text-red-500 transition-all"
+            title="Excluir"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <label className="block text-[10px] uppercase tracking-widest text-white/40">Descrição</label>
-              <textarea 
-                rows={4}
-                className="w-full bg-white/5 border border-white/10 p-3 text-sm font-sans focus:border-brand-orange outline-none transition-all"
-                defaultValue={settings[sec.keys.description]?.value || ''}
-                onBlur={async (e) => {
-                  setSaving(sec.keys.description);
-                  await updateSetting(sec.keys.description, e.target.value);
-                  setSaving(null);
-                }}
-              />
-            </div>
+      <div className="space-y-6 flex-1">
+        <div className="space-y-2">
+          <label className="block text-[10px] uppercase tracking-widest text-white/40">Descrição</label>
+          {isEditing ? (
+            <textarea 
+              rows={4}
+              value={localDescription}
+              onChange={(e) => setLocalDescription(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 p-3 text-sm font-sans focus:border-brand-orange outline-none transition-all"
+            />
+          ) : (
+            <p className="text-sm text-white/60 font-sans leading-relaxed">{item.description}</p>
+          )}
+        </div>
 
-            <div className="space-y-2">
-              <label className="block text-[10px] uppercase tracking-widest text-white/40">Imagem da Seção</label>
-              <div className="space-y-4">
-                <div className="aspect-square bg-black/50 border border-white/10 overflow-hidden mb-4">
-                  <img src={settings[sec.keys.image]?.value} alt="" className="w-full h-full object-cover" />
+        <div className="space-y-2">
+          <label className="block text-[10px] uppercase tracking-widest text-white/40">Imagem da Seção</label>
+          <div className="space-y-4">
+            <div className="aspect-video bg-black/50 border border-white/10 overflow-hidden relative group-hover:border-brand-orange/20 transition-all">
+              <img src={isEditing ? localImageUrl : item.image_url} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+              {isEditing && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4">
+                  <OptimizedImageUploader 
+                    onUploadSuccess={(url) => setLocalImageUrl(url)}
+                    folder="help"
+                    label="Alterar Imagem"
+                  />
                 </div>
-                <OptimizedImageUploader 
-                  onUploadSuccess={async (url) => {
-                    setSaving(sec.keys.image);
-                    await updateSetting(sec.keys.image, url);
-                    setSaving(null);
-                  }}
-                  folder="help"
-                />
-              </div>
+              )}
             </div>
-          </div>
-
-          <div className="pt-4 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold opacity-40">
-            {saving?.startsWith('help_') && (saving === sec.keys.title || saving === sec.keys.description || saving === sec.keys.image) ? (
-              <><Loader2 className="w-3 h-3 animate-spin" /> Salvando...</>
-            ) : (
-              <><CheckCircle2 className="w-3 h-3 text-green-500" /> Sincronizado</>
-            )}
           </div>
         </div>
-      ))}
+
+        {isEditing && (
+          <div className="space-y-2">
+            <label className="block text-[10px] uppercase tracking-widest text-white/40">Texto do Botão</label>
+            <input 
+              type="text"
+              value={localButtonText}
+              onChange={(e) => setLocalButtonText(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 p-3 text-sm font-sans focus:border-brand-orange outline-none transition-all"
+            />
+          </div>
+        )}
+      </div>
+
+      {isEditing && (
+        <button 
+          onClick={() => setIsEditing(false)}
+          className="w-full py-2 text-[10px] uppercase tracking-widest font-bold text-white/20 hover:text-white transition-all"
+        >
+          Cancelar Edição
+        </button>
+      )}
+    </div>
+  );
+}
+
+function HelpSectionManager() {
+  const { items, loading, addItem, updateItem, deleteItem } = useHelpItems();
+  const [isAdding, setIsAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const handleAddNew = async () => {
+    if (!newTitle) return;
+    setAdding(true);
+    await addItem({
+      title: newTitle,
+      description: newDescription,
+      image_url: 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop',
+      button_text: 'Ver Mais',
+      modal_type: 'event',
+      order: items.length + 1
+    });
+    setAdding(false);
+    setIsAdding(false);
+    setNewTitle('');
+    setNewDescription('');
+  };
+
+  if (loading) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
+
+  return (
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/40 italic">Gerenciar Cards "Como Ajudar"</h3>
+        <button 
+          onClick={() => setIsAdding(!isAdding)}
+          className={`flex items-center gap-2 px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all ${isAdding ? 'bg-white/5 text-white/40' : 'bg-brand-orange text-white shadow-lg hover:scale-105'}`}
+        >
+          {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {isAdding ? 'Cancelar' : 'Incluir Novo Item'}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {isAdding && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white/5 border border-white/10 p-8 space-y-6 rounded-sm mb-12 shadow-2xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Título do Novo Card</label>
+                  <input 
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
+                    placeholder="Ex: Doação de Materiais"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Descrição Curta</label>
+                  <input 
+                    type="text"
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
+                    placeholder="Conte como essa ajuda faz a diferença..."
+                  />
+                </div>
+              </div>
+              <button 
+                onClick={handleAddNew}
+                disabled={adding || !newTitle}
+                className="w-full py-4 bg-brand-orange text-white font-bold uppercase tracking-[0.2em] text-xs hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50"
+              >
+                {adding ? 'Criando...' : 'Confirmar e Adicionar Card'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {items.map((item) => (
+          <HelpItemCard 
+            key={item.id} 
+            item={item} 
+            onUpdate={updateItem} 
+            onDelete={deleteItem} 
+          />
+        ))}
+      </div>
     </div>
   );
 }

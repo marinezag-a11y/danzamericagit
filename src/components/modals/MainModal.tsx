@@ -99,6 +99,19 @@ export function MainModal({ activeModal, onClose }: MainModalProps) {
               </div>
             )}
 
+            {activeModal === 'donation' && (
+              <div className="max-w-xl mx-auto text-center">
+                <Heart className="w-16 h-16 text-brand-orange mx-auto mb-8" strokeWidth={1} />
+                <h2 className="text-5xl mb-4 font-serif text-brand-dark">Sua Doação</h2>
+                <p className="text-brand-dark/60 font-serif leading-relaxed mb-8">
+                  Cada contribuição nos aproxima do nosso objetivo de representar Minas na Argentina.
+                </p>
+                <div className="bg-brand-grey p-8 flex flex-col gap-4">
+                  <p className="text-xs uppercase tracking-widest font-bold text-brand-dark/40">Use o botão de doação no topo para ver as opções</p>
+                </div>
+              </div>
+            )}
+
             {activeModal === 'contact' && (
               <div className="max-w-4xl mx-auto">
                 <div className="text-center mb-12">
@@ -183,6 +196,6 @@ export function MainModal({ activeModal, onClose }: MainModalProps) {
     </AnimatePresence>
   );
 
-  if (typeof document === 'undefined') return null;
+  if (typeof document === 'undefined' || !activeModal) return null;
   return createPortal(modalContent, document.body);
 }

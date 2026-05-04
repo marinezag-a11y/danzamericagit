@@ -3,7 +3,9 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { 
   Heart,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  X,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useSiteSettings } from '../hooks/useSiteSettings';
@@ -13,6 +15,7 @@ import { useHeroBanners } from '../hooks/useHeroBanners';
 import { useTicker } from '../hooks/useTicker';
 import { useJourney } from '../hooks/useJourney';
 import { useFundraising } from '../hooks/useFundraising';
+import { useHelpItems } from '../hooks/useHelpItems';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useEventTracking } from '../hooks/useEventTracking';
 import { Header } from '../components/layout/Header';
@@ -21,8 +24,6 @@ import { Footer } from '../components/layout/Footer';
 import { BackToTop } from '../components/BackToTop';
 import { MainModal, ModalType } from '../components/modals/MainModal';
 import { ProposalModal } from '../components/modals/ProposalModal';
-
-
 
 function VerticalTicker({ phrases }: { phrases: any[] }) {
   const [index, setIndex] = useState(0);
@@ -93,9 +94,6 @@ function TierCard({ name, price, benefits, highlight = false, onSelect }: { name
   );
 }
 
-
-
-
 export default function Home() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -110,13 +108,13 @@ export default function Home() {
   const { phrases, loading: phrasesLoading } = useTicker();
   const { items: journeyItems, loading: journeyLoading } = useJourney();
   const { expenses, loading: fundraisingLoading } = useFundraising();
+  const { items: helpItems, loading: helpLoading } = useHelpItems();
 
   // Analytics: track page view
   usePageTracking();
   const { trackEvent } = useEventTracking();
   const [isJourneyPaused, setIsJourneyPaused] = useState(false);
 
-  
   const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
   const [selectedTierData, setSelectedTierData] = useState<{name: string, price: string, benefits: string[]} | null>(null);
 
@@ -215,10 +213,7 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
   
-  // Custom totals calculation for UI
-
-
-  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || fundraisingLoading) return (
+  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || fundraisingLoading || helpLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
       <p className="text-[10px] uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
@@ -248,10 +243,7 @@ export default function Home() {
         }
       />
 
-
-      {/* Hero Section Carousel */}
       <header role="banner" className="relative h-[110vh] overflow-hidden flex items-end pb-32 px-6 lg:px-12 bg-[#1A1A1A]">
-        {/* Top Gradient Overlay for Nav Readability */}
         <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-transparent to-transparent h-40 pointer-events-none"></div>
 
         <div className="absolute inset-0 z-0 bg-[#1A1A1A]">
@@ -320,7 +312,6 @@ export default function Home() {
             </p>
           </motion.div>
 
-          {/* Carousel Indicators */}
           {banners.length > 1 && (
             <div className="flex gap-4 mt-12">
               {banners.map((_, idx) => (
@@ -336,8 +327,6 @@ export default function Home() {
       </header>
 
       <main>
-      {/* History & Social Proof Details */}
-      {/* Essence Section */}
       <motion.section 
         id="essencia" 
         initial={{ opacity: 0, y: 50 }}
@@ -371,14 +360,12 @@ export default function Home() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </motion.div>
-              {/* Decorative elements */}
               <div className="absolute -bottom-10 -right-10 w-40 h-40 border-2 border-brand-orange/10 rounded-full hidden md:block"></div>
               <div className="absolute -top-6 -left-6 w-20 h-20 bg-brand-orange/5 rounded-full blur-2xl"></div>
            </div>
         </div>
       </motion.section>
 
-      {/* History & Social Proof Details */}
       <motion.section 
         id="jornada" 
         initial={{ opacity: 0, y: 50 }}
@@ -435,55 +422,52 @@ export default function Home() {
               <h2 className="text-5xl md:text-7xl text-brand-dark mb-12 font-serif">
                 {settings.jornada_title?.value || 'Excelência que Atravessa Fronteiras.'}
               </h2>
-                               <div 
-                  className="relative h-[600px] md:h-[550px] overflow-hidden group/container"
-                  onMouseEnter={() => setIsJourneyPaused(true)}
-                  onMouseLeave={() => setIsJourneyPaused(false)}
-                  onTouchStart={() => setIsJourneyPaused(true)}
-                  onTouchEnd={() => setIsJourneyPaused(false)}
-                >
-                   <motion.div 
-                     className="space-y-16 md:space-y-24 py-32"
-                     animate={isJourneyPaused ? {} : { y: ["0%", "-50%"] }}
-                     transition={{
-                       duration: Math.max(35, (journeyItems?.length || 0) * 12),
-                       repeat: Infinity,
-                       ease: "linear"
-                     }}
-                   >
-                       {[...(journeyItems || []), ...(journeyItems || [])].map((item, idx) => (
-                         <motion.div 
-                           key={`${item.id}-${idx}`}
-                           className="flex flex-col md:flex-row gap-6 md:gap-12 items-center md:items-center group/item transition-all duration-1000 px-4 md:px-0"
-                           initial={{ opacity: 0.1, scale: 0.8, filter: 'blur(8px)', y: 50 }}
-                           whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
-                           viewport={{ amount: 0.5, margin: "-20% 0px -20% 0px" }}
-                         >
-                            <div className="flex-shrink-0 w-full md:w-40 text-center md:text-right">
-                               <span className="text-brand-orange text-5xl md:text-7xl font-serif block leading-none transition-all group-hover/item:text-brand-dark group-hover/item:scale-105">{item.label}</span>
-                            </div>
-                            <div className="flex-1 md:border-l-2 md:border-brand-orange/10 md:pl-12 text-center md:text-left transition-all group-hover/item:border-brand-orange md:group-hover/item:translate-x-4">
-                               <h4 className="text-2xl md:text-3xl font-serif mb-2 md:mb-4 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
-                               <p className="text-brand-dark/70 text-base md:text-lg leading-relaxed font-serif max-w-xl group-hover/item:text-brand-dark transition-colors">
-                                 {item.description}
-                               </p>
-                            </div>
-                         </motion.div>
-                       ))}
-                    </motion.div>
-                    
-                    {/* Modern Glassy Mask */}
-                    <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white via-white/90 to-transparent z-10 pointer-events-none" />
-                    <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white via-white/90 to-transparent z-10 pointer-events-none" />
-                 </div>
-            </div>
+              <div 
+                className="relative h-[600px] md:h-[550px] overflow-hidden group/container"
+                onMouseEnter={() => setIsJourneyPaused(true)}
+                onMouseLeave={() => setIsJourneyPaused(false)}
+                onTouchStart={() => setIsJourneyPaused(true)}
+                onTouchEnd={() => setIsJourneyPaused(false)}
+              >
+                 <motion.div 
+                   className="space-y-16 md:space-y-24 py-32"
+                   animate={isJourneyPaused ? {} : { y: ["0%", "-50%"] }}
+                   transition={{
+                     duration: Math.max(35, (journeyItems?.length || 0) * 12),
+                     repeat: Infinity,
+                     ease: "linear"
+                   }}
+                 >
+                     {[...(journeyItems || []), ...(journeyItems || [])].map((item, idx) => (
+                       <motion.div 
+                         key={`${item.id}-${idx}`}
+                         className="flex flex-col md:flex-row gap-6 md:gap-12 items-center md:items-center group/item transition-all duration-1000 px-4 md:px-0"
+                         initial={{ opacity: 0.1, scale: 0.8, filter: 'blur(8px)', y: 50 }}
+                         whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
+                         viewport={{ amount: 0.5, margin: "-20% 0px -20% 0px" }}
+                       >
+                          <div className="flex-shrink-0 w-full md:w-40 text-center md:text-right">
+                             <span className="text-brand-orange text-5xl md:text-7xl font-serif block leading-none transition-all group-hover/item:text-brand-dark group-hover/item:scale-105">{item.label}</span>
+                          </div>
+                          <div className="flex-1 md:border-l-2 md:border-brand-orange/10 md:pl-12 text-center md:text-left transition-all group-hover/item:border-brand-orange md:group-hover/item:translate-x-4">
+                             <h4 className="text-2xl md:text-3xl font-serif mb-2 md:mb-4 text-brand-dark group-hover/item:text-brand-orange transition-colors">{item.title}</h4>
+                             <p className="text-brand-dark/70 text-base md:text-lg leading-relaxed font-serif max-w-xl group-hover/item:text-brand-dark transition-colors">
+                               {item.description}
+                             </p>
+                          </div>
+                       </motion.div>
+                     ))}
+                  </motion.div>
+                  
+                  <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white via-white/90 to-transparent z-10 pointer-events-none" />
+                  <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white via-white/90 to-transparent z-10 pointer-events-none" />
+               </div>
+           </div>
         </div>
       </motion.section>
 
-      {/* Premium Vertical Ticker */}
       <VerticalTicker phrases={phrases} />
 
-      {/* Goal Tracker Section */}
       <motion.section 
         id="desafio" 
         initial={{ opacity: 0 }}
@@ -509,7 +493,6 @@ export default function Home() {
                 Nossa meta de arrecadação de <span className="text-white">R$ {goalTotal.toLocaleString()}</span> cobrirá os custos de transporte, hospedagem e inscrições para {dancersCount} bailarinos que dedicam suas vidas à excelência do movimento.
               </p>
               
-              {/* Progress Bar */}
               <div className="mb-8">
                 <div className="flex justify-between items-end mb-4">
                   <span className="text-brand-orange text-4xl font-display font-light">{percentage.toFixed(1)}%</span>
@@ -543,8 +526,6 @@ export default function Home() {
                   <p className="text-white text-2xl font-display font-medium">{remainingDays}</p>
                 </div>
               </div>
-
-
             </motion.div>
 
             <motion.div 
@@ -568,7 +549,6 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* Gallery Section */}
       <section id="galeria" className="py-32 bg-brand-white px-6 lg:px-12">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
@@ -616,102 +596,51 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How to Help - Interative Cards */}
-       <section id="ajudar" className="py-32 bg-brand-white px-6 lg:px-12">
-         <div className="max-w-7xl mx-auto">
-           <div className="text-center mb-24">
-             <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Como Ajudar</p>
-             <h2 className="text-5xl md:text-7xl text-brand-dark mb-8 font-serif">Maneiras de <span className="italic">Apoiar</span></h2>
-             <p className="text-brand-dark/40 text-lg max-w-2xl mx-auto font-serif">
-               Escolha a forma que melhor se adapta a você e ajude nossos bailarinos a alcançarem seus sonhos.
-             </p>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Loja */}
-            <motion.div 
-              whileHover={{ y: -10 }}
-              onClick={() => {
-                trackEvent('Abrir Loja', 'click');
-                setActiveModal('store');
-              }}
-              className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
-            >
-              <div>
-                <div className="w-full h-40 mb-8 overflow-hidden bg-brand-dark/10 group-hover:bg-white/10 transition-colors">
-                  <img 
-                    src={settings.help_store_image?.value || "https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop"} 
-                    alt="Loja"
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                  />
+      <section id="ajudar" className="py-32 bg-brand-white px-6 lg:px-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-24">
+            <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Como Ajudar</p>
+            <h2 className="text-5xl md:text-7xl text-brand-dark mb-8 font-serif">Maneiras de <span className="italic">Apoiar</span></h2>
+            <p className="text-brand-dark/40 text-lg max-w-2xl mx-auto font-serif">
+              Escolha a forma que melhor se adapta a você e ajude nossos bailarinos a alcançarem seus sonhos.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {(helpItems || []).map((item, idx) => (
+              <motion.div 
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                whileHover={{ y: -10 }}
+                onClick={() => {
+                  trackEvent(`Abrir ${item.title}`, 'click');
+                  setActiveModal(item.modal_type as ModalType);
+                }}
+                className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
+              >
+                <div>
+                  <div className="w-full h-40 mb-8 overflow-hidden bg-brand-dark/10 group-hover:bg-white/10 transition-colors">
+                    <img 
+                      src={item.image_url} 
+                      alt={item.title}
+                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                    />
+                  </div>
+                  <h3 className="text-3xl mb-4 group-hover:text-white font-serif">{item.title}</h3>
+                  <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
+                    {item.description}
+                  </p>
                 </div>
-                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">{settings.help_store_title?.value || 'Nossa Loja'}</h3>
-                <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
-                  {settings.help_store_description?.value || 'Adquira produtos exclusivos do Núcleo. Todo o lucro é revertido para a viagem dos bailarinos.'}
-                </p>
-              </div>
-              <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
-                Ver Produtos <ChevronRight className="w-4 h-4" />
-              </button>
-            </motion.div>
-
-            {/* Rifa */}
-            <motion.div 
-              whileHover={{ y: -10 }}
-              onClick={() => {
-                trackEvent('Abrir Rifa', 'click');
-                setActiveModal('raffle');
-              }}
-              className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
-            >
-              <div>
-                <div className="w-full h-40 mb-8 overflow-hidden bg-brand-dark/10 group-hover:bg-white/10 transition-colors">
-                  <img 
-                    src={settings.help_raffle_image?.value || "https://images.unsplash.com/photo-1535525153412-5a42439a210d?q=80&w=2670&auto=format&fit=crop"} 
-                    alt="Rifa"
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                  />
-                </div>
-                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">{settings.help_raffle_title?.value || 'Rifa Digital'}</h3>
-                <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
-                  {settings.help_raffle_description?.value || 'Concorra a uma TV 50" por apenas R$ 25,00. Quanto mais bilhetes, maior sua chance e maior a nossa ajuda.'}
-                </p>
-              </div>
-              <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
-                Comprar Bilhetes <ChevronRight className="w-4 h-4" />
-              </button>
-            </motion.div>
-
-            {/* Eventos */}
-            <motion.div 
-              whileHover={{ y: -10 }}
-              onClick={() => {
-                trackEvent('Abrir Evento', 'click');
-                setActiveModal('event');
-              }}
-              className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
-            >
-              <div>
-                <div className="w-full h-40 mb-8 overflow-hidden bg-brand-dark/10 group-hover:bg-white/10 transition-colors">
-                  <img 
-                    src={settings.help_event_image?.value || "https://images.unsplash.com/photo-1518834107812-67b0b7c58434?q=80&w=2670&auto=format&fit=crop"} 
-                    alt="Evento"
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                  />
-                </div>
-                <h3 className="text-3xl mb-4 group-hover:text-white font-serif">{settings.help_event_title?.value || 'Ação Junina'}</h3>
-                <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
-                  {settings.help_event_description?.value || 'Venha para o nosso Arraiá! Compre ingressos para o bingo e veja a nossa Grande Quadrilha.'}
-                </p>
-              </div>
-              <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
-                Saber Mais <ChevronRight className="w-4 h-4" />
-              </button>
-            </motion.div>
+                <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
+                  {item.button_text} <ChevronRight className="w-4 h-4" />
+                </button>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Sponsorship Section */}
       <section id="patrocinio" className="py-32 bg-brand-dark px-6 lg:px-12">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-24">
@@ -769,22 +698,14 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
       </main>
 
       <Footer />
 
-
-      {/* Modals Rendering */}
       <MainModal activeModal={activeModal} onClose={() => setActiveModal(null)} />
-
       
-      {/* Back to Top Button */}
       <BackToTop show={showScrollTop} />
 
-      
-      {/* Gallery Lightbox */}
       <AnimatePresence mode="wait">
         {selectedImageIdx !== null && images[selectedImageIdx] && (
           <motion.div 
@@ -792,6 +713,7 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-12"
+            onClick={() => setSelectedImageIdx(null)}
           >
             <button 
               onClick={() => setSelectedImageIdx(null)}
@@ -800,7 +722,6 @@ export default function Home() {
               <X className="w-10 h-10" strokeWidth={1} />
             </button>
 
-            {/* Navigation Buttons */}
             <button 
               onClick={(e) => {
                 e.stopPropagation();
@@ -846,7 +767,6 @@ export default function Home() {
                 </div>
               )}
               
-              {/* Image Counter */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/20 text-[10px] uppercase tracking-widest font-bold">
                 {selectedImageIdx + 1} / {images.length}
               </div>

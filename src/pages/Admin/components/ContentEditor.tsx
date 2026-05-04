@@ -9,6 +9,7 @@ import { OptimizedImageUploader } from './OptimizedImageUploader';
 import { JourneyManager } from './JourneyManager';
 import { FundraisingManager } from './FundraisingManager';
 import { TickerManager } from './TickerManager';
+import { HelpItemsManager } from './HelpItemsManager';
 
 interface ContentEditorProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
@@ -63,7 +64,11 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
       keys: []
     },
     {
-      title: '04. Configurações Globais',
+      title: '04. Seção: Como Ajudar',
+      keys: ['help_title', 'help_image']
+    },
+    {
+      title: '05. Configurações Globais',
       keys: ['pix_key', 'vakinha_url']
     }
   ];
@@ -147,7 +152,13 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
              </div>
            )}
 
-           {section.title === '04. Configurações Globais' && (
+           {section.title === '04. Seção: Como Ajudar' && (
+             <div className="mt-12 pt-12 border-t border-white/10">
+               <HelpItemsManager onAlert={onAlert} />
+             </div>
+           )}
+
+           {section.title === '05. Configurações Globais' && (
              <div className="mt-16 pt-16 border-t border-white/10">
                <h3 className="text-xl font-sans italic mb-8 text-white/80">Gerenciador de Frases (Barra de Links)</h3>
                <TickerManager onAlert={onAlert} />

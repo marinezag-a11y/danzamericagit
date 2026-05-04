@@ -2536,14 +2536,19 @@ function HelpItemCard({ item, onUpdate, onDelete }: { item: HelpItem, onUpdate: 
 
   const handleSave = async () => {
     setSaving(true);
-    await onUpdate(item.id, {
+    const result = await onUpdate(item.id, {
       title: localTitle,
       description: localDescription,
       button_text: localButtonText,
       image_url: localImageUrl
     });
     setSaving(false);
-    setIsEditing(false);
+    if (result.success) {
+      setIsEditing(false);
+      alert('Item atualizado com sucesso!');
+    } else {
+      alert('Erro ao atualizar item: ' + result.error);
+    }
   };
 
   return (

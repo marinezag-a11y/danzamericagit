@@ -206,9 +206,17 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     <CheckCircle className="w-12 h-12 text-white" />
                   </div>
                   <h3 className="text-4xl font-serif text-brand-dark mb-6 italic">Pedido Recebido!</h3>
-                  <p className="text-xl text-brand-dark/60 font-serif leading-relaxed mb-8">
-                    Obrigado por seu apoio. Enviamos uma confirmação para seu e-mail e nossa equipe entrará em contato via WhatsApp em breve.
-                  </p>
+                  <div className="bg-brand-grey p-8 border border-brand-dark/5 mb-8 max-w-lg mx-auto text-left">
+                    <p className="text-brand-orange text-[10px] uppercase tracking-widest font-bold mb-4">Pagamento via PIX</p>
+                    <p className="text-sm text-brand-dark/70 font-serif mb-6 leading-relaxed">
+                      Faça o PIX do valor total do seu pedido e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>. Você receberá um contato em seguida para finalização e envio.
+                    </p>
+                    <div className="bg-white p-4 border border-brand-dark/5 flex flex-col gap-2">
+                      <span className="text-[9px] uppercase tracking-widest opacity-40 font-bold">Chave PIX</span>
+                      <code className="text-brand-orange font-bold text-sm break-all">ballettatianafigueiredo@gmail.com</code>
+                    </div>
+                  </div>
+
                   <button 
                     onClick={onClose}
                     className="px-12 py-4 bg-brand-dark text-white font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all shadow-xl"

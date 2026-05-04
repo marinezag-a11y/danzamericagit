@@ -155,8 +155,15 @@ serve(async (req) => {
             <div style="background-color: #FFF5F0; border-left: 4px solid #FF5A1F; padding: 20px; margin: 30px 0;">
               <p style="margin: 0; font-size: 14px; color: #CC4818; line-height: 1.6;"><strong>IMPORTANTE:</strong> O frete e as taxas de envio são de responsabilidade integral do comprador.</p>
             </div>
-            <p style="font-weight: bold;">O que acontece agora?</p>
-            <p style="color: #666;">Nossa equipe entrará em contato via WhatsApp para combinar o pagamento e a entrega.</p>
+            <div style="background-color: #f9f9f9; padding: 25px; border: 1px dashed #FF5A1F; margin: 30px 0;">
+              <p style="margin: 0 0 15px 0; font-size: 14px; color: #1A1A1A; line-height: 1.6;"><strong>INSTRUÇÕES DE PAGAMENTO:</strong></p>
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #666; line-height: 1.6;">Faça o PIX do valor total do seu pedido, e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>. Você vai receber um contato em seguida para finalização e envio do seu pedido.</p>
+              <div style="background-color: white; padding: 15px; border: 1px solid #eee; text-align: center;">
+                <p style="margin: 0 0 5px 0; font-size: 10px; color: #999; text-transform: uppercase; font-weight: bold;">Chave PIX</p>
+                <p style="margin: 0; font-size: 16px; color: #FF5A1F; font-weight: bold;">ballettatianafigueiredo@gmail.com</p>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>

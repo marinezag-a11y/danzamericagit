@@ -11,7 +11,7 @@ export function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { 
   const timeoutRef = useRef<any>(null);
   const { trackEvent } = useEventTracking();
 
-  const finalPixKey = pixKey || "6093259@vakinha.com.br";
+  const finalPixKey = pixKey || "ballettatianafigueiredo@gmail.com";
   const finalVakinhaUrl = vakinhaUrl || "https://www.vakinha.com.br/vaquinha/talentos-de-minas-nossa-turma-no-palco-internacional";
 
   const handleCopyPix = async () => {

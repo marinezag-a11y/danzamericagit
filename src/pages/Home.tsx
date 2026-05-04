@@ -620,18 +620,18 @@ export default function Home() {
                 className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
               >
                 <div className="flex-1">
-                  <div className="w-full h-56 mb-8 overflow-hidden bg-brand-dark/5 group-hover:bg-white/10 transition-colors relative">
+                  <div className="w-full h-64 mb-8 overflow-hidden bg-brand-dark/10 relative">
                     <img 
-                      src={item.image_url} 
+                      src={item.image_url || 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=800&auto=format&fit=crop'} 
                       alt={item.title}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=800&auto=format&fit=crop';
                       }}
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                   </div>
-                  <h3 className="text-3xl mb-4 text-brand-dark group-hover:text-white font-serif transition-colors">{item.title}</h3>
+                  <h3 className="text-3xl mb-4 text-brand-dark group-hover:text-white font-serif transition-colors leading-tight">{item.title}</h3>
                   <p className="text-brand-dark/60 text-sm font-serif leading-relaxed group-hover:text-white/80 mb-8 transition-colors">
                     {item.description}
                   </p>

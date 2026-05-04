@@ -619,20 +619,20 @@ export default function Home() {
                 }}
                 className="bg-brand-grey p-12 flex flex-col justify-between h-full group hover:bg-brand-orange transition-colors duration-500 cursor-pointer"
               >
-                <div>
-                  <div className="w-full h-40 mb-8 overflow-hidden bg-brand-dark/10 group-hover:bg-white/10 transition-colors">
+                <div className="flex-1">
+                  <div className="w-full h-56 mb-8 overflow-hidden bg-brand-dark/5 group-hover:bg-white/10 transition-colors">
                     <img 
                       src={item.image_url} 
                       alt={item.title}
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
                     />
                   </div>
-                  <h3 className="text-3xl mb-4 group-hover:text-white font-serif">{item.title}</h3>
-                  <p className="text-brand-dark/40 text-sm font-serif leading-relaxed group-hover:text-white/60 mb-8">
+                  <h3 className="text-3xl mb-4 text-brand-dark group-hover:text-white font-serif transition-colors">{item.title}</h3>
+                  <p className="text-brand-dark/60 text-sm font-serif leading-relaxed group-hover:text-white/80 mb-8 transition-colors">
                     {item.description}
                   </p>
                 </div>
-                <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] group-hover:text-white">
+                <button className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] text-brand-orange group-hover:text-white transition-colors">
                   {item.button_text} <ChevronRight className="w-4 h-4" />
                 </button>
               </motion.div>

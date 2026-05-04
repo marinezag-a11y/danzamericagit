@@ -2656,7 +2656,7 @@ function HelpSectionManager() {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
-  const [adding, setAdding] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
 
   const handleAddNew = async () => {
     if (!newTitle) return;
@@ -2664,7 +2664,7 @@ function HelpSectionManager() {
     await addItem({
       title: newTitle,
       description: newDescription,
-      image_url: 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop',
+      image_url: newImageUrl,
       button_text: 'Ver Mais',
       modal_type: 'event',
       order: items.length + 1
@@ -2673,6 +2673,7 @@ function HelpSectionManager() {
     setIsAdding(false);
     setNewTitle('');
     setNewDescription('');
+    setNewImageUrl('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
   };
 
   if (loading) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
@@ -2700,31 +2701,46 @@ function HelpSectionManager() {
           >
             <div className="bg-white/5 border border-white/10 p-8 space-y-6 rounded-sm mb-12 shadow-2xl">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Título do Novo Card</label>
-                  <input 
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
-                    placeholder="Ex: Doação de Materiais"
-                  />
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Título do Novo Card</label>
+                    <input 
+                      type="text"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
+                      placeholder="Ex: Doação de Materiais"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Descrição Curta</label>
+                    <input 
+                      type="text"
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
+                      placeholder="Conte como essa ajuda faz a diferença..."
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Descrição Curta</label>
-                  <input 
-                    type="text"
-                    value={newDescription}
-                    onChange={(e) => setNewDescription(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
-                    placeholder="Conte como essa ajuda faz a diferença..."
-                  />
+                  <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Imagem da Seção</label>
+                  <div className="aspect-video bg-black/50 border border-white/10 overflow-hidden relative mb-2">
+                    <img src={newImageUrl} alt="" className="w-full h-full object-cover opacity-50" />
+                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                      <OptimizedImageUploader 
+                        onUploadSuccess={(url) => setNewImageUrl(url)}
+                        folder="help"
+                        label="Subir Imagem do Card"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               <button 
                 onClick={handleAddNew}
                 disabled={adding || !newTitle}
-                className="w-full py-4 bg-brand-orange text-white font-bold uppercase tracking-[0.2em] text-xs hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50"
+                className="w-full py-4 bg-brand-orange text-white font-bold uppercase tracking-[0.2em] text-xs hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 shadow-xl"
               >
                 {adding ? 'Criando...' : 'Confirmar e Adicionar Card'}
               </button>

@@ -36,7 +36,9 @@ import {
   Printer,
   Menu,
   MessageCircle,
-  Code2
+  Code2,
+  User,
+  XCircle
 } from 'lucide-react';
 
 const maskBRL = (value: string | number) => {
@@ -73,6 +75,7 @@ import { useFundraising, FundraisingExpense } from '../../hooks/useFundraising';
 import { useHelpItems, HelpItem } from '../../hooks/useHelpItems';
 import { useHelpOrders } from '../../hooks/useHelpOrders';
 import { useAnalytics, AnalyticsPeriod } from '../../hooks/useAnalytics';
+import { useProfiles, Profile } from '../../hooks/useProfiles';
 import { uploadImage } from '../../lib/upload';
 
 // Global Image Optimization Utility
@@ -214,6 +217,41 @@ function GenericConfirmModal({
     </div>
   );
 }
+function ConfirmSaveModal({ 
+  onConfirm, 
+  onCancel, 
+  oldData, 
+  newData 
+}: { 
+  onConfirm: () => void, 
+  onCancel: () => void, 
+  oldData: any, 
+  newData: any 
+}) {
+  const formatValue = (val: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md bg-brand-dark border border-white/10 p-6 md:p-8 shadow-2xl rounded-sm"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-brand-orange/10 rounded-full">
+            <Save className="w-5 h-5 text-brand-orange" />
+          </div>
+          <h3 className="text-lg font-bold text-white uppercase tracking-widest">Confirmar Alterações</h3>
+        </div>
+        
+        <p className="text-xs text-white/60 mb-8 leading-relaxed">
+          Você está prestes a atualizar os valores desta despesa. Verifique as mudanças abaixo antes de confirmar:
+        </p>
+
+        <div className="space-y-6">
+          {oldData.title !== newData.title && (
+            <div className="space-y-2 p-3 bg-white/5 border border-white/5 rounded-sm">
+              <p className="text-xs uppercase tracking-wider text-brand-orange font-bold">Título do Item</p>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/30 line-through truncate max-w-[120px]">{oldData.title}</span>
                 <ArrowRight className="w-3 h-3 text-brand-orange flex-shrink-0" />
@@ -248,13 +286,13 @@ function GenericConfirmModal({
         <div className="flex gap-4 mt-10">
           <button 
             onClick={onCancel}
-            className="flex-1 py-4 border border-white/10 text-xs uppercase tracking-wider font-bold hover:bg-white/5 transition-all text-white/40 hover:text-white"
+            className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest font-bold text-white transition-all border border-white/5"
           >
             Cancelar
           </button>
           <button 
             onClick={onConfirm}
-            className="flex-1 py-4 bg-brand-orange text-white text-xs uppercase tracking-wider font-bold hover:bg-white hover:text-brand-dark transition-all shadow-lg"
+            className="flex-1 py-4 bg-brand-orange hover:bg-brand-dark text-[10px] uppercase tracking-widest font-bold text-white transition-all shadow-lg"
           >
             Confirmar e Salvar
           </button>
@@ -1454,7 +1492,7 @@ function AnalyticsDashboard() {
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'analytics' | 'banners' | 'content' | 'gallery' | 'help' | 'sponsorship' | 'fundraising' | 'ticker'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'banners' | 'content' | 'gallery' | 'help' | 'sponsorship' | 'fundraising' | 'ticker' | 'users' | 'profile'>('profile');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { images, loading: galleryLoading } = useGallery();
 
@@ -1513,6 +1551,13 @@ export default function Dashboard() {
 
         <nav className="flex-1 space-y-2">
           <button 
+            onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
+            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'profile' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
+          >
+            <User className="w-4 h-4" />
+            Meu Perfil
+          </button>
+          <button 
             onClick={() => { setActiveTab('analytics'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'analytics' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
           >
@@ -1567,6 +1612,13 @@ export default function Dashboard() {
           >
             <Trophy className="w-4 h-4" />
             Cotas de Patrocínio
+          </button>
+          <button 
+            onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}
+            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-sans transition-all ${activeTab === 'users' ? 'bg-brand-orange text-white' : 'text-white/40 hover:bg-white/5'}`}
+          >
+            <Users className="w-4 h-4" />
+            Gerenciar Usuários
           </button>
         </nav>
 
@@ -1626,6 +1678,8 @@ export default function Dashboard() {
              activeTab === 'banners' ? 'Banners do Hero' :
              activeTab === 'ticker' ? 'Frases da Barra Rotativa' :
              activeTab === 'fundraising' ? 'Planilha de Custos (Desafio)' :
+             activeTab === 'users' ? 'Gerenciamento de Usuários' :
+             activeTab === 'profile' ? 'Meu Perfil' :
              'Como Ajudar'}
           </h2>
           <div className="w-12 h-1 bg-brand-orange"></div>
@@ -1718,6 +1772,28 @@ export default function Dashboard() {
               className="max-w-6xl"
             >
               <HelpSectionManager />
+            </motion.div>
+          )}
+          {activeTab === 'users' && (
+            <motion.div 
+              key="users"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-6xl"
+            >
+              <UserManager />
+            </motion.div>
+          )}
+          {activeTab === 'profile' && (
+            <motion.div 
+              key="profile"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-4xl"
+            >
+              <ProfileManager />
             </motion.div>
           )}
         </AnimatePresence>
@@ -2855,17 +2931,39 @@ function OrderManager() {
   const stats = {
     total: orders.length,
     pending: orders.filter(o => o.status === 'pending').length,
-    paid: orders.filter(o => o.status === 'paid').length,
+    paid: orders.filter(o => o.status === 'paid' || o.status === 'sent').length,
     cancelled: orders.filter(o => o.status === 'cancelled').length,
-    totalValue: orders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? Number(o.total_price || o.product_price) : 0), 0)
+    totalValue: orders.reduce((sum, o) => sum + ((o.status === 'paid' || o.status === 'sent') ? Number(o.total_price || o.product_price) : 0), 0),
+    pendingValue: orders.reduce((sum, o) => sum + (o.status === 'pending' ? Number(o.total_price || o.product_price) : 0), 0),
+    potentialValue: orders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? Number(o.total_price || o.product_price) : 0), 0)
   };
 
   const filteredOrders = orders.filter(o => filter === 'all' || o.status === filter);
 
   const confirmDelete = async () => {
     if (!orderToDelete) return;
+    
+    // Pegar detalhes antes de excluir para notificar o cliente
+    const order = orders.find(o => o.id === orderToDelete);
+    
     setDeleting(true);
-    await deleteOrder(orderToDelete);
+    const result = await deleteOrder(orderToDelete);
+    
+    if (result.success && order) {
+      try {
+        await supabase.functions.invoke('send-order', {
+          body: {
+            type: 'order_deletion',
+            order_id: order.id,
+            customer_name: order.customer_name,
+            customer_email: order.customer_email
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao enviar e-mail de exclusão:', err);
+      }
+    }
+    
     setDeleting(false);
     setOrderToDelete(null);
   };
@@ -2880,15 +2978,25 @@ function OrderManager() {
           message="Tem certeza que deseja excluir este registro de pedido? Esta ação removerá o pedido permanentemente do sistema."
         />
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <div className="bg-white/5 border border-white/10 p-6 rounded-sm">
           <div className="flex items-center gap-4 mb-4">
-            <div className="p-2 bg-brand-orange/20 rounded-sm">
-              <Clock className="w-5 h-5 text-brand-orange" />
+            <div className="p-2 bg-white/5 rounded-sm">
+              <ShoppingBag className="w-5 h-5 text-white/40" />
             </div>
-            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Pendentes</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Total de Pedidos</p>
           </div>
-          <p className="text-3xl font-display text-white">{stats.pending}</p>
+          <p className="text-3xl font-display text-white">{stats.total}</p>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-2 bg-red-500/20 rounded-sm">
+              <XCircle className="w-5 h-5 text-red-500" />
+            </div>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Cancelados</p>
+          </div>
+          <p className="text-3xl font-display text-red-500">{stats.cancelled}</p>
         </div>
 
         <div className="bg-white/5 border border-white/10 p-6 rounded-sm">
@@ -2896,19 +3004,19 @@ function OrderManager() {
             <div className="p-2 bg-green-500/20 rounded-sm">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
             </div>
-            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Pagos</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Pedidos Pagos</p>
           </div>
           <p className="text-3xl font-display text-white">{stats.paid}</p>
         </div>
 
         <div className="bg-white/5 border border-white/10 p-6 rounded-sm">
           <div className="flex items-center gap-4 mb-4">
-            <div className="p-2 bg-white/5 rounded-sm">
-              <ShoppingBag className="w-5 h-5 text-white/40" />
+            <div className="p-2 bg-yellow-500/20 rounded-sm">
+              <Clock className="w-5 h-5 text-yellow-500" />
             </div>
-            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Total Pedidos</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor Pendente</p>
           </div>
-          <p className="text-3xl font-display text-white">{stats.total}</p>
+          <p className="text-3xl font-display text-yellow-500">R$ {stats.pendingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
 
         <div className="bg-brand-orange border border-brand-orange p-6 rounded-sm shadow-xl shadow-brand-orange/10">
@@ -2916,7 +3024,7 @@ function OrderManager() {
             <div className="p-2 bg-white/20 rounded-sm">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
-            <p className="text-[10px] uppercase tracking-widest text-white/80 font-bold">Valor Total Arrecadado</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/80 font-bold">Total Arrecadado</p>
           </div>
           <p className="text-3xl font-display text-white">R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
@@ -2926,18 +3034,6 @@ function OrderManager() {
         <div>
           <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Gestão Financeira</p>
           <h2 className="text-4xl font-serif text-white italic">Controle de Pedidos</h2>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          <div className="bg-white/5 border border-white/10 p-6 flex flex-col min-w-[200px]">
-            <span className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Valor Total (Vendas)</span>
-            <span className="text-2xl font-display text-brand-orange">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalValue)}
-            </span>
-          </div>
-          <div className="bg-white/5 border border-white/10 p-6 flex flex-col min-w-[140px]">
-            <span className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Total Pedidos</span>
-            <span className="text-2xl font-display text-white">{orders.length}</span>
-          </div>
         </div>
       </div>
 
@@ -3025,12 +3121,29 @@ function OrderRow({ order, onUpdate, onDelete }: { order: any, onUpdate: any, on
       total_price: Number(productPrice),
       status: status
     });
-    setUpdating(false);
+    
     if (result.success) {
+      // Se o status mudou, envia e-mail
+      if (status !== order.status) {
+        try {
+          await supabase.functions.invoke('send-order', {
+            body: {
+              type: 'status_update',
+              order_id: order.id,
+              customer_name: customerName,
+              customer_email: customerEmail,
+              new_status: status
+            }
+          });
+        } catch (err) {
+          console.error('Erro ao enviar e-mail de status:', err);
+        }
+      }
       setIsEditing(false);
     } else {
       alert('Erro ao atualizar pedido: ' + result.error);
     }
+    setUpdating(false);
   };
 
   const statusColors = {
@@ -3043,7 +3156,12 @@ function OrderRow({ order, onUpdate, onDelete }: { order: any, onUpdate: any, on
   return (
     <tr className="group hover:bg-white/5 transition-colors">
       <td className="py-6 px-6 text-sm text-white/60 font-sans">
-        {new Date(order.created_at).toLocaleDateString('pt-BR')}
+        <div className="flex flex-col">
+          <span>{new Date(order.created_at).toLocaleDateString('pt-BR')}</span>
+          <span className="text-[10px] opacity-40 font-mono">
+            {new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
       </td>
       <td className="py-6 px-6">
         {isEditing ? (
@@ -3098,10 +3216,29 @@ function OrderRow({ order, onUpdate, onDelete }: { order: any, onUpdate: any, on
       <td className="py-6 px-6">
         <select 
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
+          onChange={async (e) => {
+            const newStatus = e.target.value;
+            setStatus(newStatus);
             if (!isEditing) {
-              onUpdate(order.id, { status: e.target.value });
+              setUpdating(true);
+              const result = await onUpdate(order.id, { status: newStatus });
+              if (result.success) {
+                // Enviar e-mail de atualização para o cliente
+                try {
+                  await supabase.functions.invoke('send-order', {
+                    body: {
+                      type: 'status_update',
+                      order_id: order.id,
+                      customer_name: order.customer_name,
+                      customer_email: order.customer_email,
+                      new_status: newStatus
+                    }
+                  });
+                } catch (err) {
+                  console.error('Erro ao enviar e-mail de status:', err);
+                }
+              }
+              setUpdating(false);
             }
           }}
           disabled={updating}
@@ -3186,6 +3323,22 @@ function ManualOrderModal({ onClose, onSave }: { onClose: () => void, onSave: an
     setSaving(false);
     
     if (result.success) {
+      // 2. Enviar e-mail via Edge Function
+      try {
+        await supabase.functions.invoke('send-order', {
+          body: {
+            customer_name: name,
+            customer_phone: phone,
+            customer_email: email,
+            product_name: product?.title,
+            product_price: product?.price || 0,
+            total_price: product?.price || 0,
+            status: 'pending'
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao enviar e-mail do pedido manual:', err);
+      }
       setShowSuccess(true);
     } else {
       alert('Erro ao incluir pedido: ' + result.error);
@@ -3448,3 +3601,267 @@ function JourneyManager() {
   );
 }
 
+function UserManager() {
+  const { profiles, loading, refresh } = useProfiles();
+  const [isAdding, setIsAdding] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newName, setNewName] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdding(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email: newEmail,
+          password: newPassword,
+          full_name: newName
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro ao criar usuário');
+
+      setSuccess(true);
+      setNewEmail('');
+      setNewPassword('');
+      setNewName('');
+      refresh();
+      setTimeout(() => {
+        setIsAdding(false);
+        setSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  if (loading) return <Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" />;
+
+  return (
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <p className="text-xs text-white/40 font-sans max-w-md">Gerencie os administradores do sistema. Usuários criados aqui terão acesso total ao painel.</p>
+        <button 
+          onClick={() => setIsAdding(!isAdding)}
+          className="flex items-center gap-2 px-4 py-2 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-brand-dark transition-all rounded-sm"
+        >
+          {isAdding ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+          {isAdding ? 'Cancelar' : 'Convidar Administrador'}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {isAdding && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-white/5 border border-white/10 p-8 rounded-sm shadow-2xl"
+          >
+            <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Nome Completo</label>
+                <input 
+                  required
+                  type="text" 
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all"
+                  placeholder="Nome do Admin"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">E-mail</label>
+                <input 
+                  required
+                  type="email" 
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all"
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Senha Temporária</label>
+                <div className="flex gap-2">
+                  <input 
+                    required
+                    type="password" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all"
+                    placeholder="Min 6 caracteres"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={adding}
+                    className="px-6 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 min-w-[80px] flex items-center justify-center"
+                  >
+                    {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar'}
+                  </button>
+                </div>
+              </div>
+            </form>
+            {error && <p className="mt-4 text-xs text-red-500 font-bold">{error}</p>}
+            {success && <p className="mt-4 text-xs text-green-500 font-bold">Usuário criado com sucesso!</p>}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="bg-white/5 border border-white/10 overflow-hidden rounded-sm shadow-xl">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-white/10">
+              <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-brand-orange font-bold">Nome</th>
+              <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-brand-orange font-bold">E-mail</th>
+              <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-brand-orange font-bold">Cargo</th>
+              <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-brand-orange font-bold text-right">Desde</th>
+            </tr>
+          </thead>
+          <tbody>
+            {profiles.map((p) => (
+              <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                <td className="px-6 py-4 text-sm font-sans text-white/80 group-hover:text-white transition-colors">
+                  {p.full_name || <span className="opacity-30 italic text-xs">Sem nome</span>}
+                </td>
+                <td className="px-6 py-4 text-sm font-sans text-white/60">
+                  {p.email}
+                </td>
+                <td className="px-6 py-4">
+                  <span className="px-2 py-1 bg-brand-orange/10 text-brand-orange text-[9px] uppercase tracking-widest font-bold border border-brand-orange/20 rounded-sm">
+                    {p.role || 'admin'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-xs text-white/30 text-right">
+                  {new Date(p.created_at).toLocaleDateString('pt-BR')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ProfileManager() {
+  const { profiles, updateProfile, refresh } = useProfiles();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+      if (user && profiles.length > 0) {
+        setProfile(profiles.find(p => p.id === user.id) || null);
+      }
+    };
+    checkUser();
+  }, [profiles]);
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !currentUser) return;
+    
+    setSaving(true);
+    const res = await updateProfile(currentUser.id, {
+      full_name: profile.full_name,
+      phone: profile.phone
+    });
+    
+    if (res.success) {
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+      refresh();
+    }
+    setSaving(false);
+  };
+
+  if (!profile) return <Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" />;
+
+  return (
+    <div className="max-w-2xl bg-white/5 border border-white/10 p-12 rounded-sm shadow-2xl relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+        <User className="w-64 h-64" />
+      </div>
+
+      <div className="flex items-center gap-6 mb-12">
+        <div className="w-20 h-20 bg-brand-orange/10 border border-brand-orange/20 rounded-full flex items-center justify-center text-3xl font-serif italic text-brand-orange shadow-inner">
+          {profile.full_name?.[0] || profile.email?.[0]?.toUpperCase()}
+        </div>
+        <div>
+          <h3 className="text-2xl font-serif italic text-white mb-1">{profile.full_name || 'Seu Nome'}</h3>
+          <p className="text-xs text-white/30 font-sans tracking-widest uppercase">{profile.email}</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleUpdate} className="space-y-8">
+        <div className="space-y-4">
+          <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Nome Completo</label>
+          <input 
+            type="text" 
+            value={profile.full_name || ''}
+            onChange={(e) => setProfile({...profile, full_name: e.target.value})}
+            className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10"
+            placeholder="Como você quer ser chamado?"
+          />
+        </div>
+
+        <div className="space-y-4">
+          <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">WhatsApp / Telefone</label>
+          <input 
+            type="text" 
+            value={profile.phone || ''}
+            onChange={(e) => setProfile({...profile, phone: e.target.value})}
+            className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10"
+            placeholder="(00) 00000-0000"
+          />
+        </div>
+
+        <div className="pt-6">
+          <button 
+            type="submit"
+            disabled={saving}
+            className="w-full md:w-auto px-12 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-brand-dark transition-all shadow-lg flex items-center justify-center gap-3"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+      </form>
+
+      <AnimatePresence>
+        {success && (
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="absolute bottom-8 right-8 bg-green-500 text-white px-6 py-3 rounded-sm shadow-2xl flex items-center gap-3"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span className="text-[10px] uppercase tracking-widest font-bold">Perfil atualizado!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

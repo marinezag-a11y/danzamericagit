@@ -46,6 +46,26 @@ export function useHelpOrders() {
 
   useEffect(() => {
     fetchOrders();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('help_orders_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'help_orders'
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const addOrder = async (order: Partial<HelpOrder>) => {

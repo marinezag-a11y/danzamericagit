@@ -50,12 +50,14 @@ import { uploadImage } from '../../lib/upload';
 
 // Global Image Optimization Utility
 const optimizeImage = (file: File): Promise<Blob> => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
     reader.onload = (e) => {
       const img = new Image();
       img.src = e.target?.result as string;
+      img.onerror = () => reject(new Error('Erro ao carregar imagem para otimização'));
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
@@ -98,15 +100,17 @@ function OptimizedImageUploader({ onUploadSuccess, label = "Subir Imagem (Otimiz
     setUploading(true);
     try {
       const optimizedBlob = await optimizeImage(file);
-      // Force .jpg extension even if original was .png
       const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
       const optimizedFile = new File([optimizedBlob], `${baseName}.jpg`, { type: 'image/jpeg' });
       const result = await uploadImage(optimizedFile, folder);
       if (result.success && result.url) {
         onUploadSuccess(result.url);
+      } else if (!result.success) {
+        alert('Erro no upload: ' + result.error);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload error:', err);
+      alert('Erro ao processar imagem: ' + err.message);
     }
     setUploading(false);
   };
@@ -2661,24 +2665,30 @@ function HelpSectionManager() {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [adding, setAdding] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
 
   const handleAddNew = async () => {
     if (!newTitle) return;
     setAdding(true);
-    await addItem({
+    const result = await addItem({
       title: newTitle,
       description: newDescription,
       image_url: newImageUrl,
       button_text: 'Ver Mais',
       modal_type: 'event',
-      order: items.length + 1
+      order: (items || []).length + 1
     });
     setAdding(false);
-    setIsAdding(false);
-    setNewTitle('');
-    setNewDescription('');
-    setNewImageUrl('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
+    if (result.success) {
+      setIsAdding(false);
+      setNewTitle('');
+      setNewDescription('');
+      setNewImageUrl('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
+      alert('Item adicionado com sucesso!');
+    } else {
+      alert('Erro ao adicionar item: ' + result.error);
+    }
   };
 
   if (loading) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;

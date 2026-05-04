@@ -16,7 +16,8 @@ import {
   XCircle,
   AlertTriangle,
   Info,
-  Heart
+  Heart,
+  Star
 } from 'lucide-react';
 
 // Modular Components
@@ -28,6 +29,7 @@ import { SponsorshipManager } from './components/SponsorshipManager';
 import { BannerManager } from './components/BannerManager';
 import { UserManager } from './components/UserManager';
 import { ProfileManager } from './components/ProfileManager';
+import { HelpItemsManager } from './components/HelpItemsManager';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -51,8 +53,9 @@ export default function Dashboard() {
     { id: 'analytics', label: 'Estatísticas', icon: LayoutDashboard },
     { id: 'orders', label: 'Pedidos Recebidos', icon: ShoppingBag },
     { id: 'content', label: 'Conteúdo Geral', icon: Settings },
+    { id: 'help', label: 'Como Ajudar', icon: Heart },
     { id: 'gallery', label: 'Galeria de Fotos', icon: Images },
-    { id: 'sponsorship', label: 'Apoiadores', icon: Heart },
+    { id: 'sponsorship', label: 'Apoiadores', icon: Star },
     { id: 'banners', label: 'Banners Iniciais', icon: ImageIcon },
     { id: 'users', label: 'Administradores', icon: Users },
   ];
@@ -142,6 +145,7 @@ export default function Dashboard() {
               {activeTab === 'analytics' && <AnalyticsDashboard onAlert={onAlert} />}
               {activeTab === 'orders' && <OrdersManager onAlert={onAlert} />}
               {activeTab === 'content' && <ContentEditor onAlert={onAlert} />}
+              {activeTab === 'help' && <HelpItemsManager onAlert={onAlert} />}
               {activeTab === 'gallery' && <GalleryManager onAlert={onAlert} />}
               {activeTab === 'sponsorship' && <SponsorshipManager onAlert={onAlert} />}
               {activeTab === 'banners' && <BannerManager onAlert={onAlert} />}

@@ -91,11 +91,11 @@ export function UserManager({ onAlert }: UserManagerProps) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Erro ao criar usuário');
 
-      if (result.email_error) {
-        onAlert('Aviso de E-mail', result.email_error, 'warning');
+      if (result.email_status && !result.email_status.sent) {
+        onAlert('Usuário Criado', `O administrador foi criado, mas o e-mail de convite falhou: ${result.email_status.error || 'Erro no servidor de e-mail'}. Passe a senha manualmente.`, 'warning');
       } else {
         setSuccess(true);
-        onAlert('Sucesso', 'Novo administrador criado e convidado.', 'info');
+        onAlert('Sucesso', 'Novo administrador criado e convidado por e-mail.', 'info');
       }
 
       setNewEmail('');

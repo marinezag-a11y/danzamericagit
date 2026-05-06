@@ -30,7 +30,7 @@ serve(async (req) => {
 
     if (error) throw error
 
-    // 2. Send Welcome Email via Resend
+    let emailStatus = { sent: false, error: null };
     if (RESEND_API_KEY) {
       const welcomeEmailHtml = `
         <div style="font-family: serif; background-color: #1A1A1A; color: white; padding: 40px; border: 1px solid #FF5A1F; max-width: 600px; margin: auto;">
@@ -41,13 +41,13 @@ serve(async (req) => {
           
           <h3 style="color: white; font-style: italic; border-bottom: 1px solid rgba(255,90,31,0.2); padding-bottom: 15px; margin-bottom: 25px;">Bem-vindo ao Time!</h3>
           
-          <p>Olá, <strong>${full_name}</strong>,</p>
+          <p>Olá, <strong>\${full_name}</strong>,</p>
           <p>Você acaba de ser adicionado como administrador do sistema Danzamerica 2026. Agora você tem acesso total para gerenciar conteúdos, patrocínios e pedidos.</p>
           
           <div style="background-color: rgba(255,255,255,0.03); padding: 25px; border-left: 4px solid #FF5A1F; margin: 30px 0;">
             <p style="margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; tracking-spacing: 1px; color: #FF5A1F; font-weight: bold;">Seus Dados de Acesso:</p>
-            <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Login:</strong> ${email}</p>
-            <p style="margin: 0; font-size: 14px;"><strong>Senha Temporária:</strong> ${password}</p>
+            <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Login:</strong> \${email}</p>
+            <p style="margin: 0; font-size: 14px;"><strong>Senha Temporária:</strong> \${password}</p>
           </div>
 
           <div style="text-align: center; margin: 40px 0;">
@@ -67,26 +67,35 @@ serve(async (req) => {
       `;
 
       try {
-        await fetch('https://api.resend.com/emails', {
+        const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Authorization': `Bearer \${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
             from: 'Danzamerica 2026 <admin@nucleotatianafigueiredo.com.br>',
             to: [email],
-            subject: `Bem-vindo ao Painel Danzamerica 2026 - ${full_name}`,
+            subject: \`Bem-vindo ao Painel Danzamerica 2026 - \${full_name}\`,
             html: welcomeEmailHtml,
           }),
         })
+        
+        if (res.ok) {
+          emailStatus.sent = true;
+        } else {
+          const errData = await res.json();
+          emailStatus.error = errData.message || 'Erro desconhecido no Resend';
+        }
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError)
-        // We don't throw here to avoid failing the user creation if only the email fails
+        emailStatus.error = emailError.message;
       }
+    } else {
+      emailStatus.error = 'RESEND_API_KEY não configurada';
     }
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ ...data, email_status: emailStatus }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

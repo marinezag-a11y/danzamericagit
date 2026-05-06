@@ -256,66 +256,80 @@ export function FinancialManager({ onAlert }: FinancialManagerProps) {
             exit={{ opacity: 0, y: -20 }}
             className="p-8 bg-white/5 border border-white/10 rounded-sm shadow-2xl"
           >
-            <h4 className="text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold mb-8">Novo Registro Financeiro</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-8 items-end">
-              <div className="space-y-3">
-                <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Descrição</label>
-                <input 
-                  type="text"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm"
-                  placeholder="Ex: Patrocínio Ouro"
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Categoria</label>
-                <input 
-                  type="text"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm"
-                  placeholder="Ex: Alimentação"
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor (R$)</label>
-                <input 
-                  type="text"
-                  value={maskBRL(newAmount)}
-                  onChange={(e) => setNewAmount(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm font-mono"
-                  placeholder="R$ 0,00"
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Tipo</label>
-                <select 
-                  value={newType}
-                  onChange={(e) => setNewType(e.target.value as 'income' | 'expense')}
-                  className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white appearance-none rounded-sm"
-                >
-                  <option value="expense">Saída (Despesa)</option>
-                  <option value="income">Entrada (Receita)</option>
-                </select>
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Data</label>
-                <input 
-                  type="date"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm"
-                />
-              </div>
-            </div>
-            <button 
-              onClick={handleAdd}
-              disabled={!newDesc || !newAmount}
-              className="mt-8 w-full py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50"
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newDesc) {
+                  onAlert('Campo Obrigatório', 'Por favor, insira uma descrição para o lançamento.', 'warning');
+                  return;
+                }
+                if (!newAmount) {
+                  onAlert('Valor Necessário', 'Por favor, insira o valor do lançamento.', 'warning');
+                  return;
+                }
+                handleAdd();
+              }}
             >
-              Confirmar Lançamento
-            </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-8 items-end">
+                <div className="space-y-3">
+                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Descrição</label>
+                  <input 
+                    type="text"
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm"
+                    placeholder="Ex: Patrocínio Ouro"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Categoria</label>
+                  <input 
+                    type="text"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm"
+                    placeholder="Ex: Alimentação"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor (R$)</label>
+                  <input 
+                    type="text"
+                    value={maskBRL(newAmount)}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm font-mono"
+                    placeholder="R$ 0,00"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Tipo</label>
+                  <select 
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as 'income' | 'expense')}
+                    className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white appearance-none rounded-sm"
+                  >
+                    <option value="expense">Saída (Despesa)</option>
+                    <option value="income">Entrada (Receita)</option>
+                  </select>
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Data</label>
+                  <input 
+                    type="date"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm"
+                  />
+                </div>
+              </div>
+              <button 
+                type="submit"
+                disabled={!!saving}
+                className="mt-8 w-full py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50"
+              >
+                Confirmar Lançamento
+              </button>
+            </form>
           </motion.div>
         )}
       </AnimatePresence>

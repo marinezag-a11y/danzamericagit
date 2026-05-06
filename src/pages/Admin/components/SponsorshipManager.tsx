@@ -165,7 +165,22 @@ function TierEditModal({ tier, isAdding, onClose, onSave, saving }: { tier: any,
           {isAdding ? 'Nova Cota' : 'Editar Cota'}
         </h3>
 
-        <div className="space-y-8">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!name) {
+              onAlert('Campo Obrigatório', 'Por favor, insira o nome da cota.', 'warning');
+              return;
+            }
+            onSave({ 
+              name, 
+              price: price, 
+              benefits: benefits.split('\n').filter(b => b.trim()), 
+              highlight 
+            });
+          }}
+          className="space-y-8"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <label className="block text-[10px] uppercase tracking-widest text-white/40 mb-2 font-bold">Nome da Cota</label>
@@ -213,26 +228,22 @@ function TierEditModal({ tier, isAdding, onClose, onSave, saving }: { tier: any,
 
           <div className="pt-8 border-t border-white/5 flex gap-4">
               <button 
+                type="button"
                 onClick={onClose}
                 className="flex-1 py-4 text-[10px] uppercase tracking-widest font-bold border border-white/10 text-white/40 hover:bg-white/5 hover:text-white transition-all"
               >
                 Cancelar
               </button>
               <button 
-                disabled={saving || !name}
-                onClick={() => onSave({ 
-                  name, 
-                  price: price, 
-                  benefits: benefits.split('\n').filter(b => b.trim()), 
-                  highlight 
-                })}
+                type="submit"
+                disabled={saving}
                 className="flex-1 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 Salvar Cota
               </button>
           </div>
-        </div>
+        </form>
       </motion.div>
     </div>
   );

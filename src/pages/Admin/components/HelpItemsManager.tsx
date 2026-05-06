@@ -76,13 +76,23 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white/5 border border-white/10 p-8 space-y-6 rounded-sm mb-12 shadow-2xl">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newTitle) {
+                  onAlert('Campo Obrigatório', 'Por favor, insira um título para o card.', 'warning');
+                  return;
+                }
+                handleAddNew();
+              }}
+              className="bg-white/5 border border-white/10 p-8 space-y-6 rounded-sm mb-12 shadow-2xl"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Título do Novo Card</label>
                     <input 
-                      type="text"
+                      type="text" 
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
@@ -126,13 +136,13 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
                 </div>
               </div>
               <button 
-                onClick={handleAddNew}
-                disabled={adding || !newTitle}
+                type="submit"
+                disabled={adding}
                 className="w-full py-4 bg-brand-orange text-white font-bold uppercase tracking-[0.2em] text-xs hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 shadow-xl"
               >
                 {adding ? 'Criando...' : 'Confirmar e Adicionar Card'}
               </button>
-            </div>
+            </form>
           </motion.div>
         )}
       </AnimatePresence>

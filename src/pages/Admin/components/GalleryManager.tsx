@@ -92,7 +92,17 @@ export function GalleryManager({ onAlert }: GalleryManagerProps) {
           )}
         </div>
         
-        <div className="space-y-8">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!newUrl) {
+              onAlert('Imagem Necessária', 'Por favor, suba uma foto ou insira um link de imagem.', 'warning');
+              return;
+            }
+            handleSave();
+          }}
+          className="space-y-8"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="p-6 border border-white/5 bg-white/5 space-y-4">
@@ -136,8 +146,8 @@ export function GalleryManager({ onAlert }: GalleryManagerProps) {
 
               <div className="mt-auto pt-6">
                 <button 
-                   onClick={handleSave}
-                   disabled={adding || !newUrl}
+                   type="submit"
+                   disabled={adding}
                    className="w-full py-5 bg-brand-orange text-white text-[12px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-lg"
                 >
                   {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : editingImage ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -155,7 +165,7 @@ export function GalleryManager({ onAlert }: GalleryManagerProps) {
               {status.message}
             </div>
           )}
-        </div>
+        </form>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">

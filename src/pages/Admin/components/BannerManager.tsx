@@ -108,84 +108,93 @@ export function BannerManager({ onAlert }: BannerManagerProps) {
               <h3 className="text-3xl font-sans italic mb-8">
                 {editingBanner.id === 'new' ? 'Novo Slide' : 'Editar Slide'}
               </h3>
+              <form 
+                onSubmit={async (e) => {
+                    e.preventDefault();
+                    const title = (document.getElementById('banner-title') as HTMLInputElement).value;
+                    const subtitle = (document.getElementById('banner-subtitle') as HTMLInputElement).value;
+                    const image_url = (document.getElementById('banner-url') as HTMLInputElement).value;
 
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Título do Slide</label>
-                  <input 
-                    type="text"
-                    defaultValue={editingBanner.title}
-                    id="banner-title"
-                    className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Subtítulo / Legenda</label>
-                  <input 
-                    type="text"
-                    defaultValue={editingBanner.subtitle}
-                    id="banner-subtitle"
-                    className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Imagem do Banner</label>
-                  <div className="space-y-4">
+                    if (!title) {
+                      onAlert('Título Necessário', 'Por favor, insira um título para o slide.', 'warning');
+                      return;
+                    }
+
+                    setSaving(true);
+                    let result;
+                    if (editingBanner.id === 'new') {
+                      result = await addBanner({ title, subtitle, image_url, order_index: editingBanner.order_index });
+                    } else {
+                      result = await updateBanner(editingBanner.id, { title, subtitle, image_url });
+                    }
+
+                    if (result.success) {
+                      setEditingBanner(null);
+                      onAlert('Sucesso', 'Slide salvo com sucesso.', 'info');
+                    } else {
+                      onAlert('Erro ao Salvar', 'Não foi possível salvar o slide.', 'danger');
+                    }
+                    setSaving(false);
+                  }}
+                  className="space-y-6"
+                >
+                  <div className="space-y-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Título do Slide</label>
                     <input 
                       type="text"
-                      defaultValue={editingBanner.image_url}
-                      id="banner-url"
-                      className="w-full bg-white/5 border border-white/10 p-4 text-[10px] font-mono focus:border-brand-orange outline-none transition-all opacity-50"
-                    />
-                    <OptimizedImageUploader 
-                      onUploadSuccess={(url) => {
-                        const input = document.getElementById('banner-url') as HTMLInputElement;
-                        if (input) input.value = url;
-                      }}
-                      onAlert={onAlert}
-                      folder="banners"
-                      label="Substituir por Foto do Computador"
+                      defaultValue={editingBanner.title}
+                      id="banner-title"
+                      className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
                     />
                   </div>
-                </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Subtítulo / Legenda</label>
+                    <input 
+                      type="text"
+                      defaultValue={editingBanner.subtitle}
+                      id="banner-subtitle"
+                      className="w-full bg-white/5 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Imagem do Banner</label>
+                    <div className="space-y-4">
+                      <input 
+                        type="text"
+                        defaultValue={editingBanner.image_url}
+                        id="banner-url"
+                        className="w-full bg-white/5 border border-white/10 p-4 text-[10px] font-mono focus:border-brand-orange outline-none transition-all opacity-50"
+                      />
+                      <OptimizedImageUploader 
+                        onUploadSuccess={(url) => {
+                          const input = document.getElementById('banner-url') as HTMLInputElement;
+                          if (input) input.value = url;
+                        }}
+                        onAlert={onAlert}
+                        folder="banners"
+                        label="Substituir por Foto do Computador"
+                      />
+                    </div>
+                  </div>
 
-                <div className="pt-8 flex gap-4">
-                  <button 
-                    onClick={() => setEditingBanner(null)}
-                    className="flex-1 py-4 text-[10px] uppercase tracking-widest font-bold border border-white/10 hover:bg-white/5 transition-all"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    disabled={saving}
-                    onClick={async () => {
-                      setSaving(true);
-                      const title = (document.getElementById('banner-title') as HTMLInputElement).value;
-                      const subtitle = (document.getElementById('banner-subtitle') as HTMLInputElement).value;
-                      const image_url = (document.getElementById('banner-url') as HTMLInputElement).value;
-                      
-                      let result;
-                      if (editingBanner.id === 'new') {
-                        result = await addBanner({ title, subtitle, image_url, order_index: editingBanner.order_index });
-                      } else {
-                        result = await updateBanner(editingBanner.id, { title, subtitle, image_url });
-                      }
-
-                      if (result.success) {
-                        setEditingBanner(null);
-                        onAlert('Sucesso', 'Slide salvo com sucesso.', 'info');
-                      } else {
-                        onAlert('Erro ao Salvar', 'Não foi possível salvar o slide.', 'danger');
-                      }
-                      setSaving(false);
-                    }}
-                    className="flex-1 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2"
-                  >
-                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                    Salvar Slide
-                  </button>
-                </div>
-              </div>
+                  <div className="pt-8 flex gap-4">
+                    <button 
+                      type="button"
+                      onClick={() => setEditingBanner(null)}
+                      className="flex-1 py-4 text-[10px] uppercase tracking-widest font-bold border border-white/10 hover:bg-white/5 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={saving}
+                      className="flex-1 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-2"
+                    >
+                      {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                      Salvar Slide
+                    </button>
+                  </div>
+                </form>
             </motion.div>
           </div>
         )}

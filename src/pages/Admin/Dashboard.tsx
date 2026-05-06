@@ -49,11 +49,14 @@ export default function Dashboard() {
       setLoadingPermissions(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        setUserEmail(user?.email || null);
+        if (!user) return;
+        setUserEmail(user.email || null);
 
         if (isSupport && supportPerms) {
           setUserPermissions(JSON.parse(supportPerms));
-        } else if (user) {
+          setLoadingPermissions(false);
+        } else {
+          // Fetch initial permissions
           const { data: profile } = await supabase
             .from('profiles')
             .select('permissions')
@@ -61,10 +64,32 @@ export default function Dashboard() {
             .single();
           
           setUserPermissions(profile?.permissions || []);
+          setLoadingPermissions(false);
+
+          // Subscribe to changes
+          const channel = supabase
+            .channel(`profile-${user.id}`)
+            .on(
+              'postgres_changes', 
+              { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'profiles',
+                filter: `id=eq.${user.id}`
+              }, 
+              (payload) => {
+                console.log('Permission update received:', payload.new.permissions);
+                setUserPermissions(payload.new.permissions || []);
+              }
+            )
+            .subscribe();
+
+          return () => {
+            supabase.removeChannel(channel);
+          };
         }
       } catch (err) {
         console.error('Error fetching permissions:', err);
-      } finally {
         setLoadingPermissions(false);
       }
     };

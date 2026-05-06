@@ -164,16 +164,32 @@ export function UserManager({ onAlert }: UserManagerProps) {
     }, 1000);
   };
 
+  const [updatingPermission, setUpdatingPermission] = useState<string | null>(null);
+
   const handleTogglePermission = async (userId: string, permissionId: string, currentPermissions: string[] | null) => {
-    const permissions = currentPermissions || [];
-    const newPermissions = permissions.includes(permissionId)
-      ? permissions.filter(p => p !== permissionId)
-      : [...permissions, permissionId];
-    
-    const res = await updateProfile(userId, { permissions: newPermissions });
-    if (!res.success) {
-      onAlert('Erro', 'Não foi possível atualizar permissões.', 'danger');
+    // Safety check: Don't allow self-lockout from UserManager
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.id === userId && permissionId === 'users' && currentPermissions?.includes('users')) {
+      if (!confirm('AVISO: Você está prestes a remover seu próprio acesso a esta aba de Administradores. Se fizer isso, não poderá gerenciar permissões novamente. Continuar?')) {
+        return;
+      }
     }
+
+    setUpdatingPermission(`${userId}-${permissionId}`);
+    const permissions = currentPermissions || [];
+    const isAdding = !permissions.includes(permissionId);
+    
+    const newPermissions = isAdding
+      ? [...permissions, permissionId]
+      : permissions.filter(p => p !== permissionId);
+    
+    // Optimistic update
+    const res = await updateProfile(userId, { permissions: newPermissions });
+    
+    if (!res.success) {
+      onAlert('Erro', 'Não foi possível atualizar as permissões.', 'danger');
+    }
+    setUpdatingPermission(null);
   };
 
   if (loading && profiles.length === 0) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
@@ -344,15 +360,24 @@ export function UserManager({ onAlert }: UserManagerProps) {
                           {ALL_PERMISSIONS.map(perm => (
                             <button
                               key={perm.id}
+                              disabled={updatingPermission === `${p.id}-${perm.id}`}
                               onClick={() => handleTogglePermission(p.id, perm.id, p.permissions)}
-                              className={`px-4 py-3 text-[9px] uppercase tracking-widest font-bold border transition-all rounded-sm flex items-center justify-between ${
+                              className={`px-4 py-3 text-[9px] uppercase tracking-widest font-bold border transition-all rounded-sm flex items-center justify-between group/perm ${
                                 (p.permissions || []).includes(perm.id)
                                   ? 'bg-brand-orange border-brand-orange text-white'
                                   : 'bg-black/40 border-white/10 text-white/40 hover:border-white/20'
-                              }`}
+                              } ${updatingPermission === `${p.id}-${perm.id}` ? 'opacity-50' : ''}`}
                             >
                               {perm.label}
-                              {(p.permissions || []).includes(perm.id) && <CheckCircle2 className="w-3 h-3" />}
+                              <div className="flex items-center gap-2">
+                                {updatingPermission === `${p.id}-${perm.id}` ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (p.permissions || []).includes(perm.id) ? (
+                                  <CheckCircle2 className="w-3 h-3" />
+                                ) : (
+                                  <div className="w-3 h-3 border border-white/20 rounded-full" />
+                                )}
+                              </div>
                             </button>
                           ))}
                         </div>

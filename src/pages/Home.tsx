@@ -15,7 +15,6 @@ import { useSponsorship } from '../hooks/useSponsorship';
 import { useHeroBanners } from '../hooks/useHeroBanners';
 import { useTicker } from '../hooks/useTicker';
 import { useJourney } from '../hooks/useJourney';
-import { useFundraising } from '../hooks/useFundraising';
 import { useHelpItems } from '../hooks/useHelpItems';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useEventTracking } from '../hooks/useEventTracking';
@@ -109,7 +108,6 @@ export default function Home() {
   const { banners, loading: bannersLoading } = useHeroBanners();
   const { phrases, loading: phrasesLoading } = useTicker();
   const { items: journeyItems, loading: journeyLoading } = useJourney();
-  const { expenses, loading: fundraisingLoading } = useFundraising();
   const { items: helpItems, loading: helpLoading } = useHelpItems();
 
   // Analytics: track page view
@@ -155,15 +153,11 @@ export default function Home() {
     image_url: '/hero-bg.jpg' 
   };
 
-  // Custom totals calculation for UI
-  const expensesGoal = expenses.reduce((acc, exp) => acc + exp.goal_amount, 0);
-  const expensesRaised = expenses.reduce((acc, exp) => acc + exp.raised_amount, 0);
-
   const goalTotalValue = parseFloat(settings?.target_amount?.value || '0');
   const currentRaisedValue = parseFloat(settings?.current_amount?.value || '0');
-  
-  const goalTotal = expenses.length > 0 ? expensesGoal : (!isNaN(goalTotalValue) && settings?.target_amount?.value ? goalTotalValue : 136712);
-  const currentRaised = expenses.length > 0 ? expensesRaised : (!isNaN(currentRaisedValue) && settings?.current_amount?.value ? currentRaisedValue : 88862);
+
+  const goalTotal = !isNaN(goalTotalValue) && settings?.target_amount?.value ? goalTotalValue : 136712;
+  const currentRaised = !isNaN(currentRaisedValue) && settings?.current_amount?.value ? currentRaisedValue : 88862;
   
   const safeGoal = goalTotal > 0 ? goalTotal : 136712;
   const percentage = Math.min((currentRaised / safeGoal) * 100, 100) || 0;
@@ -215,7 +209,7 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
   
-  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || fundraisingLoading || helpLoading) return (
+  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
       <p className="text-[10px] uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
@@ -435,7 +429,7 @@ export default function Home() {
                    className="space-y-16 md:space-y-24 py-32"
                    animate={isJourneyPaused ? {} : { y: ["0%", "-50%"] }}
                    transition={{
-                     duration: Math.max(35, (journeyItems?.length || 0) * 12),
+                     duration: Math.max(20, (journeyItems?.length || 0) * 6),
                      repeat: Infinity,
                      ease: "linear"
                    }}
@@ -601,10 +595,10 @@ export default function Home() {
       <section id="ajudar" className="py-32 bg-brand-white px-6 lg:px-12">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-24">
-            <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Como Ajudar</p>
-            <h2 className="text-5xl md:text-7xl text-brand-dark mb-8 font-serif">Maneiras de <span className="italic">Apoiar</span></h2>
+            <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Compre um sonho</p>
+            <h2 className="text-5xl md:text-7xl text-brand-dark mb-8 font-serif">Como comprar um <span className="italic">sonho?</span></h2>
             <p className="text-brand-dark/40 text-lg max-w-2xl mx-auto font-serif">
-              Escolha a forma que melhor se adapta a você e ajude nossos bailarinos a alcançarem seus sonhos.
+              Escolha a forma que melhor se adapta a você e ajude a realizar o sonho dos nossos bailarinos.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

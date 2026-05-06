@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   Info,
   Heart,
-  Star
+  Star,
+  DollarSign
 } from 'lucide-react';
 
 // Modular Components
@@ -30,11 +31,46 @@ import { BannerManager } from './components/BannerManager';
 import { UserManager } from './components/UserManager';
 import { ProfileManager } from './components/ProfileManager';
 import { HelpItemsManager } from './components/HelpItemsManager';
+import { FinancialManager } from './components/FinancialManager';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('profile');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
+
+  useEffect(() => {
+    const isSupport = localStorage.getItem('support_mode') === 'true';
+    const supportPerms = localStorage.getItem('support_permissions');
+
+    const getPerms = async () => {
+      setLoadingPermissions(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUserEmail(user?.email || null);
+
+        if (isSupport && supportPerms) {
+          setUserPermissions(JSON.parse(supportPerms));
+        } else if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('permissions')
+            .eq('id', user.id)
+            .single();
+          
+          setUserPermissions(profile?.permissions || []);
+        }
+      } catch (err) {
+        console.error('Error fetching permissions:', err);
+      } finally {
+        setLoadingPermissions(false);
+      }
+    };
+
+    getPerms();
+  }, []);
 
   const onAlert = (title: string, message: string, variant: 'danger' | 'warning' | 'info') => {
     const id = Math.random().toString(36).substring(7);
@@ -53,12 +89,31 @@ export default function Dashboard() {
     { id: 'analytics', label: 'Estatísticas', icon: LayoutDashboard },
     { id: 'orders', label: 'Pedidos Recebidos', icon: ShoppingBag },
     { id: 'content', label: 'Conteúdo Geral', icon: Settings },
-    { id: 'help', label: 'Como Ajudar', icon: Heart },
+    { id: 'help', label: 'Compre um sonho', icon: Heart },
     { id: 'gallery', label: 'Galeria de Fotos', icon: Images },
     { id: 'sponsorship', label: 'Apoiadores', icon: Star },
+    { id: 'financial', label: 'Financeiro', icon: DollarSign },
     { id: 'banners', label: 'Banners Iniciais', icon: ImageIcon },
     { id: 'users', label: 'Administradores', icon: Users },
-  ];
+  ].filter(item => userPermissions.includes(item.id));
+
+  // Redirect to first allowed tab if current is not allowed
+  useEffect(() => {
+    if (!loadingPermissions && userPermissions.length > 0) {
+      if (!userPermissions.includes(activeTab)) {
+        setActiveTab(userPermissions[0]);
+      }
+    }
+  }, [loadingPermissions, userPermissions, activeTab]);
+
+  if (loadingPermissions) return (
+    <div className="min-h-screen bg-brand-dark flex items-center justify-center">
+      <div className="flex flex-col items-center gap-6">
+        <div className="w-16 h-16 border-4 border-brand-orange/20 border-t-brand-orange rounded-full animate-spin" />
+        <p className="text-[10px] uppercase tracking-[0.5em] font-bold text-white/40">Verificando Permissões</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-brand-dark text-white font-sans selection:bg-brand-orange selection:text-white">
@@ -108,14 +163,50 @@ export default function Dashboard() {
               ))}
             </nav>
 
-            <div className="p-8 mt-auto border-t border-white/5">
-              <button 
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-white/40 hover:text-red-500 hover:bg-red-500/5 transition-all rounded-sm border border-transparent hover:border-red-500/10"
+            <div className="px-10 py-8 mt-auto border-t border-white/5 space-y-8">
+              <div className="space-y-1">
+                <p className="text-[8px] uppercase tracking-[0.2em] text-white/30 font-bold">Logado como</p>
+                <p className="text-[11px] text-white/60 truncate font-sans">{userEmail || 'Admin'}</p>
+              </div>
+
+              <div className="space-y-4">
+                <a 
+                  href="/" 
+                  target="_blank" 
+                  className="flex items-center gap-3 text-white/40 hover:text-white transition-all group"
+                >
+                  <div className="p-2 bg-white/5 rounded-sm group-hover:bg-brand-orange/20 transition-all">
+                    <LayoutDashboard className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest font-bold">Ver Site Público</span>
+                </a>
+
+                <button 
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 text-white/40 hover:text-red-500 transition-all group"
+                >
+                  <div className="p-2 bg-white/5 rounded-sm group-hover:bg-red-500/20 transition-all">
+                    <LogOut className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest font-bold">Sair do Sistema</span>
+                </button>
+              </div>
+
+              <a 
+                href="https://wa.me/5531984211900"
+                target="_blank"
+                className="flex items-center gap-3 pt-6 border-t border-white/5 group"
               >
-                <LogOut className="w-4 h-4" />
-                Sair do Sistema
-              </button>
+                <div className="w-10 h-10 bg-brand-orange/10 rounded-full flex items-center justify-center group-hover:bg-brand-orange/20 transition-all shrink-0">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-brand-orange">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.396.015 12.035c0 2.123.554 4.197 1.608 6.022L0 24l6.117-1.605a11.847 11.847 0 005.932 1.577h.005c6.631 0 12.032-5.396 12.035-12.035.002-3.217-1.253-6.241-3.535-8.522z"/>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[8px] uppercase tracking-[0.2em] text-white/30 font-bold">Desenvolvedor</p>
+                  <p className="text-[10px] text-white/60 font-sans truncate">Farizo — (31) 98421-1900</p>
+                </div>
+              </a>
             </div>
           </motion.aside>
         )}
@@ -148,6 +239,7 @@ export default function Dashboard() {
               {activeTab === 'help' && <HelpItemsManager onAlert={onAlert} />}
               {activeTab === 'gallery' && <GalleryManager onAlert={onAlert} />}
               {activeTab === 'sponsorship' && <SponsorshipManager onAlert={onAlert} />}
+              {activeTab === 'financial' && <FinancialManager onAlert={onAlert} />}
               {activeTab === 'banners' && <BannerManager onAlert={onAlert} />}
               {activeTab === 'users' && <UserManager onAlert={onAlert} />}
             </motion.div>

@@ -58,7 +58,7 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/40 italic">Gerenciar Cards "Como Ajudar"</h3>
+        <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/40 italic">Gerenciar Cards "Compre um sonho"</h3>
         <button 
           onClick={() => setIsAdding(!isAdding)}
           className={`flex items-center gap-2 px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm ${isAdding ? 'bg-white/5 text-white/40' : 'bg-brand-orange text-white shadow-lg hover:scale-105'}`}

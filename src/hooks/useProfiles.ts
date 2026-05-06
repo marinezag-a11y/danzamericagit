@@ -7,6 +7,7 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   role: string | null;
+  permissions: string[] | null;
   created_at: string;
 }
 

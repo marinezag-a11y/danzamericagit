@@ -9,17 +9,20 @@ import {
   Loader2, 
   Pencil, 
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useProfiles } from '../../../hooks/useProfiles';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
+import { useNavigate } from 'react-router-dom';
 
 interface UserManagerProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
 }
 
 export function UserManager({ onAlert }: UserManagerProps) {
+  const navigate = useNavigate();
   const { profiles, loading, refresh, updateProfile } = useProfiles();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -33,6 +36,20 @@ export function UserManager({ onAlert }: UserManagerProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [editingPermissionsId, setEditingPermissionsId] = useState<string | null>(null);
+
+  const ALL_PERMISSIONS = [
+    { id: 'profile', label: 'Perfil' },
+    { id: 'analytics', label: 'Estatísticas' },
+    { id: 'orders', label: 'Pedidos' },
+    { id: 'content', label: 'Conteúdo' },
+    { id: 'help', label: 'Compre um sonho' },
+    { id: 'gallery', label: 'Galeria' },
+    { id: 'sponsorship', label: 'Apoiadores' },
+    { id: 'financial', label: 'Financeiro' },
+    { id: 'banners', label: 'Banners' },
+    { id: 'users', label: 'Administradores' },
+  ];
 
   const generatePassword = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
@@ -136,6 +153,29 @@ export function UserManager({ onAlert }: UserManagerProps) {
     }
   };
 
+  const handleImpersonate = (p: any) => {
+    localStorage.setItem('support_mode', 'true');
+    localStorage.setItem('support_user_name', p.full_name || 'Administrador');
+    localStorage.setItem('support_user_id', p.id);
+    localStorage.setItem('support_permissions', JSON.stringify(p.permissions || []));
+    onAlert('Modo Suporte', `Visualizando Painel como ${p.full_name || p.email}.`, 'info');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  };
+
+  const handleTogglePermission = async (userId: string, permissionId: string, currentPermissions: string[] | null) => {
+    const permissions = currentPermissions || [];
+    const newPermissions = permissions.includes(permissionId)
+      ? permissions.filter(p => p !== permissionId)
+      : [...permissions, permissionId];
+    
+    const res = await updateProfile(userId, { permissions: newPermissions });
+    if (!res.success) {
+      onAlert('Erro', 'Não foi possível atualizar permissões.', 'danger');
+    }
+  };
+
   if (loading && profiles.length === 0) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
 
   return (
@@ -230,53 +270,98 @@ export function UserManager({ onAlert }: UserManagerProps) {
           </thead>
           <tbody>
             {profiles.map((p) => (
-              <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
-                <td className="px-6 py-4 text-sm font-sans text-white/80 group-hover:text-white transition-colors">
-                  {editingId === p.id ? (
-                    <input 
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      onBlur={() => handleEditUser(p.id)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleEditUser(p.id)}
-                      autoFocus
-                      className="bg-black/50 border border-brand-orange/50 p-1 px-2 outline-none text-white text-sm"
-                    />
-                  ) : (
-                    p.full_name || <span className="opacity-30 italic text-xs">Sem nome</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-sm font-sans text-white/60">
-                  {p.email}
-                </td>
-                <td className="px-6 py-4">
-                  <span className="px-2 py-1 bg-brand-orange/10 text-brand-orange text-[9px] uppercase tracking-widest font-bold border border-brand-orange/20 rounded-sm">
-                    {p.role || 'admin'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button 
-                      onClick={() => {
-                        setEditingId(p.id);
-                        setEditName(p.full_name || '');
-                      }}
-                      className="p-2 text-white/20 hover:text-brand-orange transition-colors"
-                      title="Editar nome"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button 
-                      onClick={() => setUserToDelete(p.id)}
-                      disabled={deletingId === p.id}
-                      className="p-2 text-white/20 hover:text-red-500 transition-colors disabled:opacity-30"
-                      title="Excluir administrador"
-                    >
-                      {deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <React.Fragment key={p.id}>
+                <tr className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                  <td className="px-6 py-4 text-sm font-sans text-white/80 group-hover:text-white transition-colors">
+                    {editingId === p.id ? (
+                      <input 
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onBlur={() => handleEditUser(p.id)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleEditUser(p.id)}
+                        autoFocus
+                        className="bg-black/50 border border-brand-orange/50 p-1 px-2 outline-none text-white text-sm"
+                      />
+                    ) : (
+                      p.full_name || <span className="opacity-30 italic text-xs">Sem nome</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-sans text-white/60">
+                    {p.email}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="px-2 py-1 bg-brand-orange/10 text-brand-orange text-[9px] uppercase tracking-widest font-bold border border-brand-orange/20 rounded-sm">
+                      {p.role || 'admin'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => setEditingPermissionsId(editingPermissionsId === p.id ? null : p.id)}
+                        className={`p-2 transition-colors ${editingPermissionsId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
+                        title="Editar permissões"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => handleImpersonate(p)}
+                        className="p-2 text-white/20 hover:text-emerald-500 transition-colors"
+                        title="Ver como este usuário"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setEditingId(p.id);
+                          setEditName(p.full_name || '');
+                        }}
+                        className="p-2 text-white/20 hover:text-brand-orange transition-colors"
+                        title="Editar nome"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => setUserToDelete(p.id)}
+                        disabled={deletingId === p.id}
+                        className="p-2 text-white/20 hover:text-red-500 transition-colors disabled:opacity-30"
+                        title="Excluir administrador"
+                      >
+                        {deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {editingPermissionsId === p.id && (
+                  <tr className="bg-brand-orange/5 border-b border-white/5">
+                    <td colSpan={4} className="px-6 py-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-3 h-3 text-brand-orange" />
+                          <h4 className="text-[10px] uppercase tracking-widest font-bold text-white">Gerenciar Acessos de {p.full_name || p.email}</h4>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                          {ALL_PERMISSIONS.map(perm => (
+                            <button
+                              key={perm.id}
+                              onClick={() => handleTogglePermission(p.id, perm.id, p.permissions)}
+                              className={`px-4 py-3 text-[9px] uppercase tracking-widest font-bold border transition-all rounded-sm flex items-center justify-between ${
+                                (p.permissions || []).includes(perm.id)
+                                  ? 'bg-brand-orange border-brand-orange text-white'
+                                  : 'bg-black/40 border-white/10 text-white/40 hover:border-white/20'
+                              }`}
+                            >
+                              {perm.label}
+                              {(p.permissions || []).includes(perm.id) && <CheckCircle2 className="w-3 h-3" />}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-white/30 italic">As mudanças são aplicadas instantaneamente.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

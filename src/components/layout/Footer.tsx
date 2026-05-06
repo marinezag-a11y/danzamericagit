@@ -23,7 +23,7 @@ export function Footer({ onAdminClick }: FooterProps) {
               <li><a href="#jornada" className="hover:text-brand-orange">A Jornada</a></li>
               <li><a href="#desafio" className="hover:text-brand-orange">O Desafio</a></li>
               <li><a href="#galeria" className="hover:text-brand-orange">Galeria</a></li>
-              <li><a href="#ajudar" className="hover:text-brand-orange">Como Ajudar</a></li>
+              <li><a href="#ajudar" className="hover:text-brand-orange">Compre um sonho</a></li>
               <li><a href="#patrocinio" className="hover:text-brand-orange">Patrocínio</a></li>
               <li className="pt-4 border-t border-brand-dark/5">
                 <a href="/admin" className="hover:text-brand-orange">Painel Administrativo</a>

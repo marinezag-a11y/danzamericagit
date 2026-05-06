@@ -17,7 +17,7 @@ const NAV_LINKS = [
   { href: '#jornada', label: 'A Jornada', id: 'jornada' },
   { href: '#desafio', label: 'O Desafio', id: 'desafio' },
   { href: '#galeria', label: 'Galeria', id: 'galeria' },
-  { href: '#ajudar', label: 'Como Ajudar', id: 'ajudar' },
+  { href: '#ajudar', label: 'Compre um sonho', id: 'ajudar' },
   { href: '#patrocinio', label: 'Patrocínio', id: 'patrocinio' },
 ];
 

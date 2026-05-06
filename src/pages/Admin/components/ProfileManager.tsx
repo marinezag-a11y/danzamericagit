@@ -20,10 +20,16 @@ export function ProfileManager() {
 
   useEffect(() => {
     const checkUser = async () => {
+      const isSupport = localStorage.getItem('support_mode') === 'true';
+      const supportId = localStorage.getItem('support_user_id');
+      
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
-      if (user && profiles.length > 0) {
-        setProfile(profiles.find(p => p.id === user.id) || null);
+
+      const targetId = isSupport && supportId ? supportId : user?.id;
+
+      if (targetId && profiles.length > 0) {
+        setProfile(profiles.find(p => p.id === targetId) || null);
       }
     };
     checkUser();
@@ -82,6 +88,8 @@ export function ProfileManager() {
     }
   };
 
+  const isSupport = localStorage.getItem('support_mode') === 'true';
+
   if (!profile) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
 
   return (
@@ -100,15 +108,27 @@ export function ProfileManager() {
         </div>
       </div>
 
+      {isSupport && (
+        <div className="mb-8 p-4 bg-brand-orange/20 border border-brand-orange/30 rounded-sm">
+          <p className="text-[10px] uppercase tracking-widest font-bold text-brand-orange">
+            Modo de Visualização Ativo
+          </p>
+          <p className="text-xs text-white/60 mt-1 font-sans">
+            Você está visualizando o perfil de outro administrador. Edições estão desabilitadas.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleUpdate} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Nome Completo</label>
             <input 
+              disabled={isSupport}
               type="text" 
               value={profile.full_name || ''}
               onChange={(e) => setProfile({...profile, full_name: e.target.value})}
-              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10"
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10 disabled:opacity-50"
               placeholder="Como você quer ser chamado?"
             />
           </div>
@@ -116,26 +136,29 @@ export function ProfileManager() {
           <div className="space-y-4">
             <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">WhatsApp / Telefone</label>
             <input 
+              disabled={isSupport}
               type="text" 
               value={profile.phone || ''}
               onChange={(e) => setProfile({...profile, phone: e.target.value})}
-              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10"
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10 disabled:opacity-50"
               placeholder="(00) 00000-0000"
             />
           </div>
         </div>
 
-        <div className="space-y-4 p-6 bg-brand-orange/5 border border-brand-orange/10 rounded-sm">
-          <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Trocar Senha (Deixe em branco para manter)</label>
-          <input 
-            type="password" 
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10"
-            placeholder="Nova senha segura"
-          />
-          <p className="text-[10px] text-white/20 italic">A senha deve ter no mínimo 6 caracteres.</p>
-        </div>
+        {!isSupport && (
+          <div className="space-y-4 p-6 bg-brand-orange/5 border border-brand-orange/10 rounded-sm">
+            <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Trocar Senha (Deixe em branco para manter)</label>
+            <input 
+              type="password" 
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10"
+              placeholder="Nova senha segura"
+            />
+            <p className="text-[10px] text-white/20 italic">A senha deve ter no mínimo 6 caracteres.</p>
+          </div>
+        )}
 
         {error && (
           <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] uppercase tracking-widest font-bold">
@@ -146,7 +169,7 @@ export function ProfileManager() {
         <div className="pt-6">
           <button 
             type="submit"
-            disabled={saving}
+            disabled={saving || isSupport}
             className="w-full md:w-auto px-12 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

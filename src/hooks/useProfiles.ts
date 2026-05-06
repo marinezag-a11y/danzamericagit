@@ -34,6 +34,9 @@ export function useProfiles() {
   };
 
   const updateProfile = async (id: string, updates: Partial<Profile>) => {
+    // Optimistic update
+    setProfiles(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    
     try {
       const { error } = await supabase
         .from('profiles')
@@ -44,9 +47,10 @@ export function useProfiles() {
         .eq('id', id);
 
       if (error) throw error;
-      await fetchProfiles();
       return { success: true };
     } catch (err: any) {
+      // Rollback on error
+      fetchProfiles(); 
       return { success: false, error: err.message };
     }
   };

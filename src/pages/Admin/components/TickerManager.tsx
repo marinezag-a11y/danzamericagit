@@ -154,6 +154,7 @@ export function TickerManager({ onAlert }: TickerManagerProps) {
         onCancel={() => setPhraseToDelete(null)}
         title="Excluir Frase?"
         message="Esta frase será removida permanentemente da barra rotativa do site."
+        confirmLabel="Excluir"
         variant="danger"
       />
     </div>

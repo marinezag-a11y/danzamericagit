@@ -14,6 +14,7 @@ import { useHelpItems, HelpItem } from '../../../hooks/useHelpItems';
 import { OptimizedImageUploader } from './OptimizedImageUploader';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { maskBRL, parseBRL } from '../../../lib/utils';
+import { RaffleManager } from './RaffleManager';
 
 interface HelpItemsManagerProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
@@ -158,6 +159,8 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
           />
         ))}
       </div>
+
+      <RaffleManager onAlert={onAlert} />
     </div>
   );
 }
@@ -340,6 +343,7 @@ function HelpItemCard({ item, onUpdate, onDelete, onAlert }: { item: HelpItem, o
         onCancel={() => setItemToDelete(null)}
         title="Excluir Item"
         message="Tem certeza que deseja excluir este item de ajuda? Esta ação removerá o card da loja solidária."
+        confirmLabel="Confirmar Exclusão"
         variant="danger"
       />
     </div>

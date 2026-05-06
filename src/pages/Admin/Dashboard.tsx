@@ -35,15 +35,18 @@ import { FinancialManager } from './components/FinancialManager';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('profile');
+  const [visitedTabs, setVisitedTabs] = useState<string[]>(['profile']);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   useEffect(() => {
     const isSupport = localStorage.getItem('support_mode') === 'true';
     const supportPerms = localStorage.getItem('support_permissions');
+    const supportRole = localStorage.getItem('support_role');
 
     const getPerms = async () => {
       setLoadingPermissions(true);
@@ -54,16 +57,18 @@ export default function Dashboard() {
 
         if (isSupport && supportPerms) {
           setUserPermissions(JSON.parse(supportPerms));
+          setUserRole(supportRole);
           setLoadingPermissions(false);
         } else {
           // Fetch initial permissions
           const { data: profile } = await supabase
             .from('profiles')
-            .select('permissions')
+            .select('permissions, role')
             .eq('id', user.id)
             .single();
           
           setUserPermissions(profile?.permissions || []);
+          setUserRole(profile?.role || 'admin');
           setLoadingPermissions(false);
 
           // Subscribe to changes
@@ -126,7 +131,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (!loadingPermissions && userPermissions.length > 0) {
       if (!userPermissions.includes(activeTab)) {
-        setActiveTab(userPermissions[0]);
+        const target = userPermissions[0];
+        setActiveTab(target);
+        if (!visitedTabs.includes(target)) {
+          setVisitedTabs(prev => [...prev, target]);
+        }
       }
     }
   }, [loadingPermissions, userPermissions, activeTab]);
@@ -140,8 +149,39 @@ export default function Dashboard() {
     </div>
   );
 
+  const isSupport = localStorage.getItem('support_mode') === 'true';
+  const supportUserName = localStorage.getItem('support_user_name');
+
+  const handleExitSupport = () => {
+    localStorage.removeItem('support_mode');
+    localStorage.removeItem('support_user_id');
+    localStorage.removeItem('support_user_name');
+    localStorage.removeItem('support_permissions');
+    localStorage.removeItem('support_role');
+    onAlert('Modo Suporte Finalizado', 'Retornando à sua conta real.', 'info');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  };
+
   return (
     <div className="min-h-screen bg-brand-dark text-white font-sans selection:bg-brand-orange selection:text-white">
+      {isSupport && (
+        <div className="fixed top-0 left-0 w-full z-[100] bg-brand-orange text-white py-2 px-6 flex justify-between items-center shadow-lg">
+          <div className="flex items-center gap-4">
+            <AlertTriangle className="w-4 h-4" />
+            <p className="text-[10px] uppercase tracking-widest font-bold">
+              MODO SUPORTE ATIVO: Visualizando como <span className="underline">{supportUserName}</span>
+            </p>
+          </div>
+          <button 
+            onClick={handleExitSupport}
+            className="bg-brand-dark text-white px-4 py-1 text-[9px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all rounded-sm border border-brand-dark"
+          >
+            Sair do Suporte
+          </button>
+        </div>
+      )}
       {/* Mobile Menu Button */}
       <div className="lg:hidden fixed top-6 right-6 z-[60]">
         <button 
@@ -174,6 +214,9 @@ export default function Dashboard() {
                   key={item.id}
                   onClick={() => {
                     setActiveTab(item.id);
+                    if (!visitedTabs.includes(item.id)) {
+                      setVisitedTabs(prev => [...prev, item.id]);
+                    }
                     if (window.innerWidth < 1024) setIsSidebarOpen(false);
                   }}
                   className={`w-full flex items-center gap-4 px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-bold transition-all group rounded-sm ${
@@ -240,35 +283,60 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className={`transition-all duration-500 min-h-screen ${isSidebarOpen ? 'lg:pl-72' : 'pl-0'}`}>
         <div className="max-w-7xl mx-auto px-6 py-12 lg:px-16 lg:py-20">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="mb-16">
-                <p className="text-brand-orange text-[10px] uppercase tracking-[0.5em] font-bold mb-4">
-                  {menuItems.find(m => m.id === activeTab)?.label}
-                </p>
-                <h2 className="text-5xl lg:text-6xl font-serif text-white italic tracking-tight">
-                  Gerenciamento<span className="text-brand-orange opacity-50">.</span>
-                </h2>
-              </div>
+          <div className="relative">
+            {menuItems.map((item) => {
+              const isActive = activeTab === item.id;
+              
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={false}
+                  animate={isActive ? { 
+                    opacity: 1, 
+                    scale: 1,
+                    y: 0,
+                    display: 'block',
+                    transition: { duration: 0.25, ease: [0.23, 1, 0.32, 1] }
+                  } : { 
+                    opacity: 0, 
+                    scale: 0.98,
+                    y: 10,
+                    transitionEnd: { display: 'none' },
+                    transition: { duration: 0.15, ease: 'easeIn' }
+                  }}
+                  className="w-full"
+                >
+                  {/* Título da Aba */}
+                  <div className="mb-16">
+                    <p className="text-brand-orange text-[10px] uppercase tracking-[0.5em] font-bold mb-4">
+                      {item.label}
+                    </p>
+                    <h2 className="text-5xl lg:text-6xl font-serif text-white italic tracking-tight">
+                      Gerenciamento<span className="text-brand-orange opacity-50">.</span>
+                    </h2>
+                  </div>
 
-              {activeTab === 'profile' && <ProfileManager />}
-              {activeTab === 'analytics' && <AnalyticsDashboard onAlert={onAlert} />}
-              {activeTab === 'orders' && <OrdersManager onAlert={onAlert} />}
-              {activeTab === 'content' && <ContentEditor onAlert={onAlert} />}
-              {activeTab === 'help' && <HelpItemsManager onAlert={onAlert} />}
-              {activeTab === 'gallery' && <GalleryManager onAlert={onAlert} />}
-              {activeTab === 'sponsorship' && <SponsorshipManager onAlert={onAlert} />}
-              {activeTab === 'financial' && <FinancialManager onAlert={onAlert} />}
-              {activeTab === 'banners' && <BannerManager onAlert={onAlert} />}
-              {activeTab === 'users' && <UserManager onAlert={onAlert} />}
-            </motion.div>
-          </AnimatePresence>
+                  {/* Renderização Condicional Preguiçosa (Lazy + Persistent) */}
+                  <div className="min-h-[400px]">
+                    {visitedTabs.includes(item.id) ? ( 
+                      <>
+                        {item.id === 'profile' && <ProfileManager userRole={userRole} />}
+                        {item.id === 'analytics' && <AnalyticsDashboard onAlert={onAlert} />}
+                        {item.id === 'orders' && <OrdersManager onAlert={onAlert} />}
+                        {item.id === 'content' && <ContentEditor onAlert={onAlert} />}
+                        {item.id === 'help' && <HelpItemsManager onAlert={onAlert} />}
+                        {item.id === 'gallery' && <GalleryManager onAlert={onAlert} />}
+                        {item.id === 'sponsorship' && <SponsorshipManager onAlert={onAlert} />}
+                        {item.id === 'financial' && <FinancialManager onAlert={onAlert} />}
+                        {item.id === 'banners' && <BannerManager onAlert={onAlert} />}
+                        {item.id === 'users' && <UserManager onAlert={onAlert} userRole={userRole} />}
+                      </>
+                    ) : null}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </main>
 

@@ -24,6 +24,7 @@ import { Footer } from '../components/layout/Footer';
 import { BackToTop } from '../components/BackToTop';
 import { MainModal, ModalType } from '../components/modals/MainModal';
 import { ProposalModal } from '../components/modals/ProposalModal';
+import { RaffleSection } from '../components/RaffleSection';
 
 function VerticalTicker({ phrases }: { phrases: any[] }) {
   const [index, setIndex] = useState(0);
@@ -646,6 +647,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <RaffleSection />
 
       <section id="patrocinio" className="py-32 bg-brand-dark px-6 lg:px-12">
         <div className="max-w-7xl mx-auto">

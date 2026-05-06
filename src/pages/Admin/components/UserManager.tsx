@@ -20,9 +20,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface UserManagerProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
+  userRole: string | null;
 }
 
-export function UserManager({ onAlert }: UserManagerProps) {
+export function UserManager({ onAlert, userRole }: UserManagerProps) {
   const navigate = useNavigate();
   const { profiles, loading, refresh, updateProfile } = useProfiles();
   const [isAdding, setIsAdding] = useState(false);
@@ -187,6 +188,7 @@ export function UserManager({ onAlert }: UserManagerProps) {
     localStorage.setItem('support_user_name', p.full_name || 'Administrador');
     localStorage.setItem('support_user_id', p.id);
     localStorage.setItem('support_permissions', JSON.stringify(p.permissions || []));
+    localStorage.setItem('support_role', p.role || 'admin');
     onAlert('Modo Suporte', `Visualizando Painel como ${p.full_name || p.email}.`, 'info');
     setTimeout(() => {
       window.location.reload();
@@ -231,13 +233,15 @@ export function UserManager({ onAlert }: UserManagerProps) {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <p className="text-xs text-white/40 font-sans max-w-md">Gerencie os administradores do sistema. Usuários criados aqui terão acesso total ao painel.</p>
-        <button 
-          onClick={() => setIsAdding(!isAdding)}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-brand-dark transition-all rounded-sm shadow-lg"
-        >
-          {isAdding ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-          {isAdding ? 'Cancelar' : 'Convidar Administrador'}
-        </button>
+        {userRole === 'master' && (
+          <button 
+            onClick={() => setIsAdding(!isAdding)}
+            className="flex items-center gap-2 px-4 py-2 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-brand-dark transition-all rounded-sm shadow-lg"
+          >
+            {isAdding ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+            {isAdding ? 'Cancelar' : 'Convidar Administrador'}
+          </button>
+        )}
       </div>
 
       <AnimatePresence>
@@ -346,30 +350,36 @@ export function UserManager({ onAlert }: UserManagerProps) {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => {
-                          setChangingPasswordId(changingPasswordId === p.id ? null : p.id);
-                          setNewPassInput('');
-                        }}
-                        className={`p-2 transition-colors ${changingPasswordId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
-                        title="Trocar senha"
-                      >
-                        <Key className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => setEditingPermissionsId(editingPermissionsId === p.id ? null : p.id)}
-                        className={`p-2 transition-colors ${editingPermissionsId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
-                        title="Editar permissões"
-                      >
-                        <Lock className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => handleImpersonate(p)}
-                        className="p-2 text-white/20 hover:text-emerald-500 transition-colors"
-                        title="Ver como este usuário"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
+                      {userRole === 'master' && (
+                        <>
+                          <button 
+                            onClick={() => {
+                              setChangingPasswordId(changingPasswordId === p.id ? null : p.id);
+                              setNewPassInput('');
+                            }}
+                            className={`p-2 transition-colors ${changingPasswordId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
+                            title="Trocar senha"
+                          >
+                            <Key className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => setEditingPermissionsId(editingPermissionsId === p.id ? null : p.id)}
+                            className={`p-2 transition-colors ${editingPermissionsId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
+                            title="Editar permissões"
+                          >
+                            <Lock className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                      {userRole === 'master' && (
+                        <button 
+                          onClick={() => handleImpersonate(p)}
+                          className="p-2 text-white/20 hover:text-emerald-500 transition-colors"
+                          title="Ver como este usuário"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button 
                         onClick={() => {
                           setEditingId(p.id);
@@ -380,14 +390,16 @@ export function UserManager({ onAlert }: UserManagerProps) {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button 
-                        onClick={() => setUserToDelete(p.id)}
-                        disabled={deletingId === p.id}
-                        className="p-2 text-white/20 hover:text-red-500 transition-colors disabled:opacity-30"
-                        title="Excluir administrador"
-                      >
-                        {deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                      </button>
+                      {userRole === 'master' && (
+                        <button 
+                          onClick={() => setUserToDelete(p.id)}
+                          disabled={deletingId === p.id}
+                          className="p-2 text-white/20 hover:text-red-500 transition-colors disabled:opacity-30"
+                          title="Excluir administrador"
+                        >
+                          {deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -119,6 +119,7 @@ export function SponsorshipManager({ onAlert }: SponsorshipManagerProps) {
         onCancel={() => setTierToDelete(null)}
         title="Excluir Cota"
         message="Deseja excluir permanentemente esta cota de patrocínio? Isso removerá o item da página de apoiadores."
+        confirmLabel="Confirmar Exclusão"
         variant="danger"
       />
 

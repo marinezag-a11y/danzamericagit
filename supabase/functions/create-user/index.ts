@@ -19,6 +19,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    const authHeader = req.headers.get('Authorization')
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authHeader?.replace('Bearer ', ''))
+    
+    if (authError || !user) throw new Error('Não autorizado.')
+
+    const { data: callerProfile } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (callerProfile?.role !== 'master') {
+      throw new Error('Apenas usuários Master podem criar novos administradores.')
+    }
+
     const { email, password, full_name } = await req.json()
 
     const { data, error } = await supabaseClient.auth.admin.createUser({

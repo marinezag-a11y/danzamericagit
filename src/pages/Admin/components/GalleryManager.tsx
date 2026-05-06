@@ -199,6 +199,7 @@ export function GalleryManager({ onAlert }: GalleryManagerProps) {
         onCancel={() => setImageToDelete(null)}
         title="Excluir Foto"
         message="Deseja remover esta foto da galeria? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
         variant="danger"
       />
     </div>

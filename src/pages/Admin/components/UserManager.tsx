@@ -10,7 +10,8 @@ import {
   Pencil, 
   Trash2,
   CheckCircle2,
-  Lock
+  Lock,
+  Key
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useProfiles } from '../../../hooks/useProfiles';
@@ -153,6 +154,34 @@ export function UserManager({ onAlert }: UserManagerProps) {
     }
   };
 
+  const handleChangePassword = async (userId: string, newPass: string) => {
+    if (!newPass || newPass.length < 6) {
+      onAlert('Erro', 'A senha deve ter pelo menos 6 caracteres.', 'danger');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ userId, newPassword: newPass }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro ao alterar senha');
+
+      onAlert('Sucesso', 'Senha alterada com sucesso.', 'info');
+      return true;
+    } catch (err: any) {
+      onAlert('Erro', err.message, 'danger');
+      return false;
+    }
+  };
+
   const handleImpersonate = (p: any) => {
     localStorage.setItem('support_mode', 'true');
     localStorage.setItem('support_user_name', p.full_name || 'Administrador');
@@ -163,6 +192,10 @@ export function UserManager({ onAlert }: UserManagerProps) {
       window.location.reload();
     }, 1000);
   };
+
+  const [changingPasswordId, setChangingPasswordId] = useState<string | null>(null);
+  const [newPassInput, setNewPassInput] = useState('');
+  const [isChangingPass, setIsChangingPass] = useState(false);
 
   const [updatingPermission, setUpdatingPermission] = useState<string | null>(null);
 
@@ -314,6 +347,16 @@ export function UserManager({ onAlert }: UserManagerProps) {
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button 
+                        onClick={() => {
+                          setChangingPasswordId(changingPasswordId === p.id ? null : p.id);
+                          setNewPassInput('');
+                        }}
+                        className={`p-2 transition-colors ${changingPasswordId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
+                        title="Trocar senha"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
                         onClick={() => setEditingPermissionsId(editingPermissionsId === p.id ? null : p.id)}
                         className={`p-2 transition-colors ${editingPermissionsId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
                         title="Editar permissões"
@@ -348,6 +391,45 @@ export function UserManager({ onAlert }: UserManagerProps) {
                     </div>
                   </td>
                 </tr>
+                {changingPasswordId === p.id && (
+                  <tr className="bg-brand-orange/5 border-b border-white/5">
+                    <td colSpan={4} className="px-6 py-6">
+                      <div className="flex items-end gap-6">
+                        <div className="flex-1 space-y-2">
+                          <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Nova Senha para {p.full_name || p.email}</label>
+                          <input 
+                            type="text" 
+                            value={newPassInput}
+                            onChange={(e) => setNewPassInput(e.target.value)}
+                            className="w-full bg-black/50 border border-white/10 p-3 text-sm text-white outline-none focus:border-brand-orange transition-all"
+                            placeholder="Mínimo 6 caracteres"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              setIsChangingPass(true);
+                              const success = await handleChangePassword(p.id, newPassInput);
+                              if (success) setChangingPasswordId(null);
+                              setIsChangingPass(false);
+                            }}
+                            disabled={isChangingPass || !newPassInput}
+                            className="px-6 py-3 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50"
+                          >
+                            {isChangingPass ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar Troca'}
+                          </button>
+                          <button
+                            onClick={() => setChangingPasswordId(null)}
+                            className="px-6 py-3 bg-white/5 text-white/60 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-all"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {editingPermissionsId === p.id && (
                   <tr className="bg-brand-orange/5 border-b border-white/5">
                     <td colSpan={4} className="px-6 py-6">

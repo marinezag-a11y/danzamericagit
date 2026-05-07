@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('profile');
   const [visitedTabs, setVisitedTabs] = useState<string[]>(['profile']);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const navigate = useNavigate();
   const [alerts, setAlerts] = useState<any[]>([]);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -58,7 +60,10 @@ export default function Dashboard() {
       setLoadingPermissions(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          navigate('/admin');
+          return;
+        }
         setUserEmail(user.email || null);
 
         if (isSupport && supportPerms) {
@@ -118,6 +123,7 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    navigate('/admin');
   };
 
   const menuItems = [

@@ -175,15 +175,46 @@ export function RaffleManager({ onAlert }: RaffleManagerProps) {
             onUpdateStatus={async (id, status) => {
               const res = await updateOrderStatus(id, status);
               if (res.success) {
+                const order = orders.find(o => o.id === id);
+                if (order) {
+                  try {
+                    await supabase.functions.invoke('send-order', {
+                      body: {
+                        type: 'status_update',
+                        order_id: id,
+                        customer_name: order.customer_name,
+                        customer_email: order.customer_email,
+                        new_status: status
+                      }
+                    });
+                  } catch (err) {
+                    console.error('Erro ao enviar e-mail de status:', err);
+                  }
+                }
                 setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-                onAlert('Status Atualizado', 'Pedido atualizado com sucesso.', 'info');
+                onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
               }
             }}
             onDeleteOrder={async (id) => {
+              const order = orders.find(o => o.id === id);
               const res = await deleteOrder(id);
               if (res.success) {
+                if (order) {
+                  try {
+                    await supabase.functions.invoke('send-order', {
+                      body: {
+                        type: 'order_deletion',
+                        order_id: id,
+                        customer_name: order.customer_name,
+                        customer_email: order.customer_email
+                      }
+                    });
+                  } catch (err) {
+                    console.error('Erro ao enviar e-mail de exclusão:', err);
+                  }
+                }
                 setOrders(prev => prev.filter(o => o.id !== id));
-                onAlert('Excluído', 'Pedido removido.', 'info');
+                onAlert('Excluído', 'Pedido removido e cliente notificado.', 'info');
               }
             }}
           />

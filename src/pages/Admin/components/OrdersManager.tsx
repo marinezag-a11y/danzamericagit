@@ -43,9 +43,24 @@ export function OrdersManager({ onAlert }: OrdersManagerProps) {
   const confirmDelete = async () => {
     if (!orderToDelete) return;
     setDeleting(true);
+    const order = orders.find(o => o.id === orderToDelete);
     const result = await deleteOrder(orderToDelete);
     if (result.success) {
-      onAlert('Pedido Excluído', 'O registro foi removido com sucesso.', 'info');
+      if (order) {
+        try {
+          await supabase.functions.invoke('send-order', {
+            body: {
+              type: 'order_deletion',
+              order_id: orderToDelete,
+              customer_name: order.customer_name,
+              customer_email: order.customer_email
+            }
+          });
+        } catch (err) {
+          console.error('Erro ao enviar e-mail de exclusão:', err);
+        }
+      }
+      onAlert('Pedido Excluído', 'O registro foi removido e o cliente notificado.', 'info');
     } else {
       onAlert('Erro ao Excluir', 'Não foi possível excluir o pedido: ' + result.error, 'danger');
     }

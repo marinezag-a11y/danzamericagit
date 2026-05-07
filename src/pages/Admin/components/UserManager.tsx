@@ -11,7 +11,8 @@ import {
   Trash2,
   CheckCircle2,
   Lock,
-  Key
+  Key,
+  Mail
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useProfiles } from '../../../hooks/useProfiles';
@@ -183,6 +184,42 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
     }
   };
 
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
+  const handleResendEmail = async (p: any) => {
+    setResendingId(p.id);
+    try {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+      let pass = '';
+      for (let i = 0; i < 10; i++) {
+        pass += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resend-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ userId: p.id, email: p.email, full_name: p.full_name, newPassword: pass }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro ao reenviar e-mail');
+
+      if (result.email_status && !result.email_status.sent) {
+        onAlert('Atenção', `Senha redefinida, mas o e-mail falhou: ${result.email_status.error}. Senha: ${pass}`, 'warning');
+      } else {
+        onAlert('Sucesso', `E-mail de acesso reenviado para ${p.email}.`, 'info');
+      }
+    } catch (err: any) {
+      onAlert('Erro', err.message, 'danger');
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   const handleImpersonate = (p: any) => {
     localStorage.setItem('support_mode', 'true');
     localStorage.setItem('support_user_name', p.full_name || 'Administrador');
@@ -326,19 +363,31 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
               <React.Fragment key={p.id}>
                 <tr className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                   <td className="px-6 py-4 text-sm font-sans text-white/80 group-hover:text-white transition-colors">
-                    {editingId === p.id ? (
-                      <input 
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        onBlur={() => handleEditUser(p.id)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleEditUser(p.id)}
-                        autoFocus
-                        className="bg-black/50 border border-brand-orange/50 p-1 px-2 outline-none text-white text-sm"
-                      />
-                    ) : (
-                      p.full_name || <span className="opacity-30 italic text-xs">Sem nome</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {userRole === 'master' && (
+                        <button
+                          onClick={() => handleResendEmail(p)}
+                          disabled={resendingId === p.id}
+                          className="p-1.5 text-white/20 hover:text-brand-orange hover:bg-brand-orange/10 rounded-sm transition-all disabled:opacity-30"
+                          title="Reenviar e-mail com nova senha"
+                        >
+                          {resendingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                      {editingId === p.id ? (
+                        <input 
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onBlur={() => handleEditUser(p.id)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleEditUser(p.id)}
+                          autoFocus
+                          className="bg-black/50 border border-brand-orange/50 p-1 px-2 outline-none text-white text-sm"
+                        />
+                      ) : (
+                        p.full_name || <span className="opacity-30 italic text-xs">Sem nome</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm font-sans text-white/60">
                     {p.email}

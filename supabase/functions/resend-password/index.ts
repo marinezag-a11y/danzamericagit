@@ -31,17 +31,19 @@ serve(async (req) => {
       .single()
 
     if (callerProfile?.role !== 'master') {
-      throw new Error('Apenas usuários Master podem criar novos administradores.')
+      throw new Error('Apenas usuários Master podem alterar senhas de outros administradores.')
     }
 
-    const { email, password, full_name } = await req.json()
+    const { userId, email, full_name, newPassword } = await req.json()
 
-    const { data, error } = await supabaseClient.auth.admin.createUser({
-      email,
-      password,
-      user_metadata: { full_name },
-      email_confirm: true
-    })
+    if (!userId || !newPassword || !email) {
+      throw new Error('ID do usuário, email e nova senha são obrigatórios.')
+    }
+
+    const { data, error } = await supabaseClient.auth.admin.updateUserById(
+      userId,
+      { password: newPassword }
+    )
 
     if (error) throw error
 
@@ -54,15 +56,15 @@ serve(async (req) => {
             <p style="text-transform: uppercase; letter-spacing: 3px; font-size: 10px; opacity: 0.5;">Acesso Administrativo</p>
           </div>
           
-          <h3 style="color: white; font-style: italic; border-bottom: 1px solid rgba(255,90,31,0.2); padding-bottom: 15px; margin-bottom: 25px;">Bem-vindo ao Time!</h3>
+          <h3 style="color: white; font-style: italic; border-bottom: 1px solid rgba(255,90,31,0.2); padding-bottom: 15px; margin-bottom: 25px;">Recuperação de Acesso</h3>
           
-          <p>Olá, <strong>${full_name}</strong>,</p>
-          <p>Você acaba de ser adicionado como administrador do sistema Danzamerica 2026. Agora você tem acesso total para gerenciar conteúdos, patrocínios e pedidos.</p>
+          <p>Olá, <strong>${full_name || 'Administrador'}</strong>,</p>
+          <p>Sua senha de acesso ao sistema Danzamerica 2026 foi redefinida por um administrador Master.</p>
           
           <div style="background-color: rgba(255,255,255,0.03); padding: 25px; border-left: 4px solid #FF5A1F; margin: 30px 0;">
-            <p style="margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; tracking-spacing: 1px; color: #FF5A1F; font-weight: bold;">Seus Dados de Acesso:</p>
+            <p style="margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; tracking-spacing: 1px; color: #FF5A1F; font-weight: bold;">Seus Novos Dados de Acesso:</p>
             <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Login:</strong> ${email}</p>
-            <p style="margin: 0; font-size: 14px;"><strong>Senha Temporária:</strong> ${password}</p>
+            <p style="margin: 0; font-size: 14px;"><strong>Senha Temporária:</strong> ${newPassword}</p>
           </div>
 
           <div style="text-align: center; margin: 40px 0;">
@@ -70,7 +72,7 @@ serve(async (req) => {
           </div>
 
           <p style="font-size: 12px; opacity: 0.5; font-style: italic; text-align: center; margin-top: 30px;">
-            * Recomendamos que você altere sua senha na aba "Perfil" logo após o primeiro acesso para garantir sua segurança.
+            * Recomendamos que você altere esta senha temporária na aba "Perfil" logo após o acesso.
           </p>
           
           <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; margin-bottom: 20px;" />
@@ -92,7 +94,7 @@ serve(async (req) => {
             from: 'Danzamerica 2026 <admin@nucleotatianafigueiredo.com.br>',
             to: [email],
             ...(user?.email ? { cc: [user.email] } : {}),
-            subject: `Bem-vindo ao Painel Danzamerica 2026 - ${full_name}`,
+            subject: `Nova Senha do Painel Danzamerica 2026 - ${full_name || 'Administrador'}`,
             html: welcomeEmailHtml,
           }),
         })
@@ -104,14 +106,14 @@ serve(async (req) => {
           emailStatus.error = errData.message || 'Erro desconhecido no Resend';
         }
       } catch (emailError) {
-        console.error('Error sending welcome email:', emailError)
+        console.error('Error sending email:', emailError)
         emailStatus.error = emailError.message;
       }
     } else {
       emailStatus.error = 'RESEND_API_KEY não configurada';
     }
 
-    return new Response(JSON.stringify({ ...data, email_status: emailStatus }), {
+    return new Response(JSON.stringify({ success: true, data, email_status: emailStatus }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

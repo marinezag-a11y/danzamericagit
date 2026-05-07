@@ -46,6 +46,10 @@ export default function Dashboard() {
   const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTab]);
+
+  useEffect(() => {
     const isSupport = localStorage.getItem('support_mode') === 'true';
     const supportPerms = localStorage.getItem('support_permissions');
     const supportRole = localStorage.getItem('support_role');
@@ -293,7 +297,7 @@ export default function Dashboard() {
               return (
                 <motion.div
                   key={item.id}
-                  initial={false}
+                  initial={isActive ? { opacity: 1, scale: 1, display: 'block' } : { opacity: 0, scale: 0.98, display: 'none' }}
                   animate={isActive ? { 
                     opacity: 1, 
                     scale: 1,

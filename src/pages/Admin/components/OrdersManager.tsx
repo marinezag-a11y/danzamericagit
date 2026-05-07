@@ -18,6 +18,7 @@ import { supabase } from '../../../lib/supabase';
 import { useHelpOrders } from '../../../hooks/useHelpOrders';
 import { useHelpItems } from '../../../hooks/useHelpItems';
 import { useProfiles } from '../../../hooks/useProfiles';
+import { useSiteSettings } from '../../../hooks/useSiteSettings';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { maskBRL, parseBRL } from '../../../lib/utils';
 

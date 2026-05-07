@@ -4,7 +4,9 @@ import {
   Loader2, 
   Save, 
   User, 
-  CheckCircle2 
+  CheckCircle2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useProfiles, Profile } from '../../../hooks/useProfiles';
@@ -17,6 +19,7 @@ export function ProfileManager() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -125,12 +128,14 @@ export function ProfileManager() {
             <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Nome Completo</label>
             <input 
               disabled={isSupport}
+              readOnly={!isSupport}
+              onFocus={(e) => !isSupport && e.target.removeAttribute('readonly')}
               type="text" 
               value={profile.full_name || ''}
               onChange={(e) => setProfile({...profile, full_name: e.target.value})}
               className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10 disabled:opacity-50"
               placeholder="Como você quer ser chamado?"
-              autoComplete="off"
+              autoComplete="none"
             />
           </div>
 
@@ -138,12 +143,14 @@ export function ProfileManager() {
             <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">WhatsApp / Telefone</label>
             <input 
               disabled={isSupport}
+              readOnly={!isSupport}
+              onFocus={(e) => !isSupport && e.target.removeAttribute('readonly')}
               type="text" 
               value={profile.phone || ''}
               onChange={(e) => setProfile({...profile, phone: e.target.value})}
               className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10 disabled:opacity-50"
               placeholder="(00) 00000-0000"
-              autoComplete="off"
+              autoComplete="none"
             />
           </div>
         </div>
@@ -151,13 +158,23 @@ export function ProfileManager() {
         {!isSupport && (
           <div className="space-y-4 p-6 bg-brand-orange/5 border border-brand-orange/10 rounded-sm">
             <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Trocar Senha (Deixe em branco para manter)</label>
-            <input 
-              type="password" 
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10"
-              placeholder="Nova senha segura"
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full bg-black/50 border border-white/10 p-4 pr-12 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10"
+                placeholder="Nova senha segura"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-brand-orange transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
             <p className="text-[10px] text-white/20 italic">A senha deve ter no mínimo 6 caracteres.</p>
           </div>
         )}

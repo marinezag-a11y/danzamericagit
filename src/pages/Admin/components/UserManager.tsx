@@ -363,31 +363,19 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
               <React.Fragment key={p.id}>
                 <tr className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                   <td className="px-6 py-4 text-sm font-sans text-white/80 group-hover:text-white transition-colors">
-                    <div className="flex items-center gap-2">
-                      {userRole === 'master' && (
-                        <button
-                          onClick={() => handleResendEmail(p)}
-                          disabled={resendingId === p.id}
-                          className="p-1.5 text-white/20 hover:text-brand-orange hover:bg-brand-orange/10 rounded-sm transition-all disabled:opacity-30"
-                          title="Reenviar e-mail com nova senha"
-                        >
-                          {resendingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
-                        </button>
-                      )}
-                      {editingId === p.id ? (
-                        <input 
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          onBlur={() => handleEditUser(p.id)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleEditUser(p.id)}
-                          autoFocus
-                          className="bg-black/50 border border-brand-orange/50 p-1 px-2 outline-none text-white text-sm"
-                        />
-                      ) : (
-                        p.full_name || <span className="opacity-30 italic text-xs">Sem nome</span>
-                      )}
-                    </div>
+                    {editingId === p.id ? (
+                      <input 
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onBlur={() => handleEditUser(p.id)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleEditUser(p.id)}
+                        autoFocus
+                        className="bg-black/50 border border-brand-orange/50 p-1 px-2 outline-none text-white text-sm"
+                      />
+                    ) : (
+                      p.full_name || <span className="opacity-30 italic text-xs">Sem nome</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm font-sans text-white/60">
                     {p.email}
@@ -417,6 +405,14 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
                             title="Editar permissões"
                           >
                             <Lock className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleResendEmail(p)}
+                            disabled={resendingId === p.id}
+                            className="p-2 text-white/20 hover:text-brand-orange transition-colors disabled:opacity-30"
+                            title="Reenviar e-mail com nova senha"
+                          >
+                            {resendingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
                           </button>
                         </>
                       )}

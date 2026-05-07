@@ -266,6 +266,13 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
 
   if (loading && profiles.length === 0) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
 
+  const ActionTooltip = ({ text }: { text: string }) => (
+    <div className="absolute bottom-full right-1/2 translate-x-1/2 mb-2 px-3 py-1.5 bg-black border border-white/10 text-[9px] uppercase tracking-widest text-white whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl rounded-sm">
+      {text}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white/10"></div>
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -348,7 +355,7 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
         )}
       </AnimatePresence>
 
-      <div className="bg-white/5 border border-white/10 overflow-hidden rounded-sm shadow-xl">
+      <div className="bg-white/5 border border-white/10 rounded-sm shadow-xl">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
@@ -389,61 +396,78 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
                     <div className="flex justify-end gap-2">
                       {userRole === 'master' && (
                         <>
-                          <button 
-                            onClick={() => {
-                              setChangingPasswordId(changingPasswordId === p.id ? null : p.id);
-                              setNewPassInput('');
-                            }}
-                            className={`p-2 transition-colors ${changingPasswordId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
-                            title="Trocar senha"
-                          >
-                            <Key className="w-3.5 h-3.5" />
-                          </button>
-                          <button 
-                            onClick={() => setEditingPermissionsId(editingPermissionsId === p.id ? null : p.id)}
-                            className={`p-2 transition-colors ${editingPermissionsId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
-                            title="Editar permissões"
-                          >
-                            <Lock className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleResendEmail(p)}
-                            disabled={resendingId === p.id}
-                            className="p-2 text-white/20 hover:text-brand-orange transition-colors disabled:opacity-30"
-                            title="Reenviar e-mail com nova senha"
-                          >
-                            {resendingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
-                          </button>
+                          <div className="relative group/btn">
+                            <button 
+                              onClick={() => {
+                                setChangingPasswordId(changingPasswordId === p.id ? null : p.id);
+                                setNewPassInput('');
+                              }}
+                              className={`p-2 transition-colors ${changingPasswordId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
+                            >
+                              <Key className="w-3.5 h-3.5" />
+                            </button>
+                            <ActionTooltip text="Trocar Senha" />
+                          </div>
+
+                          <div className="relative group/btn">
+                            <button 
+                              onClick={() => setEditingPermissionsId(editingPermissionsId === p.id ? null : p.id)}
+                              className={`p-2 transition-colors ${editingPermissionsId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                            </button>
+                            <ActionTooltip text="Editar Permissões" />
+                          </div>
+
+                          <div className="relative group/btn">
+                            <button
+                              onClick={() => handleResendEmail(p)}
+                              disabled={resendingId === p.id}
+                              className="p-2 text-white/20 hover:text-brand-orange transition-colors disabled:opacity-30"
+                            >
+                              {resendingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                            </button>
+                            <ActionTooltip text="Reenviar E-mail" />
+                          </div>
                         </>
                       )}
+                      
                       {userRole === 'master' && (
-                        <button 
-                          onClick={() => handleImpersonate(p)}
-                          className="p-2 text-white/20 hover:text-emerald-500 transition-colors"
-                          title="Ver como este usuário"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="relative group/btn">
+                          <button 
+                            onClick={() => handleImpersonate(p)}
+                            className="p-2 text-white/20 hover:text-emerald-500 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <ActionTooltip text="Ver como este usuário" />
+                        </div>
                       )}
-                      <button 
-                        onClick={() => {
-                          setEditingId(p.id);
-                          setEditName(p.full_name || '');
-                        }}
-                        className="p-2 text-white/20 hover:text-brand-orange transition-colors"
-                        title="Editar nome"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      {userRole === 'master' && (
+                      
+                      <div className="relative group/btn">
                         <button 
-                          onClick={() => setUserToDelete(p.id)}
-                          disabled={deletingId === p.id}
-                          className="p-2 text-white/20 hover:text-red-500 transition-colors disabled:opacity-30"
-                          title="Excluir administrador"
+                          onClick={() => {
+                            setEditingId(p.id);
+                            setEditName(p.full_name || '');
+                          }}
+                          className="p-2 text-white/20 hover:text-brand-orange transition-colors"
                         >
-                          {deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
+                        <ActionTooltip text="Editar Nome" />
+                      </div>
+
+                      {userRole === 'master' && (
+                        <div className="relative group/btn">
+                          <button 
+                            onClick={() => setUserToDelete(p.id)}
+                            disabled={deletingId === p.id}
+                            className="p-2 text-white/20 hover:text-red-500 transition-colors disabled:opacity-30"
+                          >
+                            {deletingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                          <ActionTooltip text="Excluir" />
+                        </div>
                       )}
                     </div>
                   </td>

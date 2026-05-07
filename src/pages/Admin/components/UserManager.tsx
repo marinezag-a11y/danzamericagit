@@ -128,6 +128,16 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
     }
   };
 
+  const handleChangeRole = async (userId: string, newRole: string) => {
+    const res = await updateProfile(userId, { role: newRole as 'admin' | 'master' });
+    if (res.success) {
+      refresh();
+      onAlert('Sucesso', `Nível hierárquico alterado para ${newRole.toUpperCase()}.`, 'info');
+    } else {
+      onAlert('Erro', 'Não foi possível atualizar o nível de acesso.', 'danger');
+    }
+  };
+
   const handleDeleteUser = async (id: string) => {
     setDeletingId(id);
     try {
@@ -515,9 +525,33 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
                   <tr className="bg-brand-orange/5 border-b border-white/5">
                     <td colSpan={4} className="px-6 py-6">
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/40 p-4 border border-white/10 rounded-sm mb-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Lock className="w-3 h-3 text-brand-orange" />
+                              <h4 className="text-[10px] uppercase tracking-widest font-bold text-white">Nível Hierárquico</h4>
+                            </div>
+                            <p className="text-[10px] text-white/40 font-sans">Mestres (Masters) têm acesso irrestrito e gerenciam outros administradores.</p>
+                          </div>
+                          <div className="flex gap-2 bg-black/50 p-1 rounded-sm border border-white/10 shrink-0">
+                            <button
+                              onClick={() => handleChangeRole(p.id, 'admin')}
+                              className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all ${p.role !== 'master' ? 'bg-white/10 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                            >
+                              Admin Padrão
+                            </button>
+                            <button
+                              onClick={() => handleChangeRole(p.id, 'master')}
+                              className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all ${p.role === 'master' ? 'bg-brand-orange text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                            >
+                              Master
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 mt-4">
                           <Lock className="w-3 h-3 text-brand-orange" />
-                          <h4 className="text-[10px] uppercase tracking-widest font-bold text-white">Gerenciar Acessos de {p.full_name || p.email}</h4>
+                          <h4 className="text-[10px] uppercase tracking-widest font-bold text-white">Permissões Específicas de {p.full_name || p.email}</h4>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                           {ALL_PERMISSIONS.map(perm => (

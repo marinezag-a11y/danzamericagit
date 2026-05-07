@@ -266,21 +266,25 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
 
   const handleSavePermissions = async (userId: string) => {
     setIsSavingPermissions(true);
-    
-    // Role update
-    const resRole = await updateProfile(userId, { role: localRole as 'admin' | 'master' });
-    
-    // Permissions update
-    const resPerms = await updateProfile(userId, { permissions: localPermissions });
-    
-    if (resRole.success && resPerms.success) {
-      onAlert('Sucesso', 'Configurações de acesso atualizadas.', 'info');
-      setEditingPermissionsId(null);
-      refresh();
-    } else {
-      onAlert('Erro', 'Não foi possível salvar as alterações.', 'danger');
+    try {
+      // Combined update for both role and permissions
+      const res = await updateProfile(userId, { 
+        role: localRole as 'admin' | 'master',
+        permissions: localPermissions 
+      });
+      
+      if (res.success) {
+        onAlert('Sucesso', 'Configurações de acesso atualizadas.', 'info');
+        setEditingPermissionsId(null);
+        refresh();
+      } else {
+        onAlert('Erro ao Salvar', res.error || 'Não foi possível salvar as alterações.', 'danger');
+      }
+    } catch (err: any) {
+      onAlert('Erro Crítico', err.message, 'danger');
+    } finally {
+      setIsSavingPermissions(false);
     }
-    setIsSavingPermissions(false);
   };
 
   const handleTogglePermission = (userId: string, permissionId: string, currentPermissions: string[] | null) => {

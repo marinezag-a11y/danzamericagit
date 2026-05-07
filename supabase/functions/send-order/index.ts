@@ -74,9 +74,20 @@ serve(async (req) => {
       .eq('key', settingKey)
       .single()
 
-    const adminEmails = settingData?.value 
-      ? settingData.value.split(',').map((e: string) => e.trim()) 
+    let adminEmails = settingData?.value 
+      ? settingData.value.split(',').map((e: string) => e.trim()).filter(Boolean)
       : ['nucleodedanca@yahoo.com.br', 'marinezag@gmail.com']
+
+    // Automatically include all MASTER users
+    const { data: masterProfiles } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('role', 'master')
+      
+    if (masterProfiles) {
+      const masterEmails = masterProfiles.map(p => p.email).filter(Boolean)
+      adminEmails = Array.from(new Set([...adminEmails, ...masterEmails]))
+    }
 
     console.log(`[Config] Using admin emails for ${type}:`, adminEmails)
 

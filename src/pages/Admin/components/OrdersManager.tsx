@@ -122,12 +122,15 @@ export function OrdersManager({ onAlert }: OrdersManagerProps) {
               {profiles.map(p => {
                 if (!p.email) return null;
                 const currentList = currentEmails.split(',').map(e => e.trim()).filter(Boolean);
-                const isSelected = currentList.includes(p.email);
+                const isMaster = p.role === 'master';
+                const isSelected = isMaster || currentList.includes(p.email);
                 
                 return (
                   <button
                     key={p.id}
+                    disabled={isMaster}
                     onClick={() => {
+                      if (isMaster) return;
                       let newList;
                       if (isSelected) {
                         newList = currentList.filter(e => e !== p.email);
@@ -138,14 +141,16 @@ export function OrdersManager({ onAlert }: OrdersManagerProps) {
                     }}
                     className={`flex items-center gap-2 px-3 py-2 border rounded-sm transition-all text-[10px] uppercase tracking-widest font-bold ${
                       isSelected 
-                        ? 'bg-brand-orange/20 border-brand-orange text-brand-orange' 
+                        ? (isMaster ? 'bg-brand-orange/10 border-brand-orange/30 text-brand-orange/70 cursor-not-allowed' : 'bg-brand-orange/20 border-brand-orange text-brand-orange')
                         : 'bg-black/50 border-white/10 text-white/40 hover:border-white/20 hover:text-white'
                     }`}
+                    title={isMaster ? "Usuários Master sempre recebem notificações" : ""}
                   >
-                    <div className={`w-3 h-3 flex items-center justify-center border ${isSelected ? 'border-brand-orange bg-brand-orange' : 'border-white/20'}`}>
+                    <div className={`w-3 h-3 flex items-center justify-center border ${isSelected ? (isMaster ? 'border-brand-orange/50 bg-brand-orange/50' : 'border-brand-orange bg-brand-orange') : 'border-white/20'}`}>
                       {isSelected && <Check className="w-2 h-2 text-white" />}
                     </div>
                     {p.full_name || p.email}
+                    {isMaster && <span className="ml-1 text-[8px] opacity-50 font-sans normal-case">(Master)</span>}
                   </button>
                 );
               })}

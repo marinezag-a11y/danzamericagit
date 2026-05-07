@@ -96,26 +96,27 @@ export function useAnalytics() {
     try {
       const dateFilter = getDateFilter(period);
 
-      // Fetch all page views within the period
-      let query = supabase
+      // Fetch total count and data separately
+      let baseQuery = supabase
         .from('page_views')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (dateFilter) {
-        query = query.gte('created_at', dateFilter);
+        baseQuery = baseQuery.gte('created_at', dateFilter);
       }
 
-      // Limit to 10000 records for performance
-      const { data: rows, error } = await query.limit(10000);
-      if (error || !rows) {
+      // Limit data fetching to 5000 for stats calculation
+      const { data: rows, error, count } = await baseQuery.limit(5000);
+      
+      if (error) {
         console.error('[Analytics] Fetch error:', error);
         setLoading(false);
         return;
       }
 
-      // Total views
-      const totalViews = rows.length;
+      // Total views from the 'count' property (bypasses row limit)
+      const totalViews = count || (rows?.length || 0);
 
       // Unique visitors (distinct session_id)
       const uniqueSessions = new Set(rows.map((r: any) => r.session_id));

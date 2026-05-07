@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Loader2, 
@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Check
 } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
 import { useRaffles, RaffleCampaign, RaffleOrder } from '../../../hooks/useRaffles';
 import { useSiteSettings } from '../../../hooks/useSiteSettings';
 import { useProfiles } from '../../../hooks/useProfiles';
@@ -49,6 +50,17 @@ export function RaffleManager({ onAlert }: RaffleManagerProps) {
   const [orders, setOrders] = useState<RaffleOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [savingEmails, setSavingEmails] = useState(false);
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && profiles.length > 0) {
+        setCurrentUserProfile(profiles.find(p => p.id === user.id));
+      }
+    };
+    fetchUser();
+  }, [profiles]);
 
   const handleOpenOrders = async (campaignId: string) => {
     setViewingOrdersId(campaignId);
@@ -75,8 +87,9 @@ export function RaffleManager({ onAlert }: RaffleManagerProps) {
 
   return (
     <div className="space-y-12">
-      {/* Configurações de Notificação */}
-      <div className="bg-white/5 border border-white/10 p-8 rounded-sm space-y-6">
+      {/* Configurações de Notificação - Somente para MASTER */}
+      {currentUserProfile?.role === 'master' && (
+        <div className="bg-white/5 border border-white/10 p-8 rounded-sm space-y-6">
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 bg-brand-orange/10 rounded-sm">
             <Users className="w-5 h-5 text-brand-orange" />
@@ -157,6 +170,7 @@ export function RaffleManager({ onAlert }: RaffleManagerProps) {
           </div>
         </div>
       </div>
+    )}
 
       <div className="flex flex-col gap-4 pt-12 border-t border-white/5">
         <h3 className="text-2xl font-serif italic text-white">Controle de Campanhas</h3>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin } from 'lucide-react';
+import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin, Plus, Minus } from 'lucide-react';
 import { useHelpOrders } from '../../hooks/useHelpOrders';
 import { HelpItem } from '../../hooks/useHelpItems';
 import { supabase } from '../../lib/supabase';
@@ -25,7 +25,7 @@ interface MainModalProps {
 export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: MainModalProps) {
   const { addOrder } = useHelpOrders();
   
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -42,27 +42,44 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   })), [helpItems]);
 
   const selectedProducts = useMemo(() => 
-    products.filter(p => selectedProductIds.includes(p.id)),
-    [products, selectedProductIds]
+    products.filter(p => !!quantities[p.id]),
+    [products, quantities]
   );
 
   const totalPrice = useMemo(() => 
-    selectedProducts.reduce((sum, p) => sum + p.price, 0),
-    [selectedProducts]
+    selectedProducts.reduce((sum, p) => sum + (p.price * (quantities[p.id] || 0)), 0),
+    [selectedProducts, quantities]
   );
 
   useEffect(() => {
-    if (selectedItemId && !selectedProductIds.includes(selectedItemId)) {
-      setSelectedProductIds(prev => [...prev, selectedItemId]);
+    if (selectedItemId && !quantities[selectedItemId]) {
+      setQuantities(prev => ({ ...prev, [selectedItemId]: 1 }));
     }
   }, [selectedItemId]);
 
   const toggleProduct = (id: string) => {
-    setSelectedProductIds(prev => 
-      prev.includes(id) 
-        ? prev.filter(itemId => itemId !== id)
-        : [...prev, id]
-    );
+    setQuantities(prev => {
+      const newQuantities = { ...prev };
+      if (newQuantities[id]) {
+        delete newQuantities[id];
+      } else {
+        newQuantities[id] = 1;
+      }
+      return newQuantities;
+    });
+  };
+
+  const updateQuantity = (id: string, delta: number) => {
+    setQuantities(prev => {
+      const current = prev[id] || 0;
+      const newValue = current + delta;
+      if (newValue <= 0) {
+        const newQuantities = { ...prev };
+        delete newQuantities[id];
+        return newQuantities;
+      }
+      return { ...prev, [id]: newValue };
+    });
   };
 
   const maskPhone = (value: string) => {
@@ -77,7 +94,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   };
 
   const resetForm = () => {
-    setSelectedProductIds([]);
+    setQuantities({});
     setCustomerName('');
     setCustomerEmail('');
     setCustomerPhone('');
@@ -97,10 +114,15 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone,
-        product_name: selectedProducts.map(p => p.name).join(', '),
+        product_name: selectedProducts.map(p => `${quantities[p.id]}x ${p.name}`).join(', '),
         product_price: totalPrice,
         total_price: totalPrice,
-        items: selectedProducts.map(p => ({ id: p.id, name: p.name, price: p.price })),
+        items: selectedProducts.map(p => ({ 
+          id: p.id, 
+          name: p.name, 
+          price: p.price,
+          quantity: quantities[p.id]
+        })),
         status: 'pending' as const
       };
 
@@ -179,22 +201,50 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     return (
                       <div 
                         key={product.id} 
-                        onClick={() => toggleProduct(product.id)}
-                        className={`p-6 flex gap-6 items-center cursor-pointer transition-all border group ${isSelected ? 'bg-brand-orange/5 border-brand-orange shadow-md' : 'bg-brand-grey border-transparent hover:border-brand-dark/10'}`}
+                        className={`p-6 flex flex-col sm:flex-row gap-6 items-center transition-all border group ${quantities[product.id] ? 'bg-brand-orange/5 border-brand-orange shadow-md' : 'bg-brand-grey border-transparent hover:border-brand-dark/10'}`}
                       >
-                        <div className="relative w-20 h-20 overflow-hidden bg-white border border-brand-dark/5 shrink-0">
-                          <img 
-                            src={product.image} 
-                            className="w-full h-full object-cover transition-transform group-hover:scale-110" 
-                            alt={product.name}
-                          />
+                        <div 
+                          className="flex gap-6 items-center flex-1 w-full cursor-pointer"
+                          onClick={() => toggleProduct(product.id)}
+                        >
+                          <div className="relative w-20 h-20 overflow-hidden bg-white border border-brand-dark/5 shrink-0">
+                            <img 
+                              src={product.image} 
+                              className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                              alt={product.name}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-serif text-lg text-brand-dark leading-tight mb-1">{product.name}</h4>
+                            <p className="text-brand-orange font-display">R$ {product.price.toFixed(2)}</p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-serif text-lg text-brand-dark leading-tight mb-1">{product.name}</h4>
-                          <p className="text-brand-orange font-display">R$ {product.price.toFixed(2)}</p>
-                        </div>
-                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${isSelected ? 'bg-brand-orange border-brand-orange text-white' : 'border-brand-dark/20'}`}>
-                          {isSelected && <CheckCircle className="w-4 h-4" />}
+
+                        <div className="flex items-center gap-4">
+                          {quantities[product.id] && (
+                            <div className="flex items-center bg-white border border-brand-dark/10 rounded-full p-1 shadow-sm">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, -1); }}
+                                className="p-2 hover:text-brand-orange transition-colors"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-8 text-center text-xs font-bold text-brand-dark">{quantities[product.id]}</span>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, 1); }}
+                                className="p-2 hover:text-brand-orange transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+
+                          <div 
+                            onClick={() => toggleProduct(product.id)}
+                            className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all cursor-pointer ${quantities[product.id] ? 'bg-brand-orange border-brand-orange text-white' : 'border-brand-dark/20'}`}
+                          >
+                            {quantities[product.id] && <CheckCircle className="w-4 h-4" />}
+                          </div>
                         </div>
                       </div>
                     );
@@ -237,8 +287,11 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                       <div className="space-y-3 mb-6">
                         {selectedProducts.map(p => (
                           <div key={p.id} className="flex justify-between items-center text-sm font-serif italic text-brand-dark/60">
-                            <span>{p.name}</span>
-                            <span>R$ {p.price.toFixed(2)}</span>
+                            <div className="flex gap-2 items-center">
+                              <span className="w-6 h-6 rounded-full bg-brand-orange/10 flex items-center justify-center text-[10px] text-brand-orange font-bold not-italic">{quantities[p.id]}x</span>
+                              <span>{p.name}</span>
+                            </div>
+                            <span>R$ {(p.price * (quantities[p.id] || 0)).toFixed(2)}</span>
                           </div>
                         ))}
                       </div>

@@ -40,6 +40,12 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [editingPermissionsId, setEditingPermissionsId] = useState<string | null>(null);
+  const [localPermissions, setLocalPermissions] = useState<string[]>([]);
+  const [localRole, setLocalRole] = useState<string>('admin');
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+  const [changingPasswordId, setChangingPasswordId] = useState<string | null>(null);
+  const [newPassInput, setNewPassInput] = useState('');
+  const [isChangingPass, setIsChangingPass] = useState(false);
 
   const ALL_PERMISSIONS = [
     { id: 'profile', label: 'Perfil' },
@@ -242,36 +248,43 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
     }, 1000);
   };
 
-  const [changingPasswordId, setChangingPasswordId] = useState<string | null>(null);
-  const [newPassInput, setNewPassInput] = useState('');
-  const [isChangingPass, setIsChangingPass] = useState(false);
-
   const [updatingPermission, setUpdatingPermission] = useState<string | null>(null);
 
-  const handleTogglePermission = async (userId: string, permissionId: string, currentPermissions: string[] | null) => {
-    // Safety check: Don't allow self-lockout from UserManager
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && user.id === userId && permissionId === 'users' && currentPermissions?.includes('users')) {
-      if (!confirm('AVISO: Você está prestes a remover seu próprio acesso a esta aba de Administradores. Se fizer isso, não poderá gerenciar permissões novamente. Continuar?')) {
-        return;
-      }
-    }
+  const startEditingPermissions = (p: any) => {
+    setEditingPermissionsId(p.id);
+    setLocalPermissions(p.permissions || []);
+    setLocalRole(p.role || 'admin');
+  };
 
-    setUpdatingPermission(`${userId}-${permissionId}`);
-    const permissions = currentPermissions || [];
-    const isAdding = !permissions.includes(permissionId);
+  const handleToggleLocalPermission = (permissionId: string) => {
+    setLocalPermissions(prev => 
+      prev.includes(permissionId) 
+        ? prev.filter(p => p !== permissionId)
+        : [...prev, permissionId]
+    );
+  };
+
+  const handleSavePermissions = async (userId: string) => {
+    setIsSavingPermissions(true);
     
-    const newPermissions = isAdding
-      ? [...permissions, permissionId]
-      : permissions.filter(p => p !== permissionId);
+    // Role update
+    const resRole = await updateProfile(userId, { role: localRole as 'admin' | 'master' });
     
-    // Optimistic update
-    const res = await updateProfile(userId, { permissions: newPermissions });
+    // Permissions update
+    const resPerms = await updateProfile(userId, { permissions: localPermissions });
     
-    if (!res.success) {
-      onAlert('Erro', 'Não foi possível atualizar as permissões.', 'danger');
+    if (resRole.success && resPerms.success) {
+      onAlert('Sucesso', 'Configurações de acesso atualizadas.', 'info');
+      setEditingPermissionsId(null);
+      refresh();
+    } else {
+      onAlert('Erro', 'Não foi possível salvar as alterações.', 'danger');
     }
-    setUpdatingPermission(null);
+    setIsSavingPermissions(false);
+  };
+
+  const handleTogglePermission = (userId: string, permissionId: string, currentPermissions: string[] | null) => {
+    handleToggleLocalPermission(permissionId);
   };
 
   if (loading && profiles.length === 0) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
@@ -421,7 +434,13 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
 
                           <div className="relative group/btn">
                             <button 
-                              onClick={() => setEditingPermissionsId(editingPermissionsId === p.id ? null : p.id)}
+                              onClick={() => {
+                                if (editingPermissionsId === p.id) {
+                                  setEditingPermissionsId(null);
+                                } else {
+                                  startEditingPermissions(p);
+                                }
+                              }}
                               className={`p-2 transition-colors ${editingPermissionsId === p.id ? 'text-brand-orange' : 'text-white/20 hover:text-brand-orange'}`}
                             >
                               <Lock className="w-3.5 h-3.5" />
@@ -525,60 +544,91 @@ export function UserManager({ onAlert, userRole }: UserManagerProps) {
                   <tr className="bg-brand-orange/5 border-b border-white/5">
                     <td colSpan={4} className="px-6 py-6">
                       <div className="space-y-4">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/40 p-4 border border-white/10 rounded-sm mb-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/40 p-6 border border-white/10 rounded-sm mb-4">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <Lock className="w-3 h-3 text-brand-orange" />
-                              <h4 className="text-[10px] uppercase tracking-widest font-bold text-white">Nível Hierárquico</h4>
+                              <Lock className="w-4 h-4 text-brand-orange" />
+                              <h4 className="text-xs uppercase tracking-widest font-bold text-white">Nível Hierárquico</h4>
                             </div>
                             <p className="text-[10px] text-white/40 font-sans">Mestres (Masters) têm acesso irrestrito e gerenciam outros administradores.</p>
                           </div>
-                          <div className="flex gap-2 bg-black/50 p-1 rounded-sm border border-white/10 shrink-0">
+                          <div className="flex gap-2 bg-black/50 p-1.5 rounded-sm border border-white/10 shrink-0">
                             <button
-                              onClick={() => handleChangeRole(p.id, 'admin')}
-                              className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all ${p.role !== 'master' ? 'bg-white/10 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                              type="button"
+                              onClick={() => setLocalRole('admin')}
+                              className={`px-6 py-2.5 text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all ${localRole !== 'master' ? 'bg-white/20 text-white shadow-lg border border-white/20' : 'text-white/40 hover:text-white'}`}
                             >
                               Admin Padrão
                             </button>
                             <button
-                              onClick={() => handleChangeRole(p.id, 'master')}
-                              className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all ${p.role === 'master' ? 'bg-brand-orange text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                              type="button"
+                              onClick={() => setLocalRole('master')}
+                              className={`px-6 py-2.5 text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all ${localRole === 'master' ? 'bg-brand-orange text-white shadow-lg border border-brand-orange' : 'text-white/40 hover:text-white'}`}
                             >
                               Master
                             </button>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-4">
-                          <Lock className="w-3 h-3 text-brand-orange" />
-                          <h4 className="text-[10px] uppercase tracking-widest font-bold text-white">Permissões Específicas de {p.full_name || p.email}</h4>
+                        <div className="flex items-center gap-2 mt-8 mb-4">
+                          <Key className="w-4 h-4 text-brand-orange" />
+                          <h4 className="text-xs uppercase tracking-widest font-bold text-white">Permissões Específicas de {p.full_name || p.email}</h4>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                          {ALL_PERMISSIONS.map(perm => (
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+                          {ALL_PERMISSIONS.map(perm => {
+                            const isSelected = localPermissions.includes(perm.id);
+                            return (
+                              <button
+                                key={perm.id}
+                                type="button"
+                                onClick={() => handleToggleLocalPermission(perm.id)}
+                                className={`px-4 py-4 text-[9px] uppercase tracking-widest font-bold border transition-all rounded-sm flex items-center justify-between group/perm ${
+                                  isSelected
+                                    ? 'bg-brand-orange border-brand-orange text-white shadow-lg shadow-brand-orange/20'
+                                    : 'bg-black/40 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
+                                }`}
+                              >
+                                {perm.label}
+                                <div className="flex items-center gap-2">
+                                  {isSelected ? (
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <div className="w-3.5 h-3.5 border border-white/20 rounded-full" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-6 border-t border-white/10">
+                          <p className="text-[10px] text-white/30 italic">As mudanças serão salvas ao confirmar abaixo.</p>
+                          <div className="flex gap-3">
                             <button
-                              key={perm.id}
-                              disabled={updatingPermission === `${p.id}-${perm.id}`}
-                              onClick={() => handleTogglePermission(p.id, perm.id, p.permissions)}
-                              className={`px-4 py-3 text-[9px] uppercase tracking-widest font-bold border transition-all rounded-sm flex items-center justify-between group/perm ${
-                                (p.permissions || []).includes(perm.id)
-                                  ? 'bg-brand-orange border-brand-orange text-white'
-                                  : 'bg-black/40 border-white/10 text-white/40 hover:border-white/20'
-                              } ${updatingPermission === `${p.id}-${perm.id}` ? 'opacity-50' : ''}`}
+                              onClick={() => setEditingPermissionsId(null)}
+                              className="px-6 py-3 bg-white/5 text-white/60 text-[10px] uppercase tracking-widest font-bold hover:bg-white/10 transition-all rounded-sm"
                             >
-                              {perm.label}
-                              <div className="flex items-center gap-2">
-                                {updatingPermission === `${p.id}-${perm.id}` ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (p.permissions || []).includes(perm.id) ? (
-                                  <CheckCircle2 className="w-3 h-3" />
-                                ) : (
-                                  <div className="w-3 h-3 border border-white/20 rounded-full" />
-                                )}
-                              </div>
+                              Cancelar
                             </button>
-                          ))}
+                            <button
+                              onClick={() => handleSavePermissions(p.id)}
+                              disabled={isSavingPermissions}
+                              className="px-8 py-3 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all rounded-sm shadow-xl flex items-center gap-2"
+                            >
+                              {isSavingPermissions ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  Salvando...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  Salvar Alterações
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-[9px] text-white/30 italic">As mudanças são aplicadas instantaneamente.</p>
                       </div>
                     </td>
                   </tr>

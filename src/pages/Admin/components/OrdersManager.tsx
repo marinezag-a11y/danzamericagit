@@ -12,7 +12,8 @@ import {
   Trash2, 
   Check, 
   X,
-  Users
+  Users,
+  Minus
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useHelpOrders } from '../../../hooks/useHelpOrders';
@@ -31,6 +32,17 @@ export function OrdersManager({ onAlert }: OrdersManagerProps) {
   const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
   const { profiles } = useProfiles();
   const [savingEmails, setSavingEmails] = useState(false);
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && profiles.length > 0) {
+        setCurrentUserProfile(profiles.find(p => p.id === user.id));
+      }
+    };
+    fetchUser();
+  }, [profiles]);
   
   const stats = {
     total: orders?.length || 0,
@@ -92,8 +104,9 @@ export function OrdersManager({ onAlert }: OrdersManagerProps) {
 
   return (
     <div className="space-y-12">
-      {/* Configurações de Notificação */}
-      <div className="bg-white/5 border border-white/10 p-8 rounded-sm space-y-6">
+      {/* Configurações de Notificação - Somente para MASTER */}
+      {currentUserProfile?.role === 'master' && (
+        <div className="bg-white/5 border border-white/10 p-8 rounded-sm space-y-6">
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 bg-brand-orange/10 rounded-sm">
             <Users className="w-5 h-5 text-brand-orange" />
@@ -174,6 +187,7 @@ export function OrdersManager({ onAlert }: OrdersManagerProps) {
           </div>
         </div>
       </div>
+    )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StatCard icon={<ShoppingBag className="w-5 h-5 text-white/40" />} label="Total de Pedidos" value={stats.total} />
         <StatCard icon={<XCircle className="w-5 h-5 text-red-500" />} label="Cancelados" value={stats.cancelled} valueClass="text-red-500" />
@@ -280,12 +294,15 @@ function OrderRow({ order, onUpdate, onDelete, onAlert }: { order: any, onUpdate
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
   
+  const { items: helpItems } = useHelpItems();
   const [customerName, setCustomerName] = useState(order?.customer_name || '');
   const [customerPhone, setCustomerPhone] = useState(order?.customer_phone || '');
   const [customerEmail, setCustomerEmail] = useState(order?.customer_email || '');
-  const [productName, setProductName] = useState(order?.product_name || '');
-  const [productPrice, setProductPrice] = useState(order?.product_price || 0);
+  const [orderItems, setOrderItems] = useState<any[]>(order?.items || []);
   const [status, setStatus] = useState(order?.status || 'pending');
+
+  const totalPrice = orderItems.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
+  const itemsText = orderItems.map(item => `${item.quantity || 1}x ${item.name}`).join(', ');
 
   const handleSave = async () => {
     setUpdating(true);
@@ -293,9 +310,10 @@ function OrderRow({ order, onUpdate, onDelete, onAlert }: { order: any, onUpdate
       customer_name: customerName,
       customer_phone: customerPhone,
       customer_email: customerEmail,
-      product_name: productName,
-      product_price: Number(productPrice),
-      total_price: Number(productPrice),
+      product_name: itemsText,
+      product_price: totalPrice,
+      total_price: totalPrice,
+      items: orderItems,
       status: status
     });
     
@@ -328,6 +346,26 @@ function OrderRow({ order, onUpdate, onDelete, onAlert }: { order: any, onUpdate
     paid: 'text-green-500 bg-green-500/10 border-green-500/20',
     sent: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
     cancelled: 'text-red-500 bg-red-500/10 border-red-500/20'
+  };
+
+  const toggleItem = (item: any) => {
+    setOrderItems(prev => {
+      const exists = prev.find(i => i.id === item.id);
+      if (exists) {
+        return prev.filter(i => i.id !== item.id);
+      }
+      return [...prev, { id: item.id, name: item.title, price: item.price, quantity: 1 }];
+    });
+  };
+
+  const updateItemQuantity = (id: string, delta: number) => {
+    setOrderItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(1, (item.quantity || 1) + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }).filter(Boolean));
   };
 
   return (
@@ -369,23 +407,55 @@ function OrderRow({ order, onUpdate, onDelete, onAlert }: { order: any, onUpdate
       </td>
       <td className="py-6 px-6 text-sm text-white/80 font-serif italic">
         {isEditing ? (
-          <textarea 
-            value={productName} 
-            onChange={e => setProductName(e.target.value)}
-            className="bg-black/50 border border-white/10 p-1 text-sm text-white w-full h-20 outline-none focus:border-brand-orange"
-          />
+          <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar border border-white/5 p-2 bg-black/20">
+            {(helpItems || []).map(item => {
+              const selectedItem = orderItems.find(i => i.id === item.id);
+              return (
+                <div key={item.id} className="flex items-center justify-between gap-2 p-1 hover:bg-white/5 rounded-sm group/item">
+                  <div 
+                    onClick={() => toggleItem(item)}
+                    className="flex items-center gap-2 cursor-pointer flex-1"
+                  >
+                    <div className={`w-3 h-3 border flex items-center justify-center ${selectedItem ? 'bg-brand-orange border-brand-orange' : 'border-white/20'}`}>
+                      {selectedItem && <Check className="w-2 h-2 text-white" />}
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-widest font-bold ${selectedItem ? 'text-white' : 'text-white/40'}`}>{item.title}</span>
+                  </div>
+                  {selectedItem && (
+                    <div className="flex items-center gap-2 bg-black/40 rounded-full px-2 py-0.5 border border-white/10">
+                      <button onClick={() => updateItemQuantity(item.id, -1)} className="text-white/40 hover:text-brand-orange transition-colors">
+                        <Minus className="w-2 h-2" />
+                      </button>
+                      <span className="text-[10px] font-bold text-brand-orange min-w-[12px] text-center">{selectedItem.quantity || 1}</span>
+                      <button onClick={() => updateItemQuantity(item.id, 1)} className="text-white/40 hover:text-brand-orange transition-colors">
+                        <Plus className="w-2 h-2" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          order.product_name
+          <div className="space-y-1">
+            {orderItems && orderItems.length > 0 ? (
+              orderItems.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-[10px] bg-brand-orange/10 text-brand-orange px-1 rounded-sm font-bold not-italic">{item.quantity || 1}x</span>
+                  <span>{item.name}</span>
+                </div>
+              ))
+            ) : (
+              order.product_name
+            )}
+          </div>
         )}
       </td>
       <td className="py-6 px-6 text-sm font-display text-brand-orange">
         {isEditing ? (
-          <input 
-            type="text"
-            value={maskBRL(productPrice)} 
-            onChange={e => setProductPrice(parseBRL(e.target.value))}
-            className="bg-black/50 border border-white/10 p-1 text-sm text-brand-orange w-32 outline-none focus:border-brand-orange"
-          />
+          <div className="text-sm font-bold">
+            {maskBRL(totalPrice)}
+          </div>
         ) : (
           maskBRL(order.product_price)
         )}
@@ -466,44 +536,52 @@ function ManualOrderModal({ onClose, onSave, onAlert }: { onClose: () => void, o
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [product, setProduct] = useState<any>(null);
+  const [selectedItems, setSelectedItems] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  useEffect(() => {
-    if (helpItems && helpItems.length > 0 && !product) {
-      setProduct(helpItems[0]);
-    }
-  }, [helpItems, product]);
+  const totalPrice = selectedItems.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  const itemsText = selectedItems.map(item => `${item.quantity || 1}x ${item.name}`).join(', ');
+
+  const toggleItem = (item: any) => {
+    setSelectedItems(prev => {
+      const exists = prev.find(i => i.id === item.id);
+      if (exists) return prev.filter(i => i.id !== item.id);
+      return [...prev, { id: item.id, name: item.title, price: item.price, quantity: 1 }];
+    });
+  };
+
+  const updateItemQuantity = (id: string, delta: number) => {
+    setSelectedItems(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, quantity: Math.max(1, (item.quantity || 1) + delta) };
+      }
+      return item;
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
     
     setSaving(true);
-    const result = await onSave({
+    const orderData = {
       customer_name: name,
       customer_phone: phone,
       customer_email: email,
-      product_id: product?.id,
-      product_name: product?.title,
-      product_price: product?.price || 0,
-      total_price: product?.price || 0,
+      product_name: itemsText,
+      product_price: totalPrice,
+      total_price: totalPrice,
+      items: selectedItems,
       status: 'pending'
-    });
+    };
+
+    const result = await onSave(orderData);
     
     if (result.success) {
       try {
         await supabase.functions.invoke('send-order', {
-          body: {
-            customer_name: name,
-            customer_phone: phone,
-            customer_email: email,
-            product_name: product?.title,
-            product_price: product?.price || 0,
-            total_price: product?.price || 0,
-            status: 'pending'
-          }
+          body: orderData
         });
       } catch (err) {
         console.error('Erro ao enviar e-mail do pedido manual:', err);
@@ -567,16 +645,45 @@ function ManualOrderModal({ onClose, onSave, onAlert }: { onClose: () => void, o
             />
           </div>
           <div className="space-y-2">
-            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Produto</label>
-            <select 
-              value={product?.id || ''}
-              onChange={(e) => setProduct(helpItems.find(p => p.id === e.target.value) || helpItems[0])}
-              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none cursor-pointer"
-            >
-              {(helpItems || []).map(p => (
-                <option key={p.id} value={p.id}>{p.title} - {maskBRL(p.price || 0)}</option>
-              ))}
-            </select>
+            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Itens do Pedido</label>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-4 border border-white/5">
+              {(helpItems || []).map(item => {
+                const selected = selectedItems.find(i => i.id === item.id);
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-4 p-2 hover:bg-white/5 rounded-sm transition-colors group">
+                    <div 
+                      onClick={() => toggleItem(item)}
+                      className="flex items-center gap-3 cursor-pointer flex-1"
+                    >
+                      <div className={`w-4 h-4 border flex items-center justify-center transition-all ${selected ? 'bg-brand-orange border-brand-orange' : 'border-white/20 group-hover:border-white/40'}`}>
+                        {selected && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className={`text-[11px] uppercase tracking-widest font-bold ${selected ? 'text-white' : 'text-white/40'}`}>{item.title}</span>
+                        <span className="text-[10px] text-brand-orange/60 font-mono">{maskBRL(item.price || 0)}</span>
+                      </div>
+                    </div>
+                    {selected && (
+                      <div className="flex items-center gap-3 bg-black/40 rounded-full px-3 py-1 border border-white/10">
+                        <button type="button" onClick={() => updateItemQuantity(item.id, -1)} className="text-white/40 hover:text-brand-orange transition-colors">
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="text-[11px] font-bold text-brand-orange min-w-[16px] text-center">{selected.quantity || 1}</span>
+                        <button type="button" onClick={() => updateItemQuantity(item.id, 1)} className="text-white/40 hover:text-brand-orange transition-colors">
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {selectedItems.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
+                <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Total do Pedido</span>
+                <span className="text-xl font-display text-brand-orange">{maskBRL(totalPrice)}</span>
+              </div>
+            )}
           </div>
           
           <button 

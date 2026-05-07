@@ -143,11 +143,11 @@ export function useRaffles() {
 
   const fetchTakenTickets = async (campaignId: string) => {
     try {
+      // Usar a VIEW pública para evitar erro de RLS e proteger dados sensíveis
       const { data, error } = await supabase
-        .from('raffle_orders')
+        .from('raffle_occupied_numbers')
         .select('selected_numbers')
-        .eq('campaign_id', campaignId)
-        .neq('status', 'cancelled');
+        .eq('campaign_id', campaignId);
 
       if (error) throw error;
       
@@ -164,15 +164,15 @@ export function useRaffles() {
 
   const createOrder = async (order: Omit<RaffleOrder, 'id' | 'created_at' | 'status'>) => {
     try {
-      const { data, error } = await supabase
+      // Inserir sem .select() para evitar erro de RLS em usuários anônimos
+      const { error } = await supabase
         .from('raffle_orders')
-        .insert([order])
-        .select()
-        .single();
+        .insert([order]);
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true };
     } catch (err: any) {
+      console.error('Create raffle order error:', err);
       return { success: false, error: err.message };
     }
   };

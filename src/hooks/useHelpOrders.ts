@@ -70,15 +70,23 @@ export function useHelpOrders() {
 
   const addOrder = async (order: Partial<HelpOrder>) => {
     try {
-      const { data, error: addError } = await supabase
+      // 1. Inserir sem .select() para evitar erro de RLS (anônimos não podem ler)
+      const { error: addError } = await supabase
         .from('help_orders')
-        .insert([order])
-        .select();
+        .insert([order]);
 
       if (addError) throw addError;
-      await fetchOrders();
-      return { success: true, data };
+
+      // 2. Tentar atualizar a lista local (se for admin, funciona. Se for público, falha silenciosamente)
+      try {
+        await fetchOrders();
+      } catch (e) {
+        // Silencioso para não quebrar a UI de sucesso do cliente
+      }
+
+      return { success: true };
     } catch (err: any) {
+      console.error('Add order error:', err);
       return { success: false, error: err.message };
     }
   };

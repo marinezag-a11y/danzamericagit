@@ -11,11 +11,13 @@ import {
   Pencil, 
   Trash2, 
   Check, 
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useHelpOrders } from '../../../hooks/useHelpOrders';
 import { useHelpItems } from '../../../hooks/useHelpItems';
+import { useProfiles } from '../../../hooks/useProfiles';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { maskBRL, parseBRL } from '../../../lib/utils';
 
@@ -24,7 +26,10 @@ interface OrdersManagerProps {
 }
 
 export function OrdersManager({ onAlert }: OrdersManagerProps) {
-  const { orders, loading, error, updateOrder, addOrder, deleteOrder } = useHelpOrders();
+  const { orders, loading: loadingOrders, error, updateOrder, addOrder, deleteOrder } = useHelpOrders();
+  const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
+  const { profiles } = useProfiles();
+  const [savingEmails, setSavingEmails] = useState(false);
   
   const stats = {
     total: orders?.length || 0,
@@ -68,11 +73,101 @@ export function OrdersManager({ onAlert }: OrdersManagerProps) {
     setOrderToDelete(null);
   };
 
+  const handleSaveEmails = async (emails: string) => {
+    setSavingEmails(true);
+    const res = await updateSetting('notification_emails_general', emails);
+    if (res.success) {
+      onAlert('Configuração Salva', 'Lista de e-mails atualizada.', 'info');
+    } else {
+      onAlert('Erro ao Salvar', 'Não foi possível atualizar os e-mails.', 'danger');
+    }
+    setSavingEmails(false);
+  };
+
   if (error) return <div className="py-20 text-center text-red-500 font-sans">Erro ao carregar pedidos: {error}</div>;
-  if (loading && (!orders || orders.length === 0)) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
+  if ((loadingOrders && (!orders || orders.length === 0)) || loadingSettings) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
+
+  const currentEmails = settings['notification_emails_general']?.value || '';
 
   return (
     <div className="space-y-12">
+      {/* Configurações de Notificação */}
+      <div className="bg-white/5 border border-white/10 p-8 rounded-sm space-y-6">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="p-3 bg-brand-orange/10 rounded-sm">
+            <Users className="w-5 h-5 text-brand-orange" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-xl font-sans italic text-white">Notificações de Pedidos</h4>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Selecione os administradores ou insira e-mails manualmente para receber alertas</p>
+          </div>
+          <div className="pb-1 hidden md:block">
+             {savingEmails ? (
+               <div className="flex items-center gap-2 text-white/40 text-[10px] uppercase tracking-widest font-bold px-4 py-4">
+                 <Loader2 className="w-3 h-3 animate-spin" /> Salvando...
+               </div>
+             ) : (
+               <div className="flex items-center gap-2 text-green-500/60 text-[10px] uppercase tracking-widest font-bold px-4 py-4">
+                 <CheckCircle2 className="w-3 h-3" /> Configuração Ativa
+               </div>
+             )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Administradores Cadastrados</label>
+            <div className="flex flex-wrap gap-3">
+              {profiles.map(p => {
+                if (!p.email) return null;
+                const currentList = currentEmails.split(',').map(e => e.trim()).filter(Boolean);
+                const isSelected = currentList.includes(p.email);
+                
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      let newList;
+                      if (isSelected) {
+                        newList = currentList.filter(e => e !== p.email);
+                      } else {
+                        newList = [...currentList, p.email];
+                      }
+                      handleSaveEmails(newList.join(', '));
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2 border rounded-sm transition-all text-[10px] uppercase tracking-widest font-bold ${
+                      isSelected 
+                        ? 'bg-brand-orange/20 border-brand-orange text-brand-orange' 
+                        : 'bg-black/50 border-white/10 text-white/40 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 flex items-center justify-center border ${isSelected ? 'border-brand-orange bg-brand-orange' : 'border-white/20'}`}>
+                      {isSelected && <Check className="w-2 h-2 text-white" />}
+                    </div>
+                    {p.full_name || p.email}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Lista de E-mails (separados por vírgula)</label>
+            <input 
+              key={currentEmails}
+              type="text"
+              defaultValue={currentEmails}
+              onBlur={(e) => {
+                if (e.target.value !== currentEmails) {
+                  handleSaveEmails(e.target.value);
+                }
+              }}
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none transition-all font-mono"
+              placeholder="admin1@email.com, admin2@email.com"
+            />
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StatCard icon={<ShoppingBag className="w-5 h-5 text-white/40" />} label="Total de Pedidos" value={stats.total} />
         <StatCard icon={<XCircle className="w-5 h-5 text-red-500" />} label="Cancelados" value={stats.cancelled} valueClass="text-red-500" />

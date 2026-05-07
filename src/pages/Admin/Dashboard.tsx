@@ -8,6 +8,7 @@ import {
   ShoppingBag, 
   LogOut, 
   ImageIcon, 
+  Ticket,
   Users, 
   User,
   X,
@@ -32,6 +33,7 @@ import { UserManager } from './components/UserManager';
 import { ProfileManager } from './components/ProfileManager';
 import { HelpItemsManager } from './components/HelpItemsManager';
 import { FinancialManager } from './components/FinancialManager';
+import { RaffleManager } from './components/RaffleManager';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -120,6 +122,7 @@ export default function Dashboard() {
     { id: 'orders', label: 'Pedidos Recebidos', icon: ShoppingBag },
     { id: 'content', label: 'Conteúdo Geral', icon: Settings },
     { id: 'help', label: 'Compre um sonho', icon: Heart },
+    { id: 'raffles', label: 'Ações entre Amigos', icon: Ticket },
     { id: 'gallery', label: 'Galeria de Fotos', icon: Images },
     { id: 'sponsorship', label: 'Apoiadores', icon: Star },
     { id: 'financial', label: 'Financeiro', icon: DollarSign },
@@ -222,10 +225,10 @@ export default function Dashboard() {
                   className={`w-full flex items-center gap-4 px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-bold transition-all group rounded-sm ${
                     activeTab === item.id 
                       ? 'bg-brand-orange text-white shadow-[0_0_20px_rgba(190,49,68,0.2)]' 
-                      : 'text-white/30 hover:text-white hover:bg-white/5'
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <item.icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${activeTab === item.id ? 'text-white' : 'text-white/20'}`} />
+                  <item.icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${activeTab === item.id ? 'text-white' : 'text-white/50'}`} />
                   {item.label}
                 </button>
               ))}
@@ -325,6 +328,7 @@ export default function Dashboard() {
                         {item.id === 'orders' && <OrdersManager onAlert={onAlert} />}
                         {item.id === 'content' && <ContentEditor onAlert={onAlert} />}
                         {item.id === 'help' && <HelpItemsManager onAlert={onAlert} />}
+                        {item.id === 'raffles' && <RaffleManager onAlert={onAlert} />}
                         {item.id === 'gallery' && <GalleryManager onAlert={onAlert} />}
                         {item.id === 'sponsorship' && <SponsorshipManager onAlert={onAlert} />}
                         {item.id === 'financial' && <FinancialManager onAlert={onAlert} />}

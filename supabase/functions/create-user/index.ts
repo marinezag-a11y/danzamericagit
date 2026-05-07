@@ -56,13 +56,13 @@ serve(async (req) => {
           
           <h3 style="color: white; font-style: italic; border-bottom: 1px solid rgba(255,90,31,0.2); padding-bottom: 15px; margin-bottom: 25px;">Bem-vindo ao Time!</h3>
           
-          <p>Olá, <strong>\${full_name}</strong>,</p>
+          <p>Olá, <strong>${full_name}</strong>,</p>
           <p>Você acaba de ser adicionado como administrador do sistema Danzamerica 2026. Agora você tem acesso total para gerenciar conteúdos, patrocínios e pedidos.</p>
           
           <div style="background-color: rgba(255,255,255,0.03); padding: 25px; border-left: 4px solid #FF5A1F; margin: 30px 0;">
             <p style="margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; tracking-spacing: 1px; color: #FF5A1F; font-weight: bold;">Seus Dados de Acesso:</p>
-            <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Login:</strong> \${email}</p>
-            <p style="margin: 0; font-size: 14px;"><strong>Senha Temporária:</strong> \${password}</p>
+            <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Login:</strong> ${email}</p>
+            <p style="margin: 0; font-size: 14px;"><strong>Senha Temporária:</strong> ${password}</p>
           </div>
 
           <div style="text-align: center; margin: 40px 0;">
@@ -86,12 +86,12 @@ serve(async (req) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer \${RESEND_API_KEY}`,
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
             from: 'Danzamerica 2026 <admin@nucleotatianafigueiredo.com.br>',
             to: [email],
-            subject: \`Bem-vindo ao Painel Danzamerica 2026 - \${full_name}\`,
+            subject: `Bem-vindo ao Painel Danzamerica 2026 - ${full_name}`,
             html: welcomeEmailHtml,
           }),
         })

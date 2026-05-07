@@ -159,8 +159,6 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
           />
         ))}
       </div>
-
-      <RaffleManager onAlert={onAlert} />
     </div>
   );
 }

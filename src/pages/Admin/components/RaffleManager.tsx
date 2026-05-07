@@ -13,9 +13,12 @@ import {
   DollarSign,
   Image as ImageIcon,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { useRaffles, RaffleCampaign, RaffleOrder } from '../../../hooks/useRaffles';
+import { useSiteSettings } from '../../../hooks/useSiteSettings';
+import { useProfiles } from '../../../hooks/useProfiles';
 import { OptimizedImageUploader } from './OptimizedImageUploader';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { maskBRL, parseBRL, formatDate } from '../../../lib/utils';
@@ -27,7 +30,7 @@ interface RaffleManagerProps {
 export function RaffleManager({ onAlert }: RaffleManagerProps) {
   const { 
     campaigns, 
-    loading, 
+    loading: loadingRaffles, 
     createCampaign, 
     updateCampaign, 
     deleteCampaign,
@@ -36,12 +39,16 @@ export function RaffleManager({ onAlert }: RaffleManagerProps) {
     deleteOrder 
   } = useRaffles();
 
+  const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
+  const { profiles } = useProfiles();
+
   const [isAdding, setIsAdding] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<RaffleCampaign | null>(null);
   const [viewingOrdersId, setViewingOrdersId] = useState<string | null>(null);
   const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
   const [orders, setOrders] = useState<RaffleOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [savingEmails, setSavingEmails] = useState(false);
 
   const handleOpenOrders = async (campaignId: string) => {
     setViewingOrdersId(campaignId);
@@ -51,12 +58,103 @@ export function RaffleManager({ onAlert }: RaffleManagerProps) {
     setLoadingOrders(false);
   };
 
-  if (loading && campaigns.length === 0) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
+  const handleSaveEmails = async (emails: string) => {
+    setSavingEmails(true);
+    const res = await updateSetting('notification_emails_raffles', emails);
+    if (res.success) {
+      onAlert('Configuração Salva', 'Lista de e-mails atualizada.', 'info');
+    } else {
+      onAlert('Erro ao Salvar', 'Não foi possível atualizar os e-mails.', 'danger');
+    }
+    setSavingEmails(false);
+  };
+
+  if ((loadingRaffles && campaigns.length === 0) || loadingSettings) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
+
+  const currentEmails = settings['notification_emails_raffles']?.value || '';
 
   return (
-    <div className="space-y-12 pt-12 border-t border-white/10 mt-20">
-      <div className="flex flex-col gap-4">
-        <h3 className="text-2xl font-serif italic text-white">Controle das Ações entre Amigos</h3>
+    <div className="space-y-12">
+      {/* Configurações de Notificação */}
+      <div className="bg-white/5 border border-white/10 p-8 rounded-sm space-y-6">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="p-3 bg-brand-orange/10 rounded-sm">
+            <Users className="w-5 h-5 text-brand-orange" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-xl font-sans italic text-white">Notificações das Rifas</h4>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Selecione os administradores ou insira e-mails manualmente para receber alertas</p>
+          </div>
+          <div className="pb-1 hidden md:block">
+             {savingEmails ? (
+               <div className="flex items-center gap-2 text-white/40 text-[10px] uppercase tracking-widest font-bold px-4 py-4">
+                 <Loader2 className="w-3 h-3 animate-spin" /> Salvando...
+               </div>
+             ) : (
+               <div className="flex items-center gap-2 text-green-500/60 text-[10px] uppercase tracking-widest font-bold px-4 py-4">
+                 <CheckCircle2 className="w-3 h-3" /> Configuração Ativa
+               </div>
+             )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Administradores Cadastrados</label>
+            <div className="flex flex-wrap gap-3">
+              {profiles.map(p => {
+                if (!p.email) return null;
+                const currentList = currentEmails.split(',').map(e => e.trim()).filter(Boolean);
+                const isSelected = currentList.includes(p.email);
+                
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      let newList;
+                      if (isSelected) {
+                        newList = currentList.filter(e => e !== p.email);
+                      } else {
+                        newList = [...currentList, p.email];
+                      }
+                      handleSaveEmails(newList.join(', '));
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2 border rounded-sm transition-all text-[10px] uppercase tracking-widest font-bold ${
+                      isSelected 
+                        ? 'bg-brand-orange/20 border-brand-orange text-brand-orange' 
+                        : 'bg-black/50 border-white/10 text-white/40 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 flex items-center justify-center border ${isSelected ? 'border-brand-orange bg-brand-orange' : 'border-white/20'}`}>
+                      {isSelected && <Check className="w-2 h-2 text-white" />}
+                    </div>
+                    {p.full_name || p.email}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-widest text-brand-orange font-bold">Lista de E-mails (separados por vírgula)</label>
+            <input 
+              key={currentEmails}
+              type="text"
+              defaultValue={currentEmails}
+              onBlur={(e) => {
+                if (e.target.value !== currentEmails) {
+                  handleSaveEmails(e.target.value);
+                }
+              }}
+              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none transition-all font-mono"
+              placeholder="admin1@email.com, admin2@email.com"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4 pt-12 border-t border-white/5">
+        <h3 className="text-2xl font-serif italic text-white">Controle de Campanhas</h3>
         <p className="text-xs text-white/40 font-sans tracking-widest uppercase">Gerencie campanhas de rifas e sorteios solidários</p>
       </div>
 

@@ -130,6 +130,7 @@ export function ProfileManager() {
               onChange={(e) => setProfile({...profile, full_name: e.target.value})}
               className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10 disabled:opacity-50"
               placeholder="Como você quer ser chamado?"
+              autoComplete="off"
             />
           </div>
 
@@ -142,6 +143,7 @@ export function ProfileManager() {
               onChange={(e) => setProfile({...profile, phone: e.target.value})}
               className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white outline-none focus:border-brand-orange transition-all placeholder:text-white/10 disabled:opacity-50"
               placeholder="(00) 00000-0000"
+              autoComplete="off"
             />
           </div>
         </div>

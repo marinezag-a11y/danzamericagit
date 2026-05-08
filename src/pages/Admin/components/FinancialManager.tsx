@@ -19,19 +19,24 @@ import {
 } from 'lucide-react';
 import { useFinancial, FinancialRecord } from '../../../hooks/useFinancial';
 import { useSiteSettings } from '../../../hooks/useSiteSettings';
+import { useProfiles } from '../../../hooks/useProfiles';
+import { NotificationSettings } from './ui/NotificationSettings';
 import { maskBRL, parseBRL } from '../../../lib/utils';
 
 interface FinancialManagerProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
+  userRole: string | null;
 }
 
-export function FinancialManager({ onAlert }: FinancialManagerProps) {
+export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
   const { records, loading, addRecord, updateRecord, deleteRecord, totals, refresh } = useFinancial();
-  const { settings, updateSetting } = useSiteSettings();
+  const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
+  const { profiles } = useProfiles();
   
   // UI State
   const [isAdding, setIsAdding] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+  const [savingEmails, setSavingEmails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
@@ -42,6 +47,19 @@ export function FinancialManager({ onAlert }: FinancialManagerProps) {
   const [newType, setNewType] = useState<'income' | 'expense'>('expense');
   const [newCategory, setNewCategory] = useState('Geral');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const handleSaveEmails = async (emails: string) => {
+    setSavingEmails(true);
+    const res = await updateSetting('notification_emails_general', emails);
+    if (res.success) {
+      onAlert('Configuração Salva', 'Lista de e-mails atualizada.', 'info');
+    } else {
+      onAlert('Erro ao Salvar', 'Não foi possível atualizar os e-mails.', 'danger');
+    }
+    setSavingEmails(false);
+  };
+
+  const currentEmails = settings['notification_emails_general']?.value || '';
 
   // Sync totals with site_settings for frontend use
   const syncTotals = async (income: number, expense: number) => {
@@ -136,10 +154,21 @@ export function FinancialManager({ onAlert }: FinancialManagerProps) {
     });
   }, [records, searchTerm, typeFilter]);
 
-  if (loading) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
+  if (loading || loadingSettings) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
 
   return (
     <div className="space-y-12">
+      {/* Notification Settings */}
+      {userRole === 'master' && (
+        <NotificationSettings 
+          title="Notificações de Pedidos (Financeiro)"
+          description="Gerencie quem recebe alertas de novos pedidos e faturamentos diretamente aqui"
+          profiles={profiles}
+          currentEmails={currentEmails}
+          onSave={handleSaveEmails}
+        />
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
         <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-sm">

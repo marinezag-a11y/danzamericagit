@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { useHelpItems } from '../../../../hooks/useHelpItems';
-import { maskBRL } from '../../../../lib/utils';
+import { maskBRL, parseBRL } from '../../../../lib/utils';
 
 interface OrderRowProps {
   order: any;
@@ -28,6 +28,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
   const [customerEmail, setCustomerEmail] = useState(order?.customer_email || '');
   const [orderItems, setOrderItems] = useState<any[]>(order?.items || []);
   const [status, setStatus] = useState(order?.status || 'pending');
+  const [manualPrice, setManualPrice] = useState(order?.product_price || 0);
 
   const totalPrice = orderItems.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
   const itemsText = orderItems.map(item => `${item.quantity || 1}x ${item.name}`).join(', ');
@@ -39,8 +40,8 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
       customer_phone: customerPhone,
       customer_email: customerEmail,
       product_name: itemsText,
-      product_price: totalPrice,
-      total_price: totalPrice,
+      product_price: manualPrice,
+      total_price: manualPrice,
       items: orderItems,
       status: status
     });
@@ -79,21 +80,32 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
   const toggleItem = (item: any) => {
     setOrderItems(prev => {
       const exists = prev.find(i => i.id === item.id);
-      if (exists) {
-        return prev.filter(i => i.id !== item.id);
-      }
-      return [...prev, { id: item.id, name: item.title, price: item.price, quantity: 1 }];
+      const newItems = exists ? prev.filter(i => i.id !== item.id) : [...prev, { id: item.id, name: item.title, price: item.price, quantity: 1 }];
+      
+      // Update manual price automatically when items change
+      const newTotal = newItems.reduce((sum, i) => sum + (Number(i.price) * (i.quantity || 1)), 0);
+      setManualPrice(newTotal);
+      
+      return newItems;
     });
   };
 
   const updateItemQuantity = (id: string, delta: number) => {
-    setOrderItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(1, (item.quantity || 1) + delta);
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }).filter(Boolean));
+    setOrderItems(prev => {
+      const newItems = prev.map(item => {
+        if (item.id === id) {
+          const newQty = Math.max(1, (item.quantity || 1) + delta);
+          return { ...item, quantity: newQty };
+        }
+        return item;
+      });
+
+      // Update manual price automatically when quantity changes
+      const newTotal = newItems.reduce((sum, i) => sum + (Number(i.price) * (i.quantity || 1)), 0);
+      setManualPrice(newTotal);
+
+      return newItems;
+    });
   };
 
   return (
@@ -181,9 +193,12 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
       </td>
       <td className="py-6 px-6 text-sm font-display text-brand-orange">
         {isEditing ? (
-          <div className="text-sm font-bold">
-            {maskBRL(totalPrice)}
-          </div>
+          <input 
+            type="text"
+            value={maskBRL(manualPrice)}
+            onChange={e => setManualPrice(parseBRL(e.target.value))}
+            className="w-full bg-black/50 border border-white/10 p-1 text-sm text-brand-orange font-bold outline-none focus:border-brand-orange"
+          />
         ) : (
           maskBRL(order.product_price)
         )}

@@ -38,7 +38,7 @@ serve(async (req) => {
         </div>
 
         <div style="text-align: center; margin: 40px 0;">
-          <a href="https://danzamerica.vercel.app/admin" style="background-color: #FF5A1F; color: white; padding: 18px 35px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; display: inline-block; border-radius: 2px;">Acessar Painel ADM</a>
+          <a href="https://nucleotatianafigueiredo.com.br/admin" style="background-color: #FF5A1F; color: white; padding: 18px 35px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; display: inline-block; border-radius: 2px;">Acessar Painel ADM</a>
         </div>
 
         <p style="font-size: 12px; opacity: 0.5; text-align: center; margin-top: 30px;">

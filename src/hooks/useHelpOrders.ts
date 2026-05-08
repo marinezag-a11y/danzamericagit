@@ -29,6 +29,7 @@ export function useHelpOrders() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchOrders = async () => {
+    if (!supabase) return;
     try {
       setLoading(true);
       const { data, error: fetchError } = await supabase
@@ -46,6 +47,10 @@ export function useHelpOrders() {
   };
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     fetchOrders();
 
     // Subscribe to realtime changes

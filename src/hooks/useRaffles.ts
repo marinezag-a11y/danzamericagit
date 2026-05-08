@@ -31,6 +31,10 @@ export function useRaffles() {
   const [loading, setLoading] = useState(true);
 
   const fetchCampaigns = useCallback(async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -178,6 +182,10 @@ export function useRaffles() {
   };
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     fetchCampaigns();
   }, [fetchCampaigns]);
 

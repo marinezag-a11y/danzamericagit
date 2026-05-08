@@ -14,6 +14,7 @@ export function useJourney() {
   const [loading, setLoading] = useState(true);
 
   const fetchItems = async () => {
+    if (!supabase) return;
     try {
       const { data, error } = await supabase
         .from('journey_items')
@@ -30,6 +31,10 @@ export function useJourney() {
   };
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     fetchItems();
   }, []);
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { X, Ticket, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
+import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy } from 'lucide-react';
 import { RaffleCampaign, useRaffles } from '../../hooks/useRaffles';
 import { supabase } from '../../lib/supabase';
 
@@ -20,6 +20,17 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyPix = async () => {
+    try {
+      await navigator.clipboard.writeText('ballettatianafigueiredo@gmail.com');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      console.error('Falha ao copiar:', err);
+    }
+  };
 
   useEffect(() => {
     const loadTaken = async () => {
@@ -123,9 +134,23 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 Seus números <strong>({selectedNumbers.join(', ')})</strong> foram reservados. 
                 Faça o PIX de <strong>R$ {totalPrice.toFixed(2)}</strong> e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>.
               </p>
-              <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-2 text-center">
+              <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-4 text-center">
                 <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold">Chave PIX para Pagamento</span>
                 <code className="text-brand-dark font-bold text-base md:text-lg break-all">ballettatianafigueiredo@gmail.com</code>
+                <button 
+                  onClick={handleCopyPix}
+                  className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors"
+                >
+                  {copied ? (
+                    <span className="flex items-center gap-2 text-green-600">
+                      <CheckCircle className="w-3 h-3" /> Copiado!
+                    </span>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" /> Copiar Chave
+                    </>
+                  )}
+                </button>
               </div>
             </div>
             <button onClick={onClose} className="px-12 py-4 bg-brand-dark text-white font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all">

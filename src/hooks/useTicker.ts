@@ -13,6 +13,7 @@ export function useTicker() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchPhrases = async () => {
+    if (!supabase) return;
     try {
       const { data, error } = await supabase
         .from('ticker_phrases')
@@ -74,6 +75,10 @@ export function useTicker() {
   };
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     fetchPhrases();
   }, []);
 

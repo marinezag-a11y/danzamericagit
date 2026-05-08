@@ -18,6 +18,7 @@ export function useHelpItems() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchItems = async () => {
+    if (!supabase) return;
     try {
       setLoading(true);
       const { data, error: fetchError } = await supabase
@@ -35,6 +36,10 @@ export function useHelpItems() {
   };
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     fetchItems();
   }, []);
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin, Plus, Minus } from 'lucide-react';
+import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin, Plus, Minus, Copy } from 'lucide-react';
 import { useHelpOrders } from '../../hooks/useHelpOrders';
 import { HelpItem } from '../../hooks/useHelpItems';
 import { supabase } from '../../lib/supabase';
@@ -32,6 +32,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const products = useMemo(() => (helpItems || []).map(item => ({
     id: item.id,
@@ -101,6 +102,17 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
     setSuccess(false);
     setSubmitting(false);
     setError(null);
+    setCopied(false);
+  };
+
+  const handleCopyPix = async () => {
+    try {
+      await navigator.clipboard.writeText('ballettatianafigueiredo@gmail.com');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      console.error('Falha ao copiar:', err);
+    }
   };
 
   const handleOrder = async (e: React.FormEvent) => {
@@ -197,11 +209,11 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
               {!success ? (
                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
                   {products.map(product => {
-                    const isSelected = selectedProductIds.includes(product.id);
+                    const isSelected = !!quantities[product.id];
                     return (
                       <div 
                         key={product.id} 
-                        className={`p-6 flex flex-col sm:flex-row gap-6 items-center transition-all border group ${quantities[product.id] ? 'bg-brand-orange/5 border-brand-orange shadow-md' : 'bg-brand-grey border-transparent hover:border-brand-dark/10'}`}
+                        className={`p-6 flex flex-col sm:flex-row gap-6 items-center transition-all border group ${isSelected ? 'bg-brand-orange/5 border-brand-orange shadow-md' : 'bg-brand-grey border-transparent hover:border-brand-dark/10'}`}
                       >
                         <div 
                           className="flex gap-6 items-center flex-1 w-full cursor-pointer"
@@ -261,9 +273,23 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     <p className="text-sm text-brand-dark/70 font-serif mb-6 leading-relaxed">
                       Faça o PIX do valor total do seu pedido e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>. Você receberá um contato em seguida para finalização e envio.
                     </p>
-                    <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-2 text-center">
+                    <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-4 text-center">
                       <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold">Chave PIX para Pagamento</span>
                       <code className="text-brand-dark font-bold text-base md:text-lg break-all">ballettatianafigueiredo@gmail.com</code>
+                      <button 
+                        onClick={handleCopyPix}
+                        className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors"
+                      >
+                        {copied ? (
+                          <span className="flex items-center gap-2 text-green-600">
+                            <CheckCircle className="w-3 h-3" /> Copiado!
+                          </span>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" /> Copiar Chave
+                          </>
+                        )}
+                      </button>
                     </div>
 
                   </div>

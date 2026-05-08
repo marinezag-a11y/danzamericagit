@@ -277,27 +277,33 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Acessos por Dia (últimos 7 dias)</h4>
           </div>
 
-          <div className="flex items-end gap-3 h-48">
+          <div className="flex items-end gap-3 h-56 pt-8">
             {data.dailyViews.map((day, idx) => {
-              const barHeight = maxDailyViews > 0 ? (day.count / maxDailyViews) * 100 : 0;
+              // Ajuste de escala: garante que as variações fiquem visíveis mesmo com poucos dados
+              // Se o máximo for 5, a escala se ajusta para que 5 seja 80% da altura, permitindo ver a diferença para 4, 3, etc.
+              const chartMax = Math.max(maxDailyViews * 1.1, 5); 
+              const barHeight = (day.count / chartMax) * 100;
               const dayLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' });
+              
               return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] text-white/40 font-bold lg:opacity-0 lg:group-hover:opacity-100 transition-all">
+                <div key={idx} className="flex-1 flex flex-col items-center gap-3 group">
+                  <span className={`text-[10px] font-bold transition-all duration-500 ${
+                    day.count > 0 ? 'text-brand-orange opacity-100' : 'text-white/10 opacity-40'
+                  }`}>
                     {day.count}
                   </span>
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: `${Math.max(barHeight, 2)}%` }}
-                    transition={{ delay: 0.3 + idx * 0.05, duration: 0.6, ease: 'easeOut' }}
-                    className="w-full bg-brand-orange/30 group-hover:bg-brand-orange transition-all duration-300 rounded-t-sm relative min-h-[2px]"
-                  >
-                    <div
-                      className="absolute bottom-0 left-0 right-0 bg-brand-orange rounded-t-sm transition-all duration-500"
-                      style={{ height: `${Math.min(barHeight * 1.5, 100)}%` }}
-                    />
-                  </motion.div>
-                  <span className="text-[9px] text-white/30 uppercase tracking-wider font-bold">{dayLabel}</span>
+                  <div className="w-full bg-white/5 rounded-t-xl relative h-40 overflow-hidden flex items-end group-hover:bg-white/10 transition-all">
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max(barHeight, day.count > 0 ? 5 : 0)}%` }}
+                      transition={{ delay: 0.2 + idx * 0.05, duration: 0.8, ease: 'backOut' }}
+                      className="w-full bg-gradient-to-t from-brand-orange/40 to-brand-orange rounded-t-lg relative"
+                    >
+                      {/* Brilho sutil no topo da barra */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 rounded-t-lg" />
+                    </motion.div>
+                  </div>
+                  <span className="text-[9px] text-white/30 uppercase tracking-widest font-bold">{dayLabel}</span>
                 </div>
               );
             })}

@@ -62,75 +62,75 @@ export function TickerManager({ onAlert }: TickerManagerProps) {
   if (loading && phrases.length === 0) return <div className="py-10 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
 
   return (
-    <div className="space-y-8">
-      <div className="bg-white/5 border border-white/10 p-8 rounded-sm">
-        <h3 className="text-xl font-sans italic mb-6 text-white/80">Adicionar Nova Frase</h3>
+    <div className="space-y-12">
+      <div className="space-y-8">
+        <h4 className="text-xl font-serif italic text-white/80">Adicionar Nova Frase</h4>
         <div className="flex gap-4">
           <input 
             type="text"
             value={newPhrase}
             onChange={(e) => setNewPhrase(e.target.value)}
             placeholder="Ex: Novos Vencedores 2026..."
-            className="flex-1 bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
+            className="flex-1 bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
           />
           <button 
             onClick={handleAdd}
             disabled={saving || !newPhrase.trim()}
-            className="bg-brand-orange text-white px-8 py-4 text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50"
+            className="bg-brand-orange text-white px-10 py-5 text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 rounded-xl shadow-xl"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar'}
           </button>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-xl font-sans italic text-white/60">Frases Atuais</h3>
+      <div className="space-y-6">
+        <h4 className="text-xl font-serif italic text-white/60 ml-1">Frases Ativas no Site</h4>
         <div className="grid gap-4">
           {phrases.map((phrase) => (
-            <div key={phrase.id} className="bg-white/5 border border-white/10 p-6 flex items-center justify-between group hover:border-white/20 transition-all">
+            <div key={phrase.id} className="bg-black/20 border border-white/5 p-8 flex items-center justify-between group hover:border-brand-orange/20 transition-all rounded-2xl">
               {editingId === phrase.id ? (
-                <div className="flex-1 flex gap-4 mr-4">
+                <div className="flex-1 flex gap-6">
                   <input 
                     type="text"
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
-                    className="flex-1 bg-black/50 border border-brand-orange p-3 text-sm font-sans outline-none text-white"
+                    className="flex-1 bg-black border border-brand-orange/40 p-4 text-sm font-sans outline-none text-white rounded-lg"
                     autoFocus
                   />
-                  <div className="flex gap-2">
+                  <div className="flex gap-4">
                     <button 
                       onClick={() => handleUpdate(phrase.id)}
-                      className="p-2 text-green-500 hover:text-white transition-colors"
+                      className="p-3 text-green-500 hover:bg-green-500/10 rounded-xl transition-colors"
                       title="Salvar"
                     >
-                      <CheckCircle2 className="w-5 h-5" />
+                      <CheckCircle2 className="w-6 h-6" />
                     </button>
                     <button 
                       onClick={() => setEditingId(null)}
-                      className="p-2 text-white/20 hover:text-white transition-colors"
+                      className="p-3 text-white/20 hover:text-white rounded-xl transition-colors"
                       title="Cancelar"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-6 h-6" />
                     </button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <p className="font-sans italic text-lg text-white/90">{phrase.text}</p>
-                  <div className="flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                  <p className="font-serif italic text-lg text-white/90">{phrase.text}</p>
+                  <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
                     <button 
                       onClick={() => {
                         setEditingId(phrase.id);
                         setEditText(phrase.text);
                       }}
-                      className="p-2 text-white/20 hover:text-brand-orange transition-colors"
+                      className="p-3 bg-white/5 hover:bg-brand-orange hover:text-white rounded-xl transition-all text-white/20"
                       title="Editar"
                     >
                       <Settings className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => setPhraseToDelete(phrase.id)}
-                      className="p-2 text-white/20 hover:text-red-500 transition-colors"
+                      className="p-3 bg-white/5 hover:bg-red-500 hover:text-white rounded-xl transition-all text-white/20"
                       title="Excluir"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -141,7 +141,7 @@ export function TickerManager({ onAlert }: TickerManagerProps) {
             </div>
           ))}
           {phrases.length === 0 && (
-            <div className="text-center py-12 border border-dashed border-white/10">
+            <div className="text-center py-16 border border-dashed border-white/10 rounded-3xl">
               <p className="text-white/20 font-sans italic">Nenhuma frase cadastrada.</p>
             </div>
           )}

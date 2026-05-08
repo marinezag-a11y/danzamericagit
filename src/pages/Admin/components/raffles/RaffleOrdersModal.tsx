@@ -5,7 +5,8 @@ import {
   Loader2, 
   CheckCircle2, 
   AlertCircle, 
-  Trash2 
+  Trash2,
+  Mail 
 } from 'lucide-react';
 import { RaffleCampaign, RaffleOrder } from '../../../../hooks/useRaffles';
 import { ConfirmModal } from '../../../../components/modals/ConfirmModal';
@@ -71,7 +72,18 @@ export function RaffleOrdersModal({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-1">
                         <p className="text-[8px] uppercase tracking-widest text-white/30">Contato</p>
-                        <p className="text-xs text-white/60">{order.customer_email}<br/>{order.customer_phone}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-white/60">{order.customer_email}</p>
+                          {order.notification_sent ? (
+                            <Mail className="w-3 h-3 text-emerald-500" title="Notificação enviada" />
+                          ) : (
+                            <div className="flex items-center gap-1 text-red-500" title="Falha no envio">
+                              <Mail className="w-3 h-3" />
+                              <span className="text-[8px] font-bold">!</span>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-white/60">{order.customer_phone}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-[8px] uppercase tracking-widest text-white/30">Números Escolhidos</p>

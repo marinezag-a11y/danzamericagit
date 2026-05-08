@@ -127,18 +127,20 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
     setSubmitting(true);
     setError(null);
     try {
+      const newOrderId = crypto.randomUUID();
       const orderData = {
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone,
-        product_name: selectedProducts.map(p => `${quantities[p.id]}x ${p.name}`).join(', '),
+        id: newOrderId,
+        customer_name: customerName || 'Cliente sem nome',
+        customer_email: customerEmail || '',
+        customer_phone: customerPhone || '',
+        product_name: selectedProducts.map(p => `${quantities[p.id] || 1}x ${p.name || 'Produto'}`).join(', '),
         product_price: totalPrice,
         total_price: totalPrice,
         items: selectedProducts.map(p => ({ 
           id: p.id, 
-          name: p.name, 
-          price: p.price,
-          quantity: quantities[p.id]
+          name: p.name || 'Produto', 
+          price: p.price || 0,
+          quantity: quantities[p.id] || 1
         })),
         status: 'pending' as const
       };
@@ -147,19 +149,14 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
       const result = await addOrder(orderData);
 
       if (result.success) {
-        // 2. Send Emails via Edge Function
-        try {
-          if (supabase) {
-            await supabase.functions.invoke('send-order', {
-              body: orderData
-            });
-          }
-        } catch (e) {
-          console.error('Edge function error:', e);
-          // Don't fail the UI if just the email fails
+        setSuccess(true); // Mostra sucesso imediatamente
+
+        // Dispara o e-mail em segundo plano (background)
+        if (supabase) {
+          supabase.functions.invoke('send-order', {
+            body: { ...orderData, order_id: newOrderId }
+          }).catch(e => console.error('Background email error:', e));
         }
-        
-        setSuccess(true);
       } else {
         setError('Ocorreu um erro ao salvar seu pedido. Por favor, tente novamente ou nos chame no WhatsApp.');
       }

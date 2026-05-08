@@ -3,7 +3,8 @@ import {
   Loader2, 
   Pencil, 
   Trash2, 
-  ChevronRight
+  ChevronRight,
+  Mail
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { maskBRL } from '../../../../lib/utils';
@@ -69,7 +70,17 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
             <p className="text-white font-bold text-sm">{order.customer_name}</p>
             <div className="flex items-center gap-3 mt-1">
               <span className="text-[10px] text-white/40 font-mono tracking-wider">{order.customer_phone}</span>
-              <span className="text-[10px] text-brand-orange/40 font-mono tracking-wider">{order.customer_email}</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-brand-orange/40 font-mono tracking-wider">{order.customer_email}</span>
+                {order.notification_sent ? (
+                  <Mail className="w-3 h-3 text-emerald-500" title="Notificação enviada" />
+                ) : (
+                  <div className="flex items-center gap-1 text-red-500" title="E-mail não enviado">
+                    <Mail className="w-3 h-3" />
+                    <span className="text-[8px] font-bold">!</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </td>

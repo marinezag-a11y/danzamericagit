@@ -10,13 +10,14 @@ import {
   Check, 
   CheckCircle2,
   Play,
-  Pause
+  Pause,
+  ChevronDown,
+  ShoppingBag
 } from 'lucide-react';
 import { useHelpItems, HelpItem } from '../../../hooks/useHelpItems';
 import { OptimizedImageUploader } from './OptimizedImageUploader';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { maskBRL, parseBRL } from '../../../lib/utils';
-import { RaffleManager } from './RaffleManager';
 
 interface HelpItemsManagerProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
@@ -59,102 +60,123 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
   if (loading && items.length === 0) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/40 italic">Gerenciar Cards "Compre um sonho"</h3>
+    <div className="space-y-6 pb-20">
+      {/* Accordion for New Product */}
+      <div className={`border transition-all duration-500 overflow-hidden rounded-[2.5rem] ${
+        isAdding 
+          ? 'bg-black/30 border-white/10 shadow-2xl' 
+          : 'bg-black/10 border-white/5 hover:border-white/20'
+      }`}>
         <button 
           onClick={() => setIsAdding(!isAdding)}
-          className={`flex items-center gap-2 px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm ${isAdding ? 'bg-white/5 text-white/40' : 'bg-brand-orange text-white shadow-lg hover:scale-105'}`}
+          className="w-full p-10 flex items-center justify-between group"
         >
-          {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {isAdding ? 'Cancelar' : 'Incluir Novo Item'}
+          <div className="flex items-center gap-6">
+            <div className={`p-4 rounded-2xl border transition-all duration-500 ${
+              isAdding 
+                ? 'bg-brand-orange/20 border-brand-orange/40 text-brand-orange' 
+                : 'bg-white/5 border-white/5 text-white/20 group-hover:text-white/40'
+            }`}>
+              <Plus className={`w-6 h-6 transition-transform duration-500 ${isAdding ? 'rotate-45' : ''}`} />
+            </div>
+            <div className="text-left">
+              <h3 className={`text-2xl font-serif italic transition-all duration-500 ${
+                isAdding ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+              }`}>
+                Adicionar Novo Produto à Loja
+              </h3>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">Cadastre um novo item para arrecadação solidária</p>
+            </div>
+          </div>
         </button>
-      </div>
 
-      <AnimatePresence>
-        {isAdding && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!newTitle) {
-                  onAlert('Campo Obrigatório', 'Por favor, insira um título para o card.', 'warning');
-                  return;
-                }
-                handleAddNew();
-              }}
-              className="bg-white/5 border border-white/10 p-8 space-y-6 rounded-sm mb-12 shadow-2xl"
+        <AnimatePresence>
+          {isAdding && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Título do Novo Card</label>
-                    <input 
-                      type="text" 
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
-                      placeholder="Ex: Doação de Materiais"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Valor do Item (R$)</label>
-                    <input 
-                      type="text"
-                      value={maskBRL(newPrice)}
-                      onChange={(e) => setNewPrice(parseBRL(e.target.value))}
-                      className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-brand-orange font-bold"
-                      placeholder="R$ 0,00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Descrição Curta</label>
-                    <input 
-                      type="text"
-                      value={newDescription}
-                      onChange={(e) => setNewDescription(e.target.value)}
-                      className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
-                      placeholder="Conte como essa ajuda faz a diferença..."
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Imagem da Seção</label>
-                  <div className="aspect-video bg-black/50 border border-white/10 overflow-hidden relative mb-2">
-                    <img src={newImageUrl} alt="" className="w-full h-full object-cover opacity-50" />
-                    <div className="absolute inset-0 flex items-center justify-center p-4">
-                      <OptimizedImageUploader 
-                        onUploadSuccess={(url) => setNewImageUrl(url)}
-                        onAlert={onAlert}
-                        folder="help"
-                        label="Subir Imagem do Card"
-                      />
+              <div className="px-12 pb-12">
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleAddNew();
+                  }}
+                  className="space-y-10"
+                >
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div className="space-y-8">
+                      <div className="space-y-4">
+                        <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Título do Produto</label>
+                        <input 
+                          type="text" required value={newTitle}
+                          onChange={(e) => setNewTitle(e.target.value)}
+                          className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
+                        />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço Sugerido</label>
+                        <input 
+                          type="text" value={maskBRL(newPrice)}
+                          onChange={(e) => setNewPrice(parseBRL(e.target.value))}
+                          className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
+                        />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Descrição Curta</label>
+                        <textarea 
+                          rows={4} value={newDescription}
+                          onChange={(e) => setNewDescription(e.target.value)}
+                          className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl resize-none shadow-inner"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-8">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Imagem e Pré-visualização</label>
+                      <div className="aspect-square max-w-[400px] mx-auto bg-black rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-2xl group">
+                        <img src={newImageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700" alt="" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-8">
+                          <OptimizedImageUploader 
+                            onUploadSuccess={(url) => setNewImageUrl(url)}
+                            onAlert={onAlert}
+                            folder="help"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              <button 
-                type="submit"
-                disabled={adding}
-                className="w-full py-4 bg-brand-orange text-white font-bold uppercase tracking-[0.2em] text-xs hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 shadow-xl"
-              >
-                {adding ? 'Criando...' : 'Confirmar e Adicionar Card'}
-              </button>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {items.map((item) => (
-          <HelpItemCard 
+                  <div className="pt-8 border-t border-white/5 flex justify-end">
+                    <button 
+                      type="submit" disabled={adding}
+                      className="px-12 py-5 bg-brand-orange text-white font-bold uppercase tracking-[0.3em] text-[10px] hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 shadow-2xl rounded-xl flex items-center gap-4"
+                    >
+                      {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
+                      Cadastrar Produto
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* List of Products as Accordions */}
+      <div className="space-y-4 pt-12">
+        <div className="flex flex-col gap-2 ml-1 mb-6">
+          <h4 className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-bold">Produtos Ativos ({items.length})</h4>
+          <div className="h-px w-12 bg-white/5" />
+        </div>
+        
+        {items.map((item, index) => (
+          <HelpItemAccordion 
             key={item.id} 
             item={item} 
+            index={index + 1}
             onUpdate={updateItem} 
             onDelete={deleteItem}
             onAlert={onAlert}
@@ -165,213 +187,188 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
   );
 }
 
-interface HelpItemCardProps {
+interface HelpItemAccordionProps {
   item: HelpItem;
+  index: number;
   onUpdate: (id: string, updates: any) => Promise<any>;
   onDelete: (id: string) => Promise<any>;
   onAlert: (t: string, m: string, v: any) => void;
 }
 
-const HelpItemCard: React.FC<HelpItemCardProps> = ({ item, onUpdate, onDelete, onAlert }) => {
-  const [isEditing, setIsEditing] = useState(false);
+const HelpItemAccordion: React.FC<HelpItemAccordionProps> = ({ item, index, onUpdate, onDelete, onAlert }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [localTitle, setLocalTitle] = useState(item.title);
   const [localDescription, setLocalDescription] = useState(item.description);
-  const [localButtonText, setLocalButtonText] = useState(item.button_text);
   const [localImageUrl, setLocalImageUrl] = useState(item.image_url);
   const [localPrice, setLocalPrice] = useState(item.price || 0);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!isEditing) {
+    if (!isOpen) {
       setLocalTitle(item.title);
       setLocalDescription(item.description);
-      setLocalButtonText(item.button_text);
       setLocalImageUrl(item.image_url);
       setLocalPrice(item.price || 0);
     }
-  }, [item, isEditing]);
+  }, [item, isOpen]);
 
   const handleSave = async () => {
     setSaving(true);
     const result = await onUpdate(item.id, {
       title: localTitle,
       description: localDescription,
-      button_text: localButtonText,
       image_url: localImageUrl,
       price: localPrice
     });
     setSaving(false);
     if (result.success) {
-      setIsEditing(false);
-      setShowSuccess(true);
-      onAlert('Sucesso', 'Item atualizado com sucesso.', 'info');
-      setTimeout(() => setShowSuccess(false), 3000);
+      setIsOpen(false);
+      onAlert('Sucesso', 'Produto atualizado.', 'info');
     } else {
-      onAlert('Erro', 'Erro ao atualizar item: ' + result.error, 'danger');
+      onAlert('Erro', 'Erro ao atualizar: ' + result.error, 'danger');
     }
-  };
-
-  const handleDelete = async () => {
-    if (!itemToDelete) return;
-    const result = await onDelete(itemToDelete);
-    if (result.success) {
-      onAlert('Excluído', 'Item removido com sucesso.', 'info');
-    } else {
-      onAlert('Erro', 'Erro ao excluir item.', 'danger');
-    }
-    setItemToDelete(null);
   };
 
   return (
-    <div className={`bg-white/5 border border-white/10 p-6 md:p-8 space-y-6 flex flex-col relative group hover:border-white/20 transition-all rounded-xl ${!item.is_active ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-      {!item.is_active && (
-        <div className="absolute top-0 left-0 w-full h-1 bg-brand-orange/40 rounded-t-xl overflow-hidden">
-          <div className="w-full h-full bg-brand-orange animate-pulse" />
+    <div className={`border transition-all duration-500 overflow-hidden rounded-[2.5rem] ${
+      isOpen 
+        ? 'bg-black/30 border-white/10 shadow-2xl' 
+        : 'bg-black/10 border-white/5 hover:border-white/20'
+    } ${!item.is_active ? 'opacity-50 grayscale' : ''}`}>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-10 flex items-center justify-between group"
+      >
+        <div className="flex items-center gap-6">
+          <div className="text-[10px] font-bold text-white/10 group-hover:text-brand-orange transition-colors font-sans w-6 text-center">
+            {index.toString().padStart(2, '0')}
+          </div>
+          <div className="w-16 h-12 bg-black rounded-lg overflow-hidden border border-white/5 relative flex-shrink-0">
+             <img src={item.image_url} className="w-full h-full object-cover opacity-60" alt="" />
+          </div>
+          <div className="text-left">
+            <h3 className={`text-xl font-serif italic transition-all duration-500 ${
+              isOpen ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+            }`}>
+              {item.title}
+            </h3>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">
+              {maskBRL(item.price || 0)} {!item.is_active && '• PAUSADO'}
+            </p>
+          </div>
         </div>
-      )}
+        <ChevronDown className={`w-5 h-5 text-white/10 group-hover:text-white/40 transition-all duration-500 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
 
-      <div className="flex justify-between items-start">
-        {isEditing ? (
-          <input 
-            type="text"
-            value={localTitle}
-            onChange={(e) => setLocalTitle(e.target.value)}
-            className="text-xl font-sans italic text-brand-orange bg-black/50 border-b border-brand-orange/30 outline-none w-full p-1"
-          />
-        ) : (
-          <h3 className="text-xl font-sans italic text-brand-orange">{item.title}</h3>
-        )}
-        
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => onUpdate(item.id, { is_active: !item.is_active })}
-            className={`p-2 rounded-full transition-all ${!item.is_active ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white' : 'bg-brand-orange/10 text-brand-orange hover:bg-brand-orange hover:text-white'}`}
-            title={item.is_active ? "Pausar Vendas" : "Reativar Vendas"}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
           >
-            {item.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </button>
-
-          {!isEditing && (
-            <button 
-              onClick={() => setIsEditing(true)}
-              className="p-2 text-white/20 hover:text-white transition-all"
-              title="Editar"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-          )}
-          <button 
-            onClick={() => setItemToDelete(item.id)}
-            className="p-2 text-white/20 hover:text-red-500 transition-all"
-            title="Excluir"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-
-      <div className="space-y-6 flex-1">
-        <div className="space-y-2">
-          <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Descrição</label>
-          {isEditing ? (
-            <textarea 
-              rows={4}
-              value={localDescription}
-              onChange={(e) => setLocalDescription(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 p-3 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
-            />
-          ) : (
-            <p className="text-sm text-white/60 font-sans leading-relaxed">{item.description}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor do Item (R$)</label>
-          {isEditing ? (
-            <input 
-              type="text"
-              value={maskBRL(localPrice)}
-              onChange={(e) => setLocalPrice(parseBRL(e.target.value))}
-              className="w-full bg-black/50 border border-white/10 p-3 text-sm font-sans focus:border-brand-orange outline-none transition-all text-brand-orange font-bold"
-              placeholder="R$ 0,00"
-            />
-          ) : (
-            <p className="text-xl font-display text-brand-orange">{maskBRL(item.price || 0)}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Imagem da Seção</label>
-          <div className="space-y-4">
-            <div className="aspect-video bg-black/50 border border-white/10 overflow-hidden relative group-hover:border-brand-orange/20 transition-all rounded-lg">
-              <img src={isEditing ? localImageUrl : item.image_url} alt="" className={`w-full h-full object-cover transition-all ${!item.is_active ? 'opacity-30' : 'opacity-60 group-hover:opacity-100'}`} />
-              {!item.is_active && !isEditing && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="bg-black/80 text-white text-[8px] uppercase tracking-[0.3em] font-bold px-4 py-2 border border-white/10 rounded-full">Vendas Pausadas</span>
+            <div className="px-12 pb-12">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8 border-t border-white/5">
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Título do Produto</label>
+                    <input 
+                      type="text" value={localTitle}
+                      onChange={(e) => setLocalTitle(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço Sugerido</label>
+                    <input 
+                      type="text" value={maskBRL(localPrice)}
+                      onChange={(e) => setLocalPrice(parseBRL(e.target.value))}
+                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Descrição</label>
+                    <textarea 
+                      rows={6} value={localDescription}
+                      onChange={(e) => setLocalDescription(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl resize-none shadow-inner"
+                    />
+                  </div>
                 </div>
-              )}
 
-              {isEditing && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4">
-                  <OptimizedImageUploader 
-                    onUploadSuccess={(url) => setLocalImageUrl(url)}
-                    onAlert={onAlert}
-                    folder="help"
-                    label="Alterar Imagem"
-                  />
+                <div className="space-y-8">
+                  <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Capa do Card (Pré-visualização)</label>
+                  <div className="aspect-square max-w-[360px] mx-auto bg-black rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-2xl group">
+                    <img src={localImageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700" alt="" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-8">
+                      <OptimizedImageUploader 
+                        onUploadSuccess={(url) => setLocalImageUrl(url)}
+                        onAlert={onAlert}
+                        folder="help"
+                        label="Substituir Foto"
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              <div className="pt-12 border-t border-white/5 flex justify-between items-center">
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => onUpdate(item.id, { is_active: !item.is_active })}
+                    className={`flex items-center gap-3 px-6 py-4 rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all ${
+                      item.is_active 
+                        ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white' 
+                        : 'bg-brand-orange/10 text-brand-orange hover:bg-brand-orange hover:text-white'
+                    }`}
+                  >
+                    {item.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    {item.is_active ? 'Pausar Venda' : 'Ativar Venda'}
+                  </button>
+                  <button 
+                    onClick={() => setItemToDelete(true)}
+                    className="flex items-center gap-3 px-6 py-4 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </button>
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsOpen(false)}
+                    className="px-8 py-4 text-[10px] uppercase tracking-widest font-bold text-white/20 hover:text-white transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-10 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all rounded-xl flex items-center gap-3 shadow-2xl disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Salvar Alterações
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {isEditing && (
-          <div className="space-y-2">
-            <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Texto do Botão</label>
-            <input 
-              type="text"
-              value={localButtonText}
-              onChange={(e) => setLocalButtonText(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 p-3 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
-            />
-          </div>
+          </motion.div>
         )}
-      </div>
-
-      {isEditing ? (
-        <div className="flex gap-4 pt-4 border-t border-white/10">
-          <button 
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 bg-brand-orange text-white py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Salvar Alterações
-          </button>
-          <button 
-            onClick={() => setIsEditing(false)}
-            className="px-6 py-3 border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white/40 hover:text-white transition-all"
-          >
-            Cancelar
-          </button>
-        </div>
-      ) : showSuccess && (
-        <div className="pt-4 border-t border-green-500/20 flex items-center gap-3 text-green-500 text-[10px] uppercase tracking-widest font-bold">
-          <CheckCircle2 className="w-4 h-4" />
-          Alterado com sucesso!
-        </div>
-      )}
+      </AnimatePresence>
 
       <ConfirmModal 
-        isOpen={!!itemToDelete}
-        onConfirm={handleDelete}
+        isOpen={itemToDelete}
+        onConfirm={async () => {
+           const res = await onDelete(item.id);
+           if (res.success) onAlert('Excluído', 'Produto removido.', 'info');
+           setItemToDelete(false);
+        }}
         onCancel={() => setItemToDelete(null)}
-        title="Excluir Item"
-        message="Tem certeza que deseja excluir este item de ajuda? Esta ação removerá o card da loja solidária."
-        confirmLabel="Confirmar Exclusão"
+        title="Excluir Item?"
+        message="Esta ação é permanente e o produto sairá da vitrine pública."
+        confirmLabel="Sim, Excluir"
         variant="danger"
       />
     </div>

@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Loader2, 
   Plus, 
   Save, 
   Trash2, 
-  Pencil 
+  Pencil,
+  X,
+  ChevronDown,
+  Image as ImageIcon
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGallery } from '../../../hooks/useGallery';
 import { OptimizedImageUploader } from './OptimizedImageUploader';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
@@ -16,190 +20,312 @@ interface GalleryManagerProps {
 
 export function GalleryManager({ onAlert }: GalleryManagerProps) {
   const { images, loading, addImage, updateImage, deleteImage } = useGallery();
-  const [editingImage, setEditingImage] = useState<any>(null);
+  const [isAdding, setIsAdding] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [newCaption, setNewCaption] = useState('');
   const [adding, setAdding] = useState(false);
-  const [imageToDelete, setImageToDelete] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
-
-  const handleStartEdit = (image: any) => {
-    setEditingImage(image);
-    setNewUrl(image.url);
-    setNewCaption(image.caption);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingImage(null);
-    setNewUrl('');
-    setNewCaption('');
-  };
 
   const handleSave = async () => {
     if (!newUrl) return;
     setAdding(true);
-    setStatus({ type: 'info', message: editingImage ? 'Atualizando foto...' : 'Salvando na galeria...' });
-    
-    let result;
-    if (editingImage) {
-      result = await updateImage(editingImage.id, { url: newUrl, caption: newCaption });
-    } else {
-      result = await addImage(newUrl, newCaption);
-    }
-
+    const result = await addImage(newUrl, newCaption);
     if (result.success) {
       setNewUrl('');
       setNewCaption('');
-      setEditingImage(null);
-      setStatus({ type: 'success', message: editingImage ? 'Foto atualizada!' : 'Foto adicionada com sucesso!' });
-      onAlert('Sucesso', editingImage ? 'Foto atualizada na galeria.' : 'Foto adicionada à galeria.', 'info');
-      setTimeout(() => setStatus(null), 3000);
+      setIsAdding(false);
+      onAlert('Sucesso', 'Foto adicionada à galeria.', 'info');
     } else {
-      onAlert('Erro', 'Não foi possível salvar a imagem: ' + result.error, 'danger');
-      setStatus(null);
+      onAlert('Erro', 'Não foi possível salvar a imagem.', 'danger');
     }
     setAdding(false);
-  };
-
-  const handleDelete = async () => {
-    if (!imageToDelete) return;
-    const result = await deleteImage(imageToDelete);
-    if (result.success) {
-      onAlert('Excluído', 'Foto removida da galeria.', 'info');
-    } else {
-      onAlert('Erro', 'Não foi possível excluir a foto.', 'danger');
-    }
-    setImageToDelete(null);
   };
 
   if (loading && images.length === 0) return <div className="py-20 text-center"><Loader2 className="w-8 h-8 text-brand-orange animate-spin mx-auto" /></div>;
 
   return (
-    <div className="space-y-12">
-      <div className={`bg-white/5 border p-8 transition-all duration-500 rounded-sm ${editingImage ? 'border-brand-orange ring-1 ring-brand-orange/20' : 'border-white/10'}`}>
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="text-xl font-sans italic text-white/80">
-            {editingImage ? 'Editando Foto' : 'Adicionar Nova Foto'}
-          </h3>
-          {editingImage && (
-            <button 
-              onClick={handleCancelEdit}
-              className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+    <div className="space-y-6 pb-20">
+      {/* Accordion for New Photo */}
+      <div className={`border transition-all duration-500 overflow-hidden rounded-[2.5rem] ${
+        isAdding 
+          ? 'bg-black/30 border-white/10 shadow-2xl' 
+          : 'bg-black/10 border-white/5 hover:border-white/20'
+      }`}>
+        <button 
+          onClick={() => setIsAdding(!isAdding)}
+          className="w-full p-10 flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-6">
+            <div className={`p-4 rounded-2xl border transition-all duration-500 ${
+              isAdding 
+                ? 'bg-brand-orange/20 border-brand-orange/40 text-brand-orange' 
+                : 'bg-white/5 border-white/5 text-white/20 group-hover:text-white/40'
+            }`}>
+              <Plus className={`w-6 h-6 transition-transform duration-500 ${isAdding ? 'rotate-45' : ''}`} />
+            </div>
+            <div className="text-left">
+              <h3 className={`text-2xl font-serif italic transition-all duration-500 ${
+                isAdding ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+              }`}>
+                Adicionar Nova Foto
+              </h3>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">Fazer upload de novos registros do evento</p>
+            </div>
+          </div>
+        </button>
+
+        <AnimatePresence>
+          {isAdding && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
             >
-              Cancelar Edição
-            </button>
+              <div className="px-12 pb-12">
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSave();
+                  }}
+                  className="space-y-10"
+                >
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div className="space-y-8">
+                      <div className="p-10 bg-black/40 border border-white/10 rounded-[2rem] space-y-8 shadow-inner">
+                        <div className="space-y-4">
+                          <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Upload de Imagem</label>
+                          <OptimizedImageUploader 
+                            onUploadSuccess={(url) => setNewUrl(url)}
+                            onAlert={onAlert}
+                            folder="gallery"
+                          />
+                        </div>
+                        <div className="pt-8 border-t border-white/5 space-y-4">
+                          <label className="block text-[10px] uppercase tracking-[0.3em] text-white/20 font-bold ml-1 italic">Ou colar link direto</label>
+                          <input 
+                            type="text"
+                            className="w-full bg-black/40 border border-white/5 p-5 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/60 rounded-xl"
+                            placeholder="https://exemplo.com/foto.jpg"
+                            value={newUrl}
+                            onChange={(e) => setNewUrl(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-10">
+                      <div className="space-y-4">
+                        <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Legenda / Descrição</label>
+                        <input 
+                          type="text"
+                          className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
+                          placeholder="Ex: Danzamerica 2026 - Noite de Gala"
+                          value={newCaption}
+                          onChange={(e) => setNewCaption(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1 italic">Pré-visualização</label>
+                        <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl">
+                          {newUrl ? (
+                            <img src={newUrl} className="w-full h-full object-contain" alt="Preview" />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-white/5 italic">
+                              <ImageIcon className="w-12 h-12 mb-4" />
+                              <span className="text-[10px] uppercase tracking-widest font-bold">Aguardando Imagem...</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-8 border-t border-white/5 flex justify-end">
+                    <button 
+                       type="submit"
+                       disabled={adding}
+                       className="px-12 py-5 bg-brand-orange text-white text-[10px] uppercase tracking-[0.3em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-4 disabled:opacity-50 shadow-2xl rounded-xl"
+                    >
+                      {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
+                      Publicar na Galeria
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
           )}
+        </AnimatePresence>
+      </div>
+
+      {/* List of Photos as Accordions */}
+      <div className="space-y-4 pt-12">
+        <div className="flex flex-col gap-2 ml-1 mb-6">
+          <h4 className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-bold">Imagens Publicadas ({images.length})</h4>
+          <div className="h-px w-12 bg-white/5" />
         </div>
         
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!newUrl) {
-              onAlert('Imagem Necessária', 'Por favor, suba uma foto ou insira um link de imagem.', 'warning');
-              return;
-            }
-            handleSave();
-          }}
-          className="space-y-8"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div className="p-6 border border-white/5 bg-white/5 space-y-4">
-                <OptimizedImageUploader 
-                  onUploadSuccess={(url) => setNewUrl(url)}
-                  onAlert={onAlert}
-                  label="Selecionar do Computador"
-                  folder="gallery"
-                />
-              </div>
-
-              <div className="p-6 border border-white/5 bg-white/5 space-y-4">
-                <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Ou Link Externo</label>
-                <input 
-                  type="text"
-                  className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
-                  placeholder="https://exemplo.com/foto.jpg"
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-8 flex flex-col">
-              <div className="space-y-2">
-                <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Legenda da Foto</label>
-                <input 
-                  type="text"
-                  className="w-full bg-black/50 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange outline-none transition-all text-white"
-                  placeholder="Ex: Danzamerica 2026 - Noite de Gala"
-                  value={newCaption}
-                  onChange={(e) => setNewCaption(e.target.value)}
-                />
-              </div>
-
-              {newUrl && (
-                <div className="aspect-video border border-white/10 overflow-hidden bg-black/50">
-                   <img src={newUrl} className="w-full h-full object-contain" alt="Preview" />
-                </div>
-              )}
-
-              <div className="mt-auto pt-6">
-                <button 
-                   type="submit"
-                   disabled={adding}
-                   className="w-full py-5 bg-brand-orange text-white text-[12px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-dark transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-lg"
-                >
-                  {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : editingImage ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                  {editingImage ? 'Salvar Alterações' : 'Finalizar e Adicionar à Galeria'}
-                </button>
-              </div>
-            </div>
-          </div>
-          {status && (
-            <div className={`p-4 text-xs font-bold uppercase tracking-widest rounded-sm ${
-              status.type === 'success' ? 'bg-green-500/20 text-green-500 border border-green-500/20' :
-              status.type === 'error' ? 'bg-red-500/20 text-red-500 border border-red-500/20' :
-              'bg-blue-500/20 text-blue-500 border border-blue-500/20'
-            }`}>
-              {status.message}
-            </div>
-          )}
-        </form>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
-        {images?.map((image) => (
-          <div key={image.id} className="group flex flex-col">
-            <div className="relative aspect-square bg-white/5 border border-white/10 overflow-hidden mb-3">
-              <img src={image.url} alt={image.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="absolute inset-0 bg-black/40 lg:bg-black/60 lg:opacity-0 lg:group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
-                <button 
-                  onClick={() => handleStartEdit(image)}
-                  className="p-3 bg-brand-orange text-white rounded-full hover:bg-white hover:text-brand-dark transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0 shadow-lg"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button 
-                  onClick={() => setImageToDelete(image.id)}
-                  className="p-3 bg-red-500 text-white rounded-full hover:bg-white hover:text-red-500 transition-all transform lg:translate-y-4 lg:group-hover:translate-y-0 shadow-lg"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold truncate px-1">{image.caption || 'Sem legenda'}</p>
-          </div>
+        {images?.map((image, index) => (
+          <GalleryItemAccordion 
+            key={image.id} 
+            image={image} 
+            index={index + 1}
+            onUpdate={updateImage} 
+            onDelete={deleteImage}
+            onAlert={onAlert}
+          />
         ))}
       </div>
+    </div>
+  );
+}
+
+interface GalleryItemAccordionProps {
+  image: any;
+  index: number;
+  onUpdate: (id: string, updates: any) => Promise<any>;
+  onDelete: (id: string) => Promise<any>;
+  onAlert: (t: string, m: string, v: any) => void;
+}
+
+const GalleryItemAccordion: React.FC<GalleryItemAccordionProps> = ({ image, index, onUpdate, onDelete, onAlert }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [localUrl, setLocalUrl] = useState(image.url);
+  const [localCaption, setLocalCaption] = useState(image.caption);
+  const [itemToDelete, setItemToDelete] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setLocalUrl(image.url);
+      setLocalCaption(image.caption);
+    }
+  }, [image, isOpen]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const result = await onUpdate(image.id, { url: localUrl, caption: localCaption });
+    setSaving(false);
+    if (result.success) {
+      setIsOpen(false);
+      onAlert('Sucesso', 'Foto atualizada com sucesso.', 'info');
+    } else {
+      onAlert('Erro', 'Não foi possível atualizar.', 'danger');
+    }
+  };
+
+  const handleDelete = async () => {
+    const result = await onDelete(image.id);
+    if (result.success) {
+      onAlert('Excluído', 'Foto removida.', 'info');
+    } else {
+      onAlert('Erro', 'Não foi possível excluir.', 'danger');
+    }
+    setItemToDelete(false);
+  };
+
+  return (
+    <div className={`border transition-all duration-500 overflow-hidden rounded-[2.5rem] ${
+      isOpen 
+        ? 'bg-black/30 border-white/10 shadow-2xl' 
+        : 'bg-black/10 border-white/5 hover:border-white/20'
+    }`}>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-8 flex items-center justify-between group"
+      >
+        <div className="flex items-center gap-6">
+          <div className="text-[10px] font-bold text-white/10 group-hover:text-brand-orange transition-colors font-sans w-6 text-center">
+            {index.toString().padStart(2, '0')}
+          </div>
+          <div className="w-16 h-12 bg-black rounded-lg overflow-hidden border border-white/5 relative flex-shrink-0">
+             <img src={image.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all" alt="" />
+          </div>
+          <div className="text-left">
+            <h3 className={`text-lg font-serif italic transition-all duration-500 ${
+              isOpen ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+            }`}>
+              {image.caption || 'Foto sem legenda'}
+            </h3>
+          </div>
+        </div>
+        <ChevronDown className={`w-5 h-5 text-white/10 group-hover:text-white/40 transition-all duration-500 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
+          >
+            <div className="px-12 pb-12">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8 border-t border-white/5">
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Legenda da Foto</label>
+                    <input 
+                      type="text" value={localCaption}
+                      onChange={(e) => setLocalCaption(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Substituir Imagem</label>
+                    <OptimizedImageUploader 
+                      onUploadSuccess={(url) => setLocalUrl(url)}
+                      onAlert={onAlert}
+                      folder="gallery"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                   <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Ampliação</label>
+                   <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl">
+                     <img src={localUrl} className="w-full h-full object-contain" alt="" />
+                   </div>
+                </div>
+              </div>
+
+              <div className="pt-12 border-t border-white/5 flex justify-between items-center">
+                <button 
+                  onClick={() => setItemToDelete(true)}
+                  className="flex items-center gap-3 px-6 py-4 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir Foto
+                </button>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsOpen(false)}
+                    className="px-8 py-4 text-[10px] uppercase tracking-widest font-bold text-white/20 hover:text-white transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-10 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all rounded-xl flex items-center gap-3 shadow-2xl disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Salvar Alterações
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ConfirmModal 
-        isOpen={!!imageToDelete}
+        isOpen={itemToDelete}
         onConfirm={handleDelete}
-        onCancel={() => setImageToDelete(null)}
-        title="Excluir Foto"
+        onCancel={() => setItemToDelete(false)}
+        title="Excluir Foto?"
         message="Deseja remover esta foto da galeria? Esta ação não pode ser desfeita."
-        confirmLabel="Excluir"
+        confirmLabel="Sim, Excluir"
         variant="danger"
       />
     </div>

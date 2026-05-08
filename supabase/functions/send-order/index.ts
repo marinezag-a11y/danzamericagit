@@ -193,7 +193,7 @@ serve(async (req) => {
       `
 
       // Send to dynamic Admins
-      await sendResendEmail({
+      const adminRes = await sendResendEmail({
         from: 'Danzamerica 2026 <pedidos@nucleotatianafigueiredo.com.br>',
         to: adminEmails,
         reply_to: customer_email,
@@ -202,12 +202,24 @@ serve(async (req) => {
       })
 
       // Send to Customer (Simplified for brevity)
-      await sendResendEmail({
+      const customerRes = await sendResendEmail({
         from: 'Danzamerica 2026 <pedidos@nucleotatianafigueiredo.com.br>',
         to: [customer_email],
         subject: `Confirmamos seu pedido! - Danzamerica 2026`,
         html: `<p>Olá ${customer_name}, recebemos seu pedido com sucesso!</p>`,
       })
+
+      // Update Database Status if at least one email was sent
+      if ((adminRes.ok || customerRes.ok) && order_id) {
+        const table = type === 'raffle_order' ? 'raffle_orders' : 'help_orders'
+        console.log(`[DB Update] Marking ${table}:${order_id} as notified`)
+        const { error: dbError } = await supabase
+          .from(table)
+          .update({ notification_sent: true })
+          .eq('id', order_id)
+        
+        if (dbError) console.error('[DB Error] Failed to update notification_sent:', dbError)
+      }
 
       return new Response(JSON.stringify({ success: true }), { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

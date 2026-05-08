@@ -70,7 +70,9 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
 
     setSubmitting(true);
     try {
+      const newOrderId = crypto.randomUUID();
       const orderData = {
+        id: newOrderId,
         campaign_id: campaign.id,
         customer_name: customerName,
         customer_email: customerEmail,
@@ -82,21 +84,20 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       const result = await createOrder(orderData);
 
       if (result.success) {
-        // Send email via edge function (reusing send-order logic if possible or similar)
-        try {
-          if (supabase) {
-            await supabase.functions.invoke('send-order', {
-              body: {
-                ...orderData,
-                product_name: `Rifa: ${campaign.name} (Números: ${selectedNumbers.join(', ')})`,
-                items: selectedNumbers.map(n => ({ id: `ticket-${n}`, name: `Número ${n}`, price: campaign.price_per_number }))
-              }
-            });
-          }
-        } catch (e) {
-          console.error('Email error:', e);
+        setSuccess(true); // Sucesso imediato
+
+        // Notificação em segundo plano
+        if (supabase) {
+          supabase.functions.invoke('send-order', {
+            body: {
+              ...orderData,
+              order_id: newOrderId,
+              type: 'raffle_order',
+              product_name: `Rifa: ${campaign?.name || 'Campanha'} (Números: ${(selectedNumbers || []).join(', ')})`,
+              items: (selectedNumbers || []).map(n => ({ id: `ticket-${n}`, name: `Número ${n}`, price: campaign?.price_per_number || 0 }))
+            }
+          }).catch(e => console.error('Background email error:', e));
         }
-        setSuccess(true);
       }
     } catch (err) {
       console.error('Order error:', err);

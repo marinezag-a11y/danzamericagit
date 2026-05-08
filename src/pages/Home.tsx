@@ -62,7 +62,15 @@ function VerticalTicker({ phrases }: { phrases: any[] }) {
   );
 }
 
-function TierCard({ name, price, benefits, highlight = false, onSelect }: { name: string, price: string, benefits: string[], highlight?: boolean, onSelect: (name: string) => void }) {
+interface TierCardProps {
+  name: string;
+  price: string;
+  benefits: string[];
+  highlight?: boolean;
+  onSelect: (name: string) => void;
+}
+
+const TierCard: React.FC<TierCardProps> = ({ name, price, benefits, highlight = false, onSelect }) => {
   const { trackEvent } = useEventTracking();
   return (
     <div className={`p-12 border border-white/10 flex flex-col justify-between transition-all group ${highlight ? 'bg-brand-orange' : 'bg-white/5 hover:bg-white/10'}`}>
@@ -678,7 +686,7 @@ export default function Home() {
                  price={tier.price}
                  benefits={tier.benefits}
                  highlight={true}
-                 onSelect={() => setSelectedTierData({ name: tier.name, price: tier.price, benefits: tier.benefits })}
+                 onSelect={(name) => setSelectedTierData({ name, price: tier.price, benefits: tier.benefits })}
                />
              ))}
           </div>

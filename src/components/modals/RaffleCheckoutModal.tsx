@@ -84,13 +84,15 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       if (result.success) {
         // Send email via edge function (reusing send-order logic if possible or similar)
         try {
-          await supabase.functions.invoke('send-order', {
-            body: {
-              ...orderData,
-              product_name: `Rifa: ${campaign.name} (Números: ${selectedNumbers.join(', ')})`,
-              items: selectedNumbers.map(n => ({ id: `ticket-${n}`, name: `Número ${n}`, price: campaign.price_per_number }))
-            }
-          });
+          if (supabase) {
+            await supabase.functions.invoke('send-order', {
+              body: {
+                ...orderData,
+                product_name: `Rifa: ${campaign.name} (Números: ${selectedNumbers.join(', ')})`,
+                items: selectedNumbers.map(n => ({ id: `ticket-${n}`, name: `Número ${n}`, price: campaign.price_per_number }))
+              }
+            });
+          }
         } catch (e) {
           console.error('Email error:', e);
         }

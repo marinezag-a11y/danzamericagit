@@ -44,6 +44,7 @@ export function useHelpItems() {
   }, []);
 
   const addItem = async (item: Partial<HelpItem>) => {
+    if (!supabase) return { success: false, error: 'Supabase não configurado' };
     try {
       const { data, error: addError } = await supabase
         .from('help_items')
@@ -59,6 +60,7 @@ export function useHelpItems() {
   };
 
   const updateItem = async (id: string, updates: Partial<HelpItem>) => {
+    if (!supabase) return { success: false, error: 'Supabase não configurado' };
     try {
       const { data, error: updateError } = await supabase
         .from('help_items')
@@ -75,6 +77,7 @@ export function useHelpItems() {
   };
 
   const deleteItem = async (id: string) => {
+    if (!supabase) return { success: false, error: 'Supabase não configurado' };
     try {
       const { error: deleteError } = await supabase
         .from('help_items')

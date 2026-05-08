@@ -18,7 +18,7 @@ interface OrderRowProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
 }
 
-export function OrderRow({ order, onUpdate, onDelete, onAlert }: OrderRowProps) {
+export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, onAlert }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
   

@@ -513,7 +513,13 @@ export function FinancialManager({ onAlert }: FinancialManagerProps) {
   );
 }
 
-function FinancialRow({ record, onEdit, onDelete }: { record: FinancialRecord, onEdit: () => void, onDelete: () => void }) {
+interface FinancialRowProps {
+  record: FinancialRecord;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const FinancialRow: React.FC<FinancialRowProps> = ({ record, onEdit, onDelete }) => {
   return (
     <tr className="hover:bg-white/[0.02] transition-all group">
       <td className="p-6">

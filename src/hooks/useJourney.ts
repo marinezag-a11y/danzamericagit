@@ -49,21 +49,31 @@ export function useJourney() {
   };
 
   const updateItem = async (id: string, updates: Partial<JourneyItem>) => {
-    const { error } = await supabase
-      .from('journey_items')
-      .update(updates)
-      .eq('id', id);
-    if (error) throw error;
-    setItems(items.map(item => item.id === id ? { ...item, ...updates } : item));
+    try {
+      const { error } = await supabase
+        .from('journey_items')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+      setItems(items.map(item => item.id === id ? { ...item, ...updates } : item));
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   };
 
   const deleteItem = async (id: string) => {
-    const { error } = await supabase
-      .from('journey_items')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
-    setItems(items.filter(item => item.id !== id));
+    try {
+      const { error } = await supabase
+        .from('journey_items')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setItems(items.filter(item => item.id !== id));
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   };
 
   return { items, loading, addItem, updateItem, deleteItem, refresh: fetchItems };

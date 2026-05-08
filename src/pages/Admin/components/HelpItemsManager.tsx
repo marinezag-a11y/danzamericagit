@@ -163,7 +163,14 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
   );
 }
 
-function HelpItemCard({ item, onUpdate, onDelete, onAlert }: { item: HelpItem, onUpdate: (id: string, updates: any) => Promise<any>, onDelete: (id: string) => Promise<any>, onAlert: (t: string, m: string, v: any) => void }) {
+interface HelpItemCardProps {
+  item: HelpItem;
+  onUpdate: (id: string, updates: any) => Promise<any>;
+  onDelete: (id: string) => Promise<any>;
+  onAlert: (t: string, m: string, v: any) => void;
+}
+
+const HelpItemCard: React.FC<HelpItemCardProps> = ({ item, onUpdate, onDelete, onAlert }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [localTitle, setLocalTitle] = useState(item.title);

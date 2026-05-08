@@ -57,7 +57,7 @@ export function Header({
         </div>
 
         {/* Desktop Nav Links */}
-        <div className="hidden lg:flex gap-6 xl:gap-12 text-[10px] xl:text-xs uppercase tracking-[0.2em] xl:tracking-[0.25em] font-display font-medium z-10">
+        <div className="hidden xl:flex gap-4 xl:gap-8 text-[9px] xl:text-[10px] uppercase tracking-[0.15em] xl:tracking-[0.2em] font-display font-medium z-10">
           {NAV_LINKS.map((link) => (
             <a
               key={link.id}
@@ -81,7 +81,7 @@ export function Header({
         <div className="relative z-20 flex items-center gap-2 sm:gap-4">
           {donationSlot}
           <button
-            className="lg:hidden text-white p-1 sm:p-2"
+            className="xl:hidden text-white p-1 sm:p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
           >

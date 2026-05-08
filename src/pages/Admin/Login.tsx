@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -24,6 +24,12 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
+    if (!supabase) {
+      setMessage({ text: 'Erro de conexão com o servidor. Verifique as configurações.', type: 'error' });
+      setLoading(false);
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithPassword({
       email,

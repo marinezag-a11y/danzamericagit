@@ -46,7 +46,7 @@ export default function Dashboard() {
     }, 5000);
   };
 
-  const menuItems = ADMIN_MENU_ITEMS.filter(item => userPermissions.includes(item.id));
+  const menuItems = userPermissions ? ADMIN_MENU_ITEMS.filter(item => userPermissions.includes(item.id)) : [];
 
   // Redirect to first allowed tab if current is not allowed
   useEffect(() => {

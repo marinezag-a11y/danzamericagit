@@ -14,7 +14,7 @@ interface RaffleCardProps {
   onViewOrders: (id: string) => void;
 }
 
-export function RaffleCard({ campaign, onEdit, onDelete, onViewOrders }: RaffleCardProps) {
+export const RaffleCard: React.FC<RaffleCardProps> = ({ campaign, onEdit, onDelete, onViewOrders }) => {
   return (
     <div className="bg-white/5 border border-white/10 group hover:border-brand-orange/30 transition-all rounded-sm overflow-hidden flex flex-col">
       <div className="aspect-video relative overflow-hidden bg-black">

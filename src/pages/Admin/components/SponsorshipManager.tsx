@@ -133,6 +133,7 @@ export function SponsorshipManager({ onAlert }: SponsorshipManagerProps) {
               setIsAdding(false);
             }}
             onSave={handleSave}
+            onAlert={onAlert}
             saving={saving}
           />
         )}
@@ -141,7 +142,7 @@ export function SponsorshipManager({ onAlert }: SponsorshipManagerProps) {
   );
 }
 
-function TierEditModal({ tier, isAdding, onClose, onSave, saving }: { tier: any, isAdding: boolean, onClose: () => void, onSave: (data: any) => void, saving: boolean }) {
+function TierEditModal({ tier, isAdding, onClose, onSave, onAlert, saving }: { tier: any, isAdding: boolean, onClose: () => void, onSave: (data: any) => void, onAlert: any, saving: boolean }) {
   const [name, setName] = useState(tier?.name || '');
   const [price, setPrice] = useState(tier?.price || '');
   const [benefits, setBenefits] = useState(tier?.benefits.join('\n') || '');

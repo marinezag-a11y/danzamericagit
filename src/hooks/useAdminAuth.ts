@@ -18,11 +18,20 @@ export function useAdminAuth() {
     const getPerms = async () => {
       setLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        if (!supabase || !supabase.auth) {
+          console.error('Supabase client not initialized');
+          setLoading(false);
+          return;
+        }
+
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !authData?.user) {
           navigate('/admin');
           return;
         }
+        
+        const user = authData.user;
         setUserEmail(user.email || null);
 
         if (isSupport && supportPerms) {

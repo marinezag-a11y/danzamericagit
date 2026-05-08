@@ -34,13 +34,16 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const products = useMemo(() => (helpItems || []).map(item => ({
-    id: item.id,
-    name: item.title,
-    price: Number(item.price) || 0,
-    description: item.description,
-    image: item.image_url || 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=800&auto=format&fit=crop'
-  })), [helpItems]);
+  const products = useMemo(() => {
+    if (!helpItems || !Array.isArray(helpItems)) return [];
+    return helpItems.map(item => ({
+      id: item?.id || Math.random().toString(),
+      name: item?.title || 'Item sem nome',
+      price: Number(item?.price) || 0,
+      description: item?.description || '',
+      image: item?.image_url || 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=800&auto=format&fit=crop'
+    }));
+  }, [helpItems]);
 
   const selectedProducts = useMemo(() => 
     products.filter(p => !!quantities[p.id]),
@@ -144,9 +147,11 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
       if (result.success) {
         // 2. Send Emails via Edge Function
         try {
-          await supabase.functions.invoke('send-order', {
-            body: orderData
-          });
+          if (supabase) {
+            await supabase.functions.invoke('send-order', {
+              body: orderData
+            });
+          }
         } catch (e) {
           console.error('Edge function error:', e);
           // Don't fail the UI if just the email fails

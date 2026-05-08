@@ -88,10 +88,12 @@ export function useAnalytics() {
   });
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<AnalyticsPeriod>('7d');
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
+    setError(null);
 
     try {
       const dateFilter = getDateFilter(period);
@@ -107,10 +109,11 @@ export function useAnalytics() {
       }
 
       // Limit data fetching to 5000 for stats calculation
-      const { data: rows, error, count } = await baseQuery.limit(5000);
+      const { data: rows, error: fetchError, count } = await baseQuery.limit(5000);
       
-      if (error) {
-        console.error('[Analytics] Fetch error:', error);
+      if (fetchError) {
+        console.error('[Analytics] Fetch error:', fetchError);
+        setError(fetchError.message);
         setLoading(false);
         return;
       }
@@ -227,6 +230,7 @@ export function useAnalytics() {
   return {
     data,
     loading,
+    error,
     period,
     setPeriod,
     refresh: fetchAnalytics,

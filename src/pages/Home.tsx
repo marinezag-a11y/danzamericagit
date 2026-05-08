@@ -611,7 +611,7 @@ export default function Home() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {(helpItems || []).map((item, idx) => (
+            {(helpItems || []).filter(item => item.is_active !== false).map((item, idx) => (
               <motion.div 
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}

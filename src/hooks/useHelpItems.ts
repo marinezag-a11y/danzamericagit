@@ -10,6 +10,7 @@ export interface HelpItem {
   button_text: string;
   modal_type: string;
   order: number;
+  is_active?: boolean;
 }
 
 export function useHelpItems() {

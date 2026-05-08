@@ -8,7 +8,9 @@ import {
   Trash2, 
   Save, 
   Check, 
-  CheckCircle2 
+  CheckCircle2,
+  Play,
+  Pause
 } from 'lucide-react';
 import { useHelpItems, HelpItem } from '../../../hooks/useHelpItems';
 import { OptimizedImageUploader } from './OptimizedImageUploader';
@@ -223,7 +225,13 @@ const HelpItemCard: React.FC<HelpItemCardProps> = ({ item, onUpdate, onDelete, o
   };
 
   return (
-    <div className="bg-white/5 border border-white/10 p-6 md:p-8 space-y-6 flex flex-col relative group hover:border-white/20 transition-all rounded-sm">
+    <div className={`bg-white/5 border border-white/10 p-6 md:p-8 space-y-6 flex flex-col relative group hover:border-white/20 transition-all rounded-xl ${!item.is_active ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+      {!item.is_active && (
+        <div className="absolute top-0 left-0 w-full h-1 bg-brand-orange/40 rounded-t-xl overflow-hidden">
+          <div className="w-full h-full bg-brand-orange animate-pulse" />
+        </div>
+      )}
+
       <div className="flex justify-between items-start">
         {isEditing ? (
           <input 
@@ -237,10 +245,18 @@ const HelpItemCard: React.FC<HelpItemCardProps> = ({ item, onUpdate, onDelete, o
         )}
         
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => onUpdate(item.id, { is_active: !item.is_active })}
+            className={`p-2 rounded-full transition-all ${!item.is_active ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white' : 'bg-brand-orange/10 text-brand-orange hover:bg-brand-orange hover:text-white'}`}
+            title={item.is_active ? "Pausar Vendas" : "Reativar Vendas"}
+          >
+            {item.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          </button>
+
           {!isEditing && (
             <button 
               onClick={() => setIsEditing(true)}
-              className="p-2 text-white/20 hover:text-brand-orange transition-all"
+              className="p-2 text-white/20 hover:text-white transition-all"
               title="Editar"
             >
               <Pencil className="w-4 h-4" />
@@ -255,6 +271,7 @@ const HelpItemCard: React.FC<HelpItemCardProps> = ({ item, onUpdate, onDelete, o
           </button>
         </div>
       </div>
+
 
       <div className="space-y-6 flex-1">
         <div className="space-y-2">
@@ -289,8 +306,14 @@ const HelpItemCard: React.FC<HelpItemCardProps> = ({ item, onUpdate, onDelete, o
         <div className="space-y-2">
           <label className="block text-[10px] uppercase tracking-widest text-white/40 font-bold">Imagem da Seção</label>
           <div className="space-y-4">
-            <div className="aspect-video bg-black/50 border border-white/10 overflow-hidden relative group-hover:border-brand-orange/20 transition-all">
-              <img src={isEditing ? localImageUrl : item.image_url} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+            <div className="aspect-video bg-black/50 border border-white/10 overflow-hidden relative group-hover:border-brand-orange/20 transition-all rounded-lg">
+              <img src={isEditing ? localImageUrl : item.image_url} alt="" className={`w-full h-full object-cover transition-all ${!item.is_active ? 'opacity-30' : 'opacity-60 group-hover:opacity-100'}`} />
+              {!item.is_active && !isEditing && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="bg-black/80 text-white text-[8px] uppercase tracking-[0.3em] font-bold px-4 py-2 border border-white/10 rounded-full">Vendas Pausadas</span>
+                </div>
+              )}
+
               {isEditing && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4">
                   <OptimizedImageUploader 

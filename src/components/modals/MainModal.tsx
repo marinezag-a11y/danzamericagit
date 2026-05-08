@@ -36,7 +36,9 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
   const products = useMemo(() => {
     if (!helpItems || !Array.isArray(helpItems)) return [];
-    return helpItems.map(item => ({
+    return helpItems
+      .filter(item => item.is_active !== false)
+      .map(item => ({
       id: item?.id || Math.random().toString(),
       name: item?.title || 'Item sem nome',
       price: Number(item?.price) || 0,

@@ -147,34 +147,86 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
       </td>
       <td className="py-6 px-6 text-sm text-white/80 font-serif italic">
         {isEditing ? (
-          <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar border border-white/5 p-2 bg-black/20">
-            {(helpItems || []).map(item => {
-              const selectedItem = orderItems.find(i => i.id === item.id);
-              return (
-                <div key={item.id} className="flex items-center justify-between gap-2 p-1 hover:bg-white/5 rounded-sm group/item">
-                  <div 
-                    onClick={() => toggleItem(item)}
-                    className="flex items-center gap-2 cursor-pointer flex-1"
-                  >
-                    <div className={`w-3 h-3 border flex items-center justify-center ${selectedItem ? 'bg-brand-orange border-brand-orange' : 'border-white/20'}`}>
-                      {selectedItem && <Check className="w-2 h-2 text-white" />}
-                    </div>
-                    <span className={`text-[10px] uppercase tracking-widest font-bold ${selectedItem ? 'text-white' : 'text-white/40'}`}>{item.title}</span>
+          <div className="space-y-4">
+            {/* Selected Items (Editable) */}
+            <div className="space-y-2 border-b border-white/10 pb-4 mb-4">
+              <p className="text-[8px] uppercase tracking-widest text-brand-orange font-bold mb-2">Itens do Pedido</p>
+              {orderItems.map((item, idx) => (
+                <div key={idx} className="bg-black/30 p-2 rounded-sm border border-white/5 space-y-2">
+                  <div className="flex gap-2">
+                    <input 
+                      value={item.name}
+                      onChange={(e) => {
+                        const newItems = [...orderItems];
+                        newItems[idx].name = e.target.value;
+                        setOrderItems(newItems);
+                      }}
+                      className="flex-1 bg-transparent border-b border-white/10 text-[10px] text-white outline-none focus:border-brand-orange"
+                      placeholder="Nome do Item"
+                    />
+                    <button 
+                      onClick={() => {
+                        const newItems = orderItems.filter((_, i) => i !== idx);
+                        setOrderItems(newItems);
+                        const newTotal = newItems.reduce((sum, i) => sum + (Number(i.price) * (i.quantity || 1)), 0);
+                        setManualPrice(newTotal);
+                      }}
+                      className="text-white/20 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
-                  {selectedItem && (
-                    <div className="flex items-center gap-2 bg-black/40 rounded-full px-2 py-0.5 border border-white/10">
-                      <button onClick={() => updateItemQuantity(item.id, -1)} className="text-white/40 hover:text-brand-orange transition-colors">
-                        <Minus className="w-2 h-2" />
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => updateItemQuantity(item.id, -1)} className="p-1 bg-white/5 hover:bg-white/10 rounded-sm">
+                        <Minus className="w-2 h-2 text-white/40" />
                       </button>
-                      <span className="text-[10px] font-bold text-brand-orange min-w-[12px] text-center">{selectedItem.quantity || 1}</span>
-                      <button onClick={() => updateItemQuantity(item.id, 1)} className="text-white/40 hover:text-brand-orange transition-colors">
-                        <Plus className="w-2 h-2" />
+                      <span className="text-[10px] font-bold text-brand-orange min-w-[20px] text-center">{item.quantity || 1}</span>
+                      <button onClick={() => updateItemQuantity(item.id, 1)} className="p-1 bg-white/5 hover:bg-white/10 rounded-sm">
+                        <Plus className="w-2 h-2 text-white/40" />
                       </button>
                     </div>
-                  )}
+                    <div className="flex items-center gap-1">
+                      <span className="text-[8px] text-white/20">R$</span>
+                      <input 
+                        value={maskBRL(item.price).replace('R$', '').trim()}
+                        onChange={(e) => {
+                          const newItems = [...orderItems];
+                          newItems[idx].price = parseBRL(e.target.value);
+                          setOrderItems(newItems);
+                          const newTotal = newItems.reduce((sum, i) => sum + (Number(i.price) * (i.quantity || 1)), 0);
+                          setManualPrice(newTotal);
+                        }}
+                        className="w-20 bg-transparent border-b border-white/10 text-[10px] text-brand-orange text-right outline-none focus:border-brand-orange font-bold"
+                      />
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
+              ))}
+              {orderItems.length === 0 && (
+                <p className="text-[10px] text-white/20 italic">Nenhum item selecionado.</p>
+              )}
+            </div>
+
+            {/* Quick Add List */}
+            <div className="space-y-2">
+              <p className="text-[8px] uppercase tracking-widest text-white/40 font-bold mb-2">Adicionar Produtos Rápidos</p>
+              <div className="max-h-32 overflow-y-auto pr-2 custom-scrollbar space-y-1">
+                {(helpItems || []).map(item => {
+                  const isSelected = orderItems.find(i => i.id === item.id);
+                  return (
+                    <button 
+                      key={item.id}
+                      onClick={() => toggleItem(item)}
+                      className={`w-full flex items-center justify-between p-2 rounded-sm border transition-all text-[10px] uppercase tracking-widest font-bold ${isSelected ? 'bg-brand-orange/10 border-brand-orange/30 text-brand-orange' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'}`}
+                    >
+                      <span>{item.title}</span>
+                      <span className="opacity-60">{maskBRL(item.price)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-1">

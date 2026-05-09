@@ -16,6 +16,7 @@ import {
   Truck,
   AlertCircle
 } from 'lucide-react';
+import { ReasonModal } from '../../../../components/modals/ReasonModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { maskBRL, parseBRL } from '../../../../lib/utils';
 import { useHelpItems } from '../../../../hooks/useHelpItems';
@@ -35,7 +36,8 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [orderItems, setOrderItems] = useState<any[]>([]);
-  const [manualPrice, setManualPrice] = useState(0);
+  const [manualPrice, setManualPrice] = useState(order?.product_price || 0);
+  const [isAskingReason, setIsAskingReason] = useState(false);
   const [status, setStatus] = useState('pending');
 
   useEffect(() => {
@@ -72,6 +74,12 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
     syncTotal(newItems);
   };
 
+  const handleItemCostChange = (idx: number, newCost: number) => {
+    const newItems = [...orderItems];
+    newItems[idx].cost_price = newCost;
+    setOrderItems(newItems);
+  };
+
   const toggleQuickAdd = (item: any) => {
     const exists = orderItems.find(i => i.id === item.id);
     let newItems;
@@ -82,6 +90,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
         id: item.id, 
         name: item.title, 
         price: item.price, 
+        cost_price: item.cost_price || 0,
         quantity: 1,
         image_url: item.image_url 
       }];
@@ -91,6 +100,15 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
   };
 
   const handleSave = async () => {
+    if (status === 'cancelled' && order.status !== 'cancelled') {
+      setIsAskingReason(true);
+      return;
+    }
+
+    await performSave('');
+  };
+
+  const performSave = async (reason: string) => {
     setUpdating(true);
     const itemsText = orderItems.map(item => `${item.quantity || 1}x ${item.name}`).join(', ');
     await onSave({
@@ -101,7 +119,8 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
       product_price: manualPrice,
       total_price: manualPrice,
       items: orderItems,
-      status: status
+      status: status,
+      reason: reason
     });
     setUpdating(false);
   };
@@ -317,7 +336,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                                     </button>
                                   </div>
                                   
-                                  <div className="flex items-center gap-3">
+                                  <div className="flex flex-wrap items-center gap-6">
                                     <div className="text-right">
                                       <p className="text-[8px] uppercase tracking-widest text-white/20 mb-0.5">Preço Unitário</p>
                                       <div className="flex items-center gap-2">
@@ -325,14 +344,25 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                                         <input 
                                           value={maskBRL(item.price).replace('R$', '').trim()}
                                           onChange={e => handleItemPriceChange(idx, parseBRL(e.target.value))}
-                                          className="w-28 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-sm text-brand-orange text-right outline-none focus:border-brand-orange font-mono font-bold"
+                                          className="w-24 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-sm text-brand-orange text-right outline-none focus:border-brand-orange font-mono font-bold"
                                         />
                                       </div>
                                     </div>
-                                    <div className="h-8 w-[1px] bg-white/10 mx-2" />
                                     <div className="text-right">
-                                       <p className="text-[8px] uppercase tracking-widest text-white/20 mb-0.5">Subtotal</p>
-                                       <p className="text-sm text-white font-mono font-bold">{maskBRL(Number(item.price) * (item.quantity || 1))}</p>
+                                      <p className="text-[8px] uppercase tracking-widest text-white/20 mb-0.5">Custo Unitário</p>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-white/40 font-bold">R$</span>
+                                        <input 
+                                          value={maskBRL(item.cost_price || 0).replace('R$', '').trim()}
+                                          onChange={e => handleItemCostChange(idx, parseBRL(e.target.value))}
+                                          className="w-24 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-sm text-white/40 text-right outline-none focus:border-brand-orange font-mono font-bold"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="h-8 w-[1px] bg-white/10" />
+                                    <div className="text-right">
+                                       <p className="text-[8px] uppercase tracking-widest text-emerald-500/60 mb-0.5">Margem Total</p>
+                                       <p className="text-sm text-emerald-500 font-mono font-bold">{maskBRL((Number(item.price) - Number(item.cost_price || 0)) * (item.quantity || 1))}</p>
                                     </div>
                                   </div>
                                 </div>
@@ -382,6 +412,13 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                           className="bg-brand-orange/10 border border-brand-orange/40 pl-10 pr-6 py-4 text-3xl text-brand-orange font-bold outline-none focus:border-brand-orange transition-all w-56 text-right rounded-2xl shadow-[0_0_40px_rgba(180,48,64,0.1)] group-hover:shadow-[0_0_60px_rgba(180,48,64,0.2)]"
                         />
                       </div>
+                    </div>
+                    <div className="w-8 h-[1px] bg-white/10 hidden sm:block" />
+                    <div className="text-center sm:text-left">
+                       <p className="text-[8px] uppercase tracking-widest text-emerald-500 font-bold mb-1">Resultado Líquido</p>
+                       <p className="text-3xl text-emerald-500 font-mono font-bold">
+                         {maskBRL(manualPrice - orderItems.reduce((sum, i) => sum + (Number(i.cost_price || 0) * (i.quantity || 1)), 0))}
+                       </p>
                     </div>
                   </div>
                 </div>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, X, CreditCard, Copy, Target, ExternalLink } from 'lucide-react';
 import { useEventTracking } from '../hooks/useEventTracking';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 
 export function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { variant?: 'default' | 'large', pixKey?: string, vakinhaUrl?: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +14,9 @@ export function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { 
 
   const finalPixKey = pixKey || "ballettatianafigueiredo@gmail.com";
   const finalVakinhaUrl = vakinhaUrl || "https://www.vakinha.com.br/vaquinha/talentos-de-minas-nossa-turma-no-palco-internacional";
+
+  const { settings } = useSiteSettings();
+  const dancersCount = settings?.dancers_count?.value || "22";
 
   const handleCopyPix = async () => {
     try {
@@ -111,7 +115,7 @@ export function DonationDropdown({ variant = 'default', pixKey, vakinhaUrl }: { 
               </a>
 
               <p className="text-[10px] uppercase tracking-[0.3em] opacity-40 leading-relaxed text-center italic mt-4">
-                Sua ajuda cobre custos de 22 bailarinos mineiros em Córdoba, Argentina.
+                Sua ajuda cobre custos de {dancersCount} bailarinos mineiros em Córdoba, Argentina.
               </p>
             </div>
           </motion.div>

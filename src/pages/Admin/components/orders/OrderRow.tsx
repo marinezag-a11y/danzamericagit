@@ -9,6 +9,7 @@ import {
 import { supabase } from '../../../../lib/supabase';
 import { maskBRL } from '../../../../lib/utils';
 import { OrderEditModal } from './OrderEditModal';
+import { ReasonModal } from '../../../../components/modals/ReasonModal';
 
 interface OrderRowProps {
   order: any;
@@ -20,6 +21,8 @@ interface OrderRowProps {
 export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, onAlert }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [isAskingReason, setIsAskingReason] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [status, setStatus] = useState(order?.status || 'pending');
 
   const statusColors = {
@@ -40,7 +43,8 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
               order_id: order.id,
               customer_name: data.customer_name,
               customer_email: data.customer_email,
-              new_status: data.status
+              new_status: data.status,
+              reason: data.reason
             }
           });
         } catch (err) {
@@ -52,6 +56,35 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
     } else {
       onAlert('Erro', result.error, 'danger');
     }
+  };
+
+  const handleConfirmReason = async (reason: string) => {
+    if (!pendingStatus) return;
+    
+    setIsAskingReason(false);
+    setStatus(pendingStatus);
+    setUpdating(true);
+    
+    const result = await onUpdate(order.id, { status: pendingStatus });
+    if (result.success) {
+      try {
+        await supabase.functions.invoke('send-order', {
+          body: {
+            type: 'status_update',
+            order_id: order.id,
+            customer_name: order.customer_name,
+            customer_email: order.customer_email,
+            new_status: pendingStatus,
+            reason: reason
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao enviar e-mail de status:', err);
+      }
+      onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
+    }
+    setUpdating(false);
+    setPendingStatus(null);
   };
 
   return (
@@ -105,10 +138,21 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
           </span>
         </td>
         <td className="py-5 px-6">
+          <span className="text-sm font-display font-bold text-emerald-500 tracking-tight">
+            {maskBRL((order.product_price || 0) - (order.items || []).reduce((sum: number, i: any) => sum + (Number(i.cost_price || 0) * (i.quantity || 1)), 0))}
+          </span>
+        </td>
+        <td className="py-5 px-6">
           <select 
             value={status}
             onChange={async (e) => {
               const newStatus = e.target.value;
+              if (newStatus === 'cancelled') {
+                setPendingStatus(newStatus);
+                setIsAskingReason(true);
+                return;
+              }
+              
               setStatus(newStatus);
               setUpdating(true);
               const result = await onUpdate(order.id, { status: newStatus });
@@ -164,6 +208,19 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
         onClose={() => setIsModalOpen(false)}
         order={order}
         onSave={handleSaveFromModal}
+      />
+
+      <ReasonModal
+        isOpen={isAskingReason}
+        title="Motivo do Cancelamento"
+        message="Por favor, informe o motivo para o cancelamento deste pedido. Este texto será enviado por e-mail para o cliente."
+        confirmLabel="Confirmar Cancelamento"
+        onConfirm={handleConfirmReason}
+        onCancel={() => {
+          setIsAskingReason(false);
+          setPendingStatus(null);
+        }}
+        variant="warning"
       />
     </>
   );

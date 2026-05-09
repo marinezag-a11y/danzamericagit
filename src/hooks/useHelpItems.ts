@@ -7,6 +7,8 @@ export interface HelpItem {
   description: string;
   image_url: string;
   price: number;
+  cost_price?: number;
+  options?: any[];
   button_text: string;
   modal_type: string;
   order: number;

@@ -34,7 +34,13 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
     setSelectedItems(prev => {
       const exists = prev.find(i => i.id === item.id);
       if (exists) return prev.filter(i => i.id !== item.id);
-      return [...prev, { id: item.id, name: item.title, price: item.price, quantity: 1 }];
+      return [...prev, { 
+        id: item.id, 
+        name: item.title, 
+        price: item.price, 
+        cost_price: item.cost_price || 0,
+        quantity: 1 
+      }];
     });
   };
 
@@ -55,7 +61,9 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
     }
     
     setSaving(true);
+    const newOrderId = crypto.randomUUID();
     const orderData = {
+      id: newOrderId,
       customer_name: name,
       customer_phone: phone,
       customer_email: email,

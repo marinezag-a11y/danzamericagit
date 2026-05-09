@@ -15,6 +15,7 @@ import { useProfiles } from '../../../hooks/useProfiles';
 import { useSiteSettings } from '../../../hooks/useSiteSettings';
 import { NotificationSettings } from './ui/NotificationSettings';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
+import { ReasonModal } from '../../../components/modals/ReasonModal';
 import { maskBRL } from '../../../lib/utils';
 import { StatCard } from './ui/StatCard';
 import { OrderRow } from './orders/OrderRow';
@@ -34,19 +35,45 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const [isAddingManually, setIsAddingManually] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [isAskingReason, setIsAskingReason] = useState(false);
 
   const stats = {
     total: orders?.length || 0,
     cancelled: (orders || []).filter(o => o?.status === 'cancelled').length,
-    paid: (orders || []).filter(o => o?.status === 'paid').length,
+    paid: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').length,
     pendingValue: (orders || []).filter(o => o?.status === 'pending').reduce((sum, o) => sum + (o?.product_price || 0), 0),
-    totalValue: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => sum + (o?.product_price || 0), 0)
+    totalValue: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => sum + (o?.product_price || 0), 0),
+    totalNetValue: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => {
+      const items = o?.items || [];
+      const totalCost = items.reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
+      return sum + (o?.product_price || 0) - totalCost;
+    }, 0)
   };
 
   const filteredOrders = (orders || []).filter(o => filter === 'all' || o?.status === filter);
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (reason: string) => {
     if (!orderToDelete) return;
+    
+    setIsAskingReason(false);
+    const order = orders?.find(o => o.id === orderToDelete);
+    
+    if (order) {
+      try {
+        await supabase.functions.invoke('send-order', {
+          body: {
+            type: 'order_deletion',
+            order_id: order.id,
+            customer_name: order.customer_name,
+            customer_email: order.customer_email,
+            reason: reason
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao enviar e-mail de exclusão:', err);
+      }
+    }
+
     setDeleting(true);
     const result = await deleteOrder(orderToDelete);
     if (result.success) {
@@ -88,12 +115,13 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <StatCard icon={<ShoppingBag className="w-5 h-5 text-white/40" />} label="Total de Pedidos" value={stats.total} />
         <StatCard icon={<XCircle className="w-5 h-5 text-red-500" />} label="Cancelados" value={stats.cancelled} valueClass="text-red-500" />
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} label="Pedidos Pagos" value={stats.paid} />
         <StatCard icon={<Clock className="w-5 h-5 text-yellow-500" />} label="Valor Pendente" value={maskBRL(stats.pendingValue)} valueClass="text-yellow-500" />
-        <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Arrecadado" value={maskBRL(stats.totalValue)} bgClass="bg-brand-orange border-brand-orange" labelClass="text-white/80" />
+        <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Bruto" value={maskBRL(stats.totalValue)} bgClass="bg-white/5 border-white/10" labelClass="text-white/40" />
+        <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Líquido" value={maskBRL(stats.totalNetValue)} bgClass="bg-brand-orange border-brand-orange" labelClass="text-white/80" />
       </div>
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mt-12">
@@ -133,6 +161,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
               <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Cliente</th>
               <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Produto</th>
               <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor</th>
+              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold text-emerald-500">Margem Líquida</th>
               <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Status</th>
               <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold text-right">Ações</th>
             </tr>
@@ -158,14 +187,14 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       </div>
 
       {/* Modals */}
-      <ConfirmModal 
+      <ReasonModal
         isOpen={!!orderToDelete}
+        title="Motivo da Exclusão"
+        message="Deseja realmente excluir este pedido? Esta ação não pode ser desfeita. Por favor, informe o motivo para o e-mail de aviso."
+        confirmLabel={deleting ? "Excluindo..." : "Confirmar Exclusão"}
         onConfirm={confirmDelete}
         onCancel={() => setOrderToDelete(null)}
-        title="Excluir Pedido"
-        message="Tem certeza que deseja excluir este registro de pedido? Esta ação removerá o pedido permanentemente do sistema."
         variant="danger"
-        confirmLabel={deleting ? "Excluindo..." : "Sim, Excluir"}
       />
 
       {isAddingManually && (

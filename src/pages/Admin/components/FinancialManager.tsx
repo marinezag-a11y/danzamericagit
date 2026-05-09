@@ -170,64 +170,55 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-        <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-sm">
-          <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-4">Total Entradas</p>
-          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-            <div className="p-2 bg-emerald-500/10 rounded-full shrink-0">
-              <TrendingUp className="w-4 h-4 text-emerald-500" />
-            </div>
-            <p className="text-xl md:text-2xl font-display text-white break-all">
-              {totals.income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm flex flex-col justify-between min-h-[120px]">
+          <div className="flex items-center gap-3 opacity-40">
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <p className="text-[10px] uppercase tracking-widest font-bold">Total Entradas</p>
           </div>
+          <p className="text-xl md:text-2xl font-display text-white mt-4 whitespace-nowrap">
+            {totals.income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\s/g, '\u00A0')}
+          </p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-sm">
-          <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-4">Total Saídas</p>
-          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-            <div className="p-2 bg-red-500/10 rounded-full shrink-0">
-              <TrendingDown className="w-4 h-4 text-red-500" />
-            </div>
-            <p className="text-xl md:text-2xl font-display text-white break-all">
-              {totals.expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm flex flex-col justify-between min-h-[120px]">
+          <div className="flex items-center gap-3 opacity-40">
+            <TrendingDown className="w-4 h-4 text-red-500" />
+            <p className="text-[10px] uppercase tracking-widest font-bold">Total Saídas</p>
           </div>
+          <p className="text-xl md:text-2xl font-display text-white mt-4 whitespace-nowrap">
+            {totals.expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\s/g, '\u00A0')}
+          </p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-sm">
-          <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-4">Saldo Atual</p>
-          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-            <div className="p-2 bg-brand-orange/10 rounded-full shrink-0">
-              <DollarSign className="w-4 h-4 text-brand-orange" />
-            </div>
-            <p className={`text-xl md:text-2xl font-display break-all ${totals.balance >= 0 ? 'text-white' : 'text-red-400'}`}>
-              {totals.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm flex flex-col justify-between min-h-[120px]">
+          <div className="flex items-center gap-3 opacity-40">
+            <DollarSign className="w-4 h-4 text-brand-orange" />
+            <p className="text-[10px] uppercase tracking-widest font-bold">Saldo Atual</p>
           </div>
+          <p className={`text-xl md:text-2xl font-display mt-4 whitespace-nowrap ${totals.balance >= 0 ? 'text-white' : 'text-red-400'}`}>
+            {totals.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\s/g, '\u00A0')}
+          </p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-sm group hover:border-emerald-500/50 transition-all">
-          <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-4">Pedidos Pagos</p>
-          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-            <div className="p-2 bg-emerald-500/10 rounded-full shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-all">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 group-hover:text-white transition-all" />
-            </div>
-            <p className="text-xl md:text-2xl font-display text-white break-all">
-              {totals.paidOrders.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm flex flex-col justify-between min-h-[120px] group hover:border-emerald-500/50 transition-all">
+          <div className="flex items-center gap-3 opacity-40">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 group-hover:text-white transition-all" />
+            <p className="text-[10px] uppercase tracking-widest font-bold">Pedidos Pagos</p>
           </div>
+          <p className="text-xl md:text-2xl font-display text-white mt-4 whitespace-nowrap">
+            {totals.paidOrders.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\s/g, '\u00A0')}
+          </p>
         </div>
 
-        <div className="bg-brand-orange p-6 md:p-8 rounded-sm shadow-2xl relative overflow-hidden">
-          <p className="text-[10px] uppercase tracking-widest text-white/60 font-bold mb-4 relative z-10">Progresso da Meta</p>
-          <div className="flex items-center justify-between relative z-10">
+        <div className="bg-brand-orange p-6 rounded-sm shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[120px]">
+          <p className="text-[10px] uppercase tracking-widest text-white/60 font-bold relative z-10">Progresso da Meta</p>
+          <div className="flex items-center justify-between relative z-10 mt-4">
             <p className="text-3xl md:text-4xl font-display text-white font-light">{totals.percentage.toFixed(0)}%</p>
-            <div className="h-10 w-10 md:h-12 md:w-12 border-2 border-white/20 rounded-full flex items-center justify-center">
-              <div className="w-6 h-6 md:w-8 md:h-8 bg-white/10 rounded-full animate-pulse" />
+            <div className="h-10 w-10 border-2 border-white/20 rounded-full flex items-center justify-center">
+              <div className="w-6 h-6 bg-white/10 rounded-full animate-pulse" />
             </div>
           </div>
-          {/* Subtle background decoration */}
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/5 rounded-full blur-2xl pointer-events-none" />
         </div>
       </div>

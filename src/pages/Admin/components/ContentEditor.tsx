@@ -24,7 +24,7 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [expandedSection, setExpandedSection] = useState<string | null>('01. Seção: Nossa Essência');
+  const [expandedSection, setExpandedSection] = useState<string | null>('01. Configurações Globais');
 
   useEffect(() => {
     if (settings && Object.keys(settings).length > 0 && Object.keys(localValues).length === 0) {
@@ -61,20 +61,20 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
 
   const sections = [
     {
-      title: '01. Seção: Nossa Essência',
-      keys: ['essencia_title', 'essencia_text', 'essencia_image']
-    },
-    {
-      title: '02. Seção: A Jornada',
-      keys: ['jornada_title', 'jornada_image']
-    },
-    {
-      title: '03. Seção: O Desafio',
+      title: '01. Configurações Globais',
       keys: []
     },
     {
-      title: '04. Configurações Globais',
-      keys: ['pix_key', 'vakinha_url']
+      title: '02. Seção: Nossa Essência',
+      keys: ['essencia_title', 'essencia_text', 'essencia_image']
+    },
+    {
+      title: '03. Seção: A Jornada',
+      keys: ['jornada_title', 'jornada_image']
+    },
+    {
+      title: '04. Seção: O Desafio',
+      keys: []
     },
     {
       title: '05. Loja: Compre um Sonho',
@@ -201,32 +201,71 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
                     )}
 
                     {/* Nested Managers */}
-                    {section.title === '01. Seção: Nossa Essência' && (
+                    {section.title === '01. Configurações Globais' && (
+                      <div className="border-t border-white/5 pt-12 space-y-12">
+                        {/* Custom Card for Donation Links */}
+                        <div className="bg-black/20 border border-white/5 p-8 rounded-2xl shadow-inner relative overflow-hidden group">
+                          <div className="absolute top-0 left-0 w-1 h-full bg-brand-orange/50 group-hover:bg-brand-orange transition-colors"></div>
+                          <h4 className="text-2xl font-serif italic text-white/90 mb-8 pl-4">Links de Doação</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pl-4">
+                            <div className="space-y-4">
+                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Chave PIX</label>
+                              <input 
+                                type="text" 
+                                className="w-full bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/50 outline-none transition-all text-white/80 rounded-xl"
+                                value={localValues['pix_key'] || ''}
+                                onChange={(e) => setLocalValues(prev => ({ ...prev, pix_key: e.target.value }))}
+                                placeholder="Ex: email@dominio.com"
+                              />
+                            </div>
+                            <div className="space-y-4">
+                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Link Vakinha</label>
+                              <input 
+                                type="text" 
+                                className="w-full bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/50 outline-none transition-all text-white/80 rounded-xl"
+                                value={localValues['vakinha_url'] || ''}
+                                onChange={(e) => setLocalValues(prev => ({ ...prev, vakinha_url: e.target.value }))}
+                                placeholder="https://vakinha.com.br/..."
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end mt-8 pl-4">
+                            <button 
+                              onClick={() => handleSaveSection('Links de Doação', ['pix_key', 'vakinha_url'])}
+                              disabled={saving === 'Links de Doação'}
+                              className="px-10 py-4 bg-brand-orange text-white font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-white hover:text-brand-dark transition-all flex items-center gap-3 shadow-xl disabled:opacity-50"
+                            >
+                              {saving === 'Links de Doação' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                              Salvar Links
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="pt-8 border-t border-white/5">
+                          <h3 className="text-2xl font-serif italic mb-10 text-white/90">Gerenciador de Frases (Ticker Bar)</h3>
+                          <TickerManager onAlert={onAlert} />
+                        </div>
+                      </div>
+                    )}
+
+                    {section.title === '02. Seção: Nossa Essência' && (
                       <div className="text-[10px] text-white/20 italic text-center mt-4">
                         * Esta seção controla os textos principais da página inicial.
                       </div>
                     )}
 
-                    {section.title === '02. Seção: A Jornada' && (
+                    {section.title === '03. Seção: A Jornada' && (
                       <div className="border-t border-white/5 pt-12">
                         <JourneyManager onAlert={onAlert} />
                       </div>
                     )}
 
-                    {section.title === '03. Seção: O Desafio' && (
+                    {section.title === '04. Seção: O Desafio' && (
                       <div className="border-t border-white/5 pt-12">
                         <FundraisingManager onAlert={onAlert} />
                       </div>
                     )}
 
-                    {section.title === '04. Configurações Globais' && (
-                      <div className="border-t border-white/5 pt-12 space-y-12">
-                        <div>
-                          <h4 className="text-xl font-serif italic text-white/60 mb-8">Gerenciador de Frases (Ticker Bar)</h4>
-                          <TickerManager onAlert={onAlert} />
-                        </div>
-                      </div>
-                    )}
 
                     {section.title === '05. Loja: Compre um Sonho' && (
                       <div className="border-t border-white/5 pt-12">

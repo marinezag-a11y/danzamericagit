@@ -22,7 +22,7 @@ export function useFinancial() {
       setLoading(true);
       if (!supabase) return;
       
-      const [recordsRes, ordersRes] = await Promise.all([
+      const [recordsRes, ordersRes, rafflesRes] = await Promise.all([
         supabase
           .from('financial_records')
           .select('*')
@@ -30,16 +30,23 @@ export function useFinancial() {
         supabase
           .from('help_orders')
           .select('total_price')
+          .in('status', ['paid', 'sent']),
+        supabase
+          .from('raffle_orders')
+          .select('total_price')
           .eq('status', 'paid')
       ]);
 
       if (recordsRes.error) throw recordsRes.error;
       if (ordersRes.error) throw ordersRes.error;
+      if (rafflesRes.error) throw rafflesRes.error;
 
       setRecords(recordsRes.data || []);
       
       const ordersSum = (ordersRes.data || []).reduce((acc, curr) => acc + (parseFloat(curr.total_price) || 0), 0);
-      setPaidOrdersTotal(ordersSum);
+      const rafflesSum = (rafflesRes.data || []).reduce((acc, curr) => acc + (parseFloat(curr.total_price) || 0), 0);
+      
+      setPaidOrdersTotal(ordersSum + rafflesSum);
 
     } catch (err: any) {
       setError(err.message);

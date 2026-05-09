@@ -87,7 +87,7 @@ export function useAnalytics() {
     dailyViews: [],
   });
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<AnalyticsPeriod>('7d');
+  const [period, setPeriod] = useState<AnalyticsPeriod>('all');
   const [error, setError] = useState<string | null>(null);
 
   const fetchAnalytics = useCallback(async () => {

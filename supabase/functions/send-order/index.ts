@@ -55,8 +55,12 @@ serve(async (req) => {
       selected_numbers = [], 
       total_price, 
       new_status, 
-      order_id 
+      order_id,
+      id,
+      reason
     } = body
+
+    const finalOrderId = order_id || id
 
     if (!customer_email) {
       console.error('Error: customer_email is missing')
@@ -102,7 +106,10 @@ serve(async (req) => {
     const itemsHtml = safeItems.length > 0 
       ? safeItems.map((item: any) => `
           <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 12px 0; color: #333; font-size: 14px;">${item.name || item.title || 'Item'}</td>
+            <td style="padding: 12px 0; color: #333; font-size: 14px;">
+              ${item.name || item.title || 'Item'}
+              ${item.option ? `<br/><span style="font-size: 11px; color: #999;">Opção: ${item.option}</span>` : ''}
+            </td>
             <td style="padding: 12px 0; text-align: right; color: #FF5A1F; font-weight: bold; font-size: 14px;">R$ ${Number(item.price || 0).toFixed(2)}</td>
           </tr>
         `).join('')
@@ -140,7 +147,13 @@ serve(async (req) => {
             </div>
             <div style="padding: 40px; color: #333;">
               <p style="font-size: 18px; margin-bottom: 25px;">Olá, <strong>${customer_name}</strong>,</p>
-              <p style="line-height: 1.6; color: #666;">Houve uma atualização no seu pedido <strong>#${String(order_id || '').slice(0, 8)}</strong>.</p>
+              <p style="line-height: 1.6; color: #666;">Houve uma atualização no seu pedido <strong>#${String(finalOrderId || '').slice(0, 8)}</strong>.</p>
+              ${reason ? `
+                <div style="margin: 25px 0; padding: 20px; background-color: #f9f9f9; border-left: 4px solid ${currentColor};">
+                  <p style="margin: 0 0 5px 0; font-[10px] uppercase font-bold text-gray-400;">Motivo / Observação:</p>
+                  <p style="margin: 0; font-style: italic; color: #333;">"${reason}"</p>
+                </div>
+              ` : ''}
               <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
                 <p style="margin: 5px 0;">📱 <strong>WhatsApp:</strong> (31) 99361-5488</p>
                 <p style="margin: 5px 0;">📧 <strong>E-mail:</strong> nucleodedanca@yahoo.com.br</p>
@@ -163,7 +176,10 @@ serve(async (req) => {
         from: 'Danzamerica 2026 <pedidos@nucleotatianafigueiredo.com.br>',
         to: adminEmails,
         subject: `[LOG ADM] Status Alterado: ${customer_name} -> ${statusLabels[finalStatus]}`,
-        html: `<p>O status do pedido de <b>${customer_name}</b> (${customer_email}) foi alterado para: <b>${statusLabels[finalStatus]}</b>.</p>`,
+        html: `
+          <p>O status do pedido de <b>${customer_name}</b> (${customer_email}) foi alterado para: <b>${statusLabels[finalStatus]}</b>.</p>
+          ${reason ? `<p><b>Motivo:</b> ${reason}</p>` : ''}
+        `,
       })
 
       return new Response(JSON.stringify({ success: true }), { 
@@ -210,15 +226,21 @@ serve(async (req) => {
       })
 
       // Update Database Status if at least one email was sent
-      if ((adminRes.ok || customerRes.ok) && order_id) {
+      if ((adminRes.ok || customerRes.ok) && finalOrderId) {
         const table = type === 'raffle_order' ? 'raffle_orders' : 'help_orders'
-        console.log(`[DB Update] Marking ${table}:${order_id} as notified`)
+        console.log(`[DB Update] Marking ${table}:${finalOrderId} as notified`)
         const { error: dbError } = await supabase
           .from(table)
           .update({ notification_sent: true })
-          .eq('id', order_id)
+          .eq('id', finalOrderId)
         
         if (dbError) console.error('[DB Error] Failed to update notification_sent:', dbError)
+      } else {
+        console.warn('[DB Skip] No emails sent successfully or no order_id provided', { 
+          adminOk: adminRes.ok, 
+          customerOk: customerRes.ok, 
+          finalOrderId 
+        })
       }
 
       return new Response(JSON.stringify({ success: true }), { 

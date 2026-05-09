@@ -30,6 +30,9 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
   const [newDescription, setNewDescription] = useState('');
   const [adding, setAdding] = useState(false);
   const [newPrice, setNewPrice] = useState(0);
+  const [newCostPrice, setNewCostPrice] = useState(0);
+  const [newOptions, setNewOptions] = useState<string[]>([]);
+  const [newOptionValue, setNewOptionValue] = useState('');
   const [newImageUrl, setNewImageUrl] = useState('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
 
   const handleAddNew = async () => {
@@ -40,6 +43,8 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
       description: newDescription,
       image_url: newImageUrl,
       price: newPrice,
+      cost_price: newCostPrice,
+      options: newOptions,
       button_text: 'Fazer Pedido',
       modal_type: 'store',
       order: (items || []).length + 1
@@ -50,6 +55,8 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
       setNewTitle('');
       setNewDescription('');
       setNewPrice(0);
+      setNewCostPrice(0);
+      setNewOptions([]);
       setNewImageUrl('https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=2670&auto=format&fit=crop');
       onAlert('Sucesso!', 'Item adicionado com sucesso.', 'info');
     } else {
@@ -116,13 +123,23 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
                           className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
                         />
                       </div>
-                      <div className="space-y-4">
-                        <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço Sugerido</label>
-                        <input 
-                          type="text" value={maskBRL(newPrice)}
-                          onChange={(e) => setNewPrice(parseBRL(e.target.value))}
-                          className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
-                        />
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço Sugerido</label>
+                          <input 
+                            type="text" value={maskBRL(newPrice)}
+                            onChange={(e) => setNewPrice(parseBRL(e.target.value))}
+                            className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
+                          />
+                        </div>
+                        <div className="space-y-4">
+                          <label className="block text-[10px] uppercase tracking-[0.3em] text-white/40 font-bold ml-1">Valor de Custo (Interno)</label>
+                          <input 
+                            type="text" value={maskBRL(newCostPrice)}
+                            onChange={(e) => setNewCostPrice(parseBRL(e.target.value))}
+                            className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/40 font-bold rounded-2xl shadow-inner text-xl"
+                          />
+                        </div>
                       </div>
                       <div className="space-y-4">
                         <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Descrição Curta</label>
@@ -131,6 +148,49 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
                           onChange={(e) => setNewDescription(e.target.value)}
                           className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl resize-none shadow-inner"
                         />
+                      </div>
+
+                      <div className="space-y-4">
+                        <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Opções do Produto (ex: P, M, G, Masc, Fem)</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" value={newOptionValue}
+                            onChange={(e) => setNewOptionValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (newOptionValue.trim()) {
+                                  setNewOptions([...newOptions, newOptionValue.trim()]);
+                                  setNewOptionValue('');
+                                }
+                              }
+                            }}
+                            placeholder="Digite e aperte Enter"
+                            className="flex-1 bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-xl shadow-inner"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              if (newOptionValue.trim()) {
+                                setNewOptions([...newOptions, newOptionValue.trim()]);
+                                setNewOptionValue('');
+                              }
+                            }}
+                            className="px-6 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {newOptions.map((opt, i) => (
+                            <span key={i} className="px-3 py-1 bg-brand-orange/10 border border-brand-orange/20 text-brand-orange text-[10px] uppercase font-bold rounded-lg flex items-center gap-2">
+                              {opt}
+                              <button type="button" onClick={() => setNewOptions(newOptions.filter((_, idx) => idx !== i))}>
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     
@@ -202,6 +262,9 @@ const HelpItemAccordion: React.FC<HelpItemAccordionProps> = ({ item, index, onUp
   const [localDescription, setLocalDescription] = useState(item.description);
   const [localImageUrl, setLocalImageUrl] = useState(item.image_url);
   const [localPrice, setLocalPrice] = useState(item.price || 0);
+  const [localCostPrice, setLocalCostPrice] = useState(item.cost_price || 0);
+  const [localOptions, setLocalOptions] = useState<string[]>(item.options || []);
+  const [optionValue, setOptionValue] = useState('');
   const [itemToDelete, setItemToDelete] = useState<boolean>(false);
 
   useEffect(() => {
@@ -210,6 +273,8 @@ const HelpItemAccordion: React.FC<HelpItemAccordionProps> = ({ item, index, onUp
       setLocalDescription(item.description);
       setLocalImageUrl(item.image_url);
       setLocalPrice(item.price || 0);
+      setLocalCostPrice(item.cost_price || 0);
+      setLocalOptions(item.options || []);
     }
   }, [item, isOpen]);
 
@@ -219,7 +284,9 @@ const HelpItemAccordion: React.FC<HelpItemAccordionProps> = ({ item, index, onUp
       title: localTitle,
       description: localDescription,
       image_url: localImageUrl,
-      price: localPrice
+      price: localPrice,
+      cost_price: localCostPrice,
+      options: localOptions
     });
     setSaving(false);
     if (result.success) {
@@ -280,13 +347,23 @@ const HelpItemAccordion: React.FC<HelpItemAccordionProps> = ({ item, index, onUp
                       className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
                     />
                   </div>
-                  <div className="space-y-4">
-                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço Sugerido</label>
-                    <input 
-                      type="text" value={maskBRL(localPrice)}
-                      onChange={(e) => setLocalPrice(parseBRL(e.target.value))}
-                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
-                    />
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço Sugerido</label>
+                      <input 
+                        type="text" value={maskBRL(localPrice)}
+                        onChange={(e) => setLocalPrice(parseBRL(e.target.value))}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-white/40 font-bold ml-1">Valor de Custo (Interno)</label>
+                      <input 
+                        type="text" value={maskBRL(localCostPrice)}
+                        onChange={(e) => setLocalCostPrice(parseBRL(e.target.value))}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/40 font-bold rounded-2xl shadow-inner text-xl"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-4">
                     <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Descrição</label>
@@ -295,6 +372,49 @@ const HelpItemAccordion: React.FC<HelpItemAccordionProps> = ({ item, index, onUp
                       onChange={(e) => setLocalDescription(e.target.value)}
                       className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl resize-none shadow-inner"
                     />
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Opções do Produto</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" value={optionValue}
+                        onChange={(e) => setOptionValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (optionValue.trim()) {
+                              setLocalOptions([...localOptions, optionValue.trim()]);
+                              setOptionValue('');
+                            }
+                          }
+                        }}
+                        placeholder="Adicionar opção"
+                        className="flex-1 bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-xl shadow-inner"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (optionValue.trim()) {
+                            setLocalOptions([...localOptions, optionValue.trim()]);
+                            setOptionValue('');
+                          }
+                        }}
+                        className="px-6 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {localOptions.map((opt, i) => (
+                        <span key={i} className="px-3 py-1 bg-brand-orange/10 border border-brand-orange/20 text-brand-orange text-[10px] uppercase font-bold rounded-lg flex items-center gap-2">
+                          {opt}
+                          <button type="button" onClick={() => setLocalOptions(localOptions.filter((_, idx) => idx !== i))}>
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

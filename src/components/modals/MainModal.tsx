@@ -4,6 +4,7 @@ import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mai
 import { useHelpOrders } from '../../hooks/useHelpOrders';
 import { HelpItem } from '../../hooks/useHelpItems';
 import { supabase } from '../../lib/supabase';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
 
 export type ModalType = 'store' | 'raffle' | 'event' | 'donation' | 'contact' | null;
 
@@ -13,6 +14,7 @@ interface Product {
   price: number;
   image: string;
   description: string;
+  options?: string[];
 }
 
 interface MainModalProps {
@@ -26,6 +28,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   const { addOrder } = useHelpOrders();
   
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -43,7 +46,8 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
       name: item?.title || 'Item sem nome',
       price: Number(item?.price) || 0,
       description: item?.description || '',
-      image: item?.image_url || 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=800&auto=format&fit=crop'
+      image: item?.image_url || 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=800&auto=format&fit=crop',
+      options: item?.options || []
     }));
   }, [helpItems]);
 
@@ -68,8 +72,17 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
       const newQuantities = { ...prev };
       if (newQuantities[id]) {
         delete newQuantities[id];
+        setSelectedOptions(opts => {
+          const newOpts = { ...opts };
+          delete newOpts[id];
+          return newOpts;
+        });
       } else {
         newQuantities[id] = 1;
+        const product = products.find(p => p.id === id);
+        if (product?.options?.length) {
+          setSelectedOptions(opts => ({ ...opts, [id]: product.options![0] }));
+        }
       }
       return newQuantities;
     });
@@ -101,6 +114,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
   const resetForm = () => {
     setQuantities({});
+    setSelectedOptions({});
     setCustomerName('');
     setCustomerEmail('');
     setCustomerPhone('');
@@ -110,9 +124,12 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
     setCopied(false);
   };
 
+  const { settings } = useSiteSettings();
+  const pixKey = settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
+
   const handleCopyPix = async () => {
     try {
-      await navigator.clipboard.writeText('ballettatianafigueiredo@gmail.com');
+      await navigator.clipboard.writeText(pixKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     } catch (err) {
@@ -133,14 +150,15 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         customer_name: customerName || 'Cliente sem nome',
         customer_email: customerEmail || '',
         customer_phone: customerPhone || '',
-        product_name: selectedProducts.map(p => `${quantities[p.id] || 1}x ${p.name || 'Produto'}`).join(', '),
+        product_name: selectedProducts.map(p => `${quantities[p.id] || 1}x ${p.name || 'Produto'}${selectedOptions[p.id] ? ` (${selectedOptions[p.id]})` : ''}`).join(', '),
         product_price: totalPrice,
         total_price: totalPrice,
         items: selectedProducts.map(p => ({ 
           id: p.id, 
           name: p.name || 'Produto', 
           price: p.price || 0,
-          quantity: quantities[p.id] || 1
+          quantity: quantities[p.id] || 1,
+          option: selectedOptions[p.id] || null
         })),
         status: 'pending' as const
       };
@@ -217,51 +235,83 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     return (
                       <div 
                         key={product.id} 
-                        className={`p-6 flex flex-col sm:flex-row gap-6 items-center transition-all border group ${isSelected ? 'bg-brand-orange/5 border-brand-orange shadow-md' : 'bg-brand-grey border-transparent hover:border-brand-dark/10'}`}
+                        className={`p-6 flex flex-col gap-6 transition-all border group ${isSelected ? 'bg-brand-orange/5 border-brand-orange shadow-md' : 'bg-brand-grey border-transparent hover:border-brand-dark/10'}`}
                       >
+                        {/* Top: Image and Text */}
                         <div 
-                          className="flex gap-6 items-center flex-1 w-full cursor-pointer"
+                          className="flex gap-6 items-start cursor-pointer w-full"
                           onClick={() => toggleProduct(product.id)}
                         >
-                          <div className="relative w-20 h-20 overflow-hidden bg-white border border-brand-dark/5 shrink-0">
+                          <div className="relative w-24 h-24 overflow-hidden bg-white border border-brand-dark/5 shrink-0 shadow-sm">
                             <img 
                               src={product.image} 
                               className="w-full h-full object-cover transition-transform group-hover:scale-110" 
                               alt={product.name}
                             />
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-serif text-lg text-brand-dark leading-tight mb-1">{product.name}</h4>
-                            <p className="text-brand-orange font-display">R$ {product.price.toFixed(2)}</p>
+                          <div className="flex-1 min-w-0 pt-1">
+                            <h4 className="font-serif text-xl text-brand-dark leading-tight mb-2">{product.name}</h4>
+                            <p className="text-brand-orange font-display text-lg">R$ {product.price.toFixed(2)}</p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                          {quantities[product.id] && (
-                            <div className="flex items-center bg-white border border-brand-dark/10 rounded-full p-1 shadow-sm">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, -1); }}
-                                className="p-2 hover:text-brand-orange transition-colors"
+                        {/* Bottom: Options and Quantity Controls */}
+                        {isSelected && (
+                          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pt-4 border-t border-brand-dark/5">
+                            {product.options && product.options.length > 0 ? (
+                              <div className="flex-1">
+                                <label className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold block mb-3 opacity-80 italic">Escolha uma opção:</label>
+                                <div className="flex flex-row flex-wrap items-center gap-2">
+                                  {product.options.map(opt => (
+                                    <button
+                                      key={opt}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedOptions(prev => ({ ...prev, [product.id]: opt }));
+                                      }}
+                                      className={`h-10 min-w-[44px] px-4 flex items-center justify-center text-[12px] uppercase tracking-widest font-extrabold border transition-all rounded-md ${
+                                        selectedOptions[product.id] === opt
+                                          ? 'bg-brand-orange border-brand-orange text-white shadow-lg scale-105'
+                                          : 'bg-white border-brand-dark/10 text-brand-dark/40 hover:border-brand-orange/40 hover:text-brand-orange'
+                                      }`}
+                                    >
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex-1"></div>
+                            )}
+
+                            <div className="flex items-center gap-4 self-start sm:self-auto shrink-0">
+                              <div className="flex items-center bg-white border border-brand-dark/10 rounded-full p-1 shadow-sm">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, -1); }}
+                                  className="p-3 hover:text-brand-orange transition-colors"
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="w-10 text-center text-sm font-bold text-brand-dark">{quantities[product.id]}</span>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, 1); }}
+                                  className="p-3 hover:text-brand-orange transition-colors"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              <div 
+                                onClick={() => toggleProduct(product.id)}
+                                className="w-12 h-12 rounded-full border flex items-center justify-center transition-all cursor-pointer bg-brand-orange border-brand-orange text-white shadow-md hover:scale-105"
+                                title="Remover item"
                               >
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <span className="w-8 text-center text-xs font-bold text-brand-dark">{quantities[product.id]}</span>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, 1); }}
-                                className="p-2 hover:text-brand-orange transition-colors"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
+                                <CheckCircle className="w-6 h-6" />
+                              </div>
                             </div>
-                          )}
-
-                          <div 
-                            onClick={() => toggleProduct(product.id)}
-                            className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all cursor-pointer ${quantities[product.id] ? 'bg-brand-orange border-brand-orange text-white' : 'border-brand-dark/20'}`}
-                          >
-                            {quantities[product.id] && <CheckCircle className="w-4 h-4" />}
                           </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
@@ -279,7 +329,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     </p>
                     <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-4 text-center">
                       <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold">Chave PIX para Pagamento</span>
-                      <code className="text-brand-dark font-bold text-base md:text-lg break-all">ballettatianafigueiredo@gmail.com</code>
+                      <code className="text-brand-dark font-bold text-base md:text-lg break-all">{pixKey}</code>
                       <button 
                         onClick={handleCopyPix}
                         className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors"
@@ -319,7 +369,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                           <div key={p.id} className="flex justify-between items-center text-sm font-serif italic text-brand-dark/60">
                             <div className="flex gap-2 items-center">
                               <span className="w-6 h-6 rounded-full bg-brand-orange/10 flex items-center justify-center text-[10px] text-brand-orange font-bold not-italic">{quantities[p.id]}x</span>
-                              <span>{p.name}</span>
+                              <span>{p.name} {selectedOptions[p.id] && <span className="text-[10px] opacity-60 ml-1">({selectedOptions[p.id]})</span>}</span>
                             </div>
                             <span>R$ {(p.price * (quantities[p.id] || 0)).toFixed(2)}</span>
                           </div>

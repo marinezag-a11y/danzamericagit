@@ -16,6 +16,7 @@ import {
   Smartphone,
   Share2,
   ShoppingCart,
+  ShoppingBag,
   TrendingUp
 } from 'lucide-react';
 import { useAnalytics, AnalyticsPeriod } from '../../../hooks/useAnalytics';

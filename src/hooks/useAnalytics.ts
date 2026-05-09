@@ -28,6 +28,11 @@ export interface TrafficSource {
   count: number;
 }
 
+export interface PeakHour {
+  hour: number;
+  count: number;
+}
+
 export interface AnalyticsData {
   totalViews: number;
   uniqueVisitors: number;
@@ -38,6 +43,9 @@ export interface AnalyticsData {
   deviceBreakdown: DeviceBreakdown;
   trafficSources: TrafficSource[];
   dailyViews: DailyView[];
+  conversionRate: string;
+  peakHours: PeakHour[];
+  topProducts: TopEvent[];
 }
 
 function getDateFilter(period: AnalyticsPeriod): string | null {
@@ -85,6 +93,9 @@ export function useAnalytics() {
     deviceBreakdown: { desktop: 0, mobile: 0 },
     trafficSources: [],
     dailyViews: [],
+    conversionRate: '0.0',
+    peakHours: [],
+    topProducts: [],
   });
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<AnalyticsPeriod>('all');
@@ -205,6 +216,42 @@ export function useAnalytics() {
       });
       const dailyViews = Object.entries(dailyMap).map(([date, count]) => ({ date, count }));
 
+      // Horários de Pico (heatmap)
+      const peakHoursMap = Array(24).fill(0);
+      rows.forEach((r: any) => {
+        const date = new Date(r.created_at);
+        const hour = date.getHours();
+        if (hour >= 0 && hour < 24) {
+          peakHoursMap[hour]++;
+        }
+      });
+      const peakHours = peakHoursMap.map((count, hour) => ({ hour, count }));
+
+      // Produtos Mais Desejados (baseado nos eventos "Abrir ...")
+      const productClicks: Record<string, number> = {};
+      (eventRows || []).forEach((r: any) => {
+        if (r.event_name.startsWith('Abrir ')) {
+          const product = r.event_name.replace('Abrir ', '');
+          productClicks[product] = (productClicks[product] || 0) + 1;
+        }
+      });
+      const topProducts = Object.entries(productClicks)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([name, count]) => ({ name, count }));
+
+      // Taxa de Conversão (Pedidos Loja + Rifas)
+      let ordersQuery = supabase.from('help_orders').select('id', { count: 'exact', head: true });
+      if (dateFilter) ordersQuery = ordersQuery.gte('created_at', dateFilter);
+      const { count: ordersCount } = await ordersQuery;
+
+      let rafflesQuery = supabase.from('raffle_purchases').select('id', { count: 'exact', head: true });
+      if (dateFilter) rafflesQuery = rafflesQuery.gte('created_at', dateFilter);
+      const { count: rafflesCount } = await rafflesQuery;
+
+      const totalConversions = (ordersCount || 0) + (rafflesCount || 0);
+      const conversionRate = uniqueVisitors > 0 ? ((totalConversions / uniqueVisitors) * 100).toFixed(1) : '0.0';
+
       setData({
         totalViews,
         uniqueVisitors,
@@ -215,6 +262,9 @@ export function useAnalytics() {
         deviceBreakdown,
         trafficSources,
         dailyViews,
+        conversionRate,
+        peakHours,
+        topProducts,
       });
     } catch (err) {
       console.error('[Analytics] Error:', err);

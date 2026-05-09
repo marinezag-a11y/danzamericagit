@@ -14,7 +14,9 @@ import {
   BarChart3, 
   Monitor,
   Smartphone,
-  Share2
+  Share2,
+  ShoppingCart,
+  TrendingUp
 } from 'lucide-react';
 import { useAnalytics, AnalyticsPeriod } from '../../../hooks/useAnalytics';
 
@@ -188,7 +190,7 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
       </motion.div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -257,6 +259,24 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
           </div>
           <p className="text-4xl font-sans text-white mb-1">
             {data.bounceRate}%
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="bg-white/5 border border-white/10 p-8 group hover:border-brand-orange/30 transition-all duration-500"
+        >
+          <p className="text-[9px] uppercase tracking-widest text-pink-500 font-bold mb-4">Taxa de Conversão (Vendas/Doações)</p>
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 bg-pink-500/10 rounded-full group-hover:bg-pink-500/20 transition-all">
+              <TrendingUp className="w-5 h-5 text-pink-500" />
+            </div>
+            <span className="text-[9px] uppercase tracking-widest text-white/20 font-bold">Conversão</span>
+          </div>
+          <p className="text-4xl font-sans text-white mb-1">
+            {data.conversionRate}%
           </p>
         </motion.div>
       </div>
@@ -494,6 +514,96 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
             <div className="flex flex-col items-center justify-center py-12 text-white/20">
               <Share2 className="w-8 h-8 mb-4 opacity-10" />
               <p className="text-[10px] uppercase tracking-widest font-bold">Sem dados de tráfego</p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Row 4: Novas Estatísticas */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="lg:col-span-2 bg-white/5 border border-white/10 p-8"
+        >
+          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Quando o site é mais acessado</p>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 bg-brand-orange/10 rounded-full">
+              <Clock className="w-4 h-4 text-brand-orange" />
+            </div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Horários de Pico</h4>
+          </div>
+
+          <div className="flex items-end gap-1 sm:gap-2 h-40 pt-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            {data.peakHours.map((hourData, idx) => {
+              const maxPeak = Math.max(...data.peakHours.map(h => h.count), 1);
+              const barHeight = (hourData.count / maxPeak) * 100;
+              return (
+                <div key={idx} className="flex-1 min-w-[20px] flex flex-col items-center gap-2 group">
+                  <span className={`text-[8px] font-bold transition-all duration-300 opacity-0 group-hover:opacity-100 ${
+                    hourData.count > 0 ? 'text-brand-orange' : 'text-white/30'
+                  }`}>
+                    {hourData.count}
+                  </span>
+                  <div className="w-full bg-white/5 rounded-t-sm relative h-full overflow-hidden flex items-end group-hover:bg-white/10 transition-all">
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max(barHeight, hourData.count > 0 ? 5 : 0)}%` }}
+                      transition={{ delay: 0.4 + idx * 0.02, duration: 0.8 }}
+                      className="w-full bg-gradient-to-t from-brand-orange/40 to-brand-orange relative"
+                    />
+                  </div>
+                  <span className="text-[8px] text-white/30 font-bold">{hourData.hour}h</span>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white/5 border border-white/10 p-8"
+        >
+          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Interesse em produtos</p>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 bg-brand-orange/10 rounded-full">
+              <ShoppingCart className="w-4 h-4 text-brand-orange" />
+            </div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Mais Desejados</h4>
+          </div>
+
+          {data.topProducts && data.topProducts.length > 0 ? (
+            <div className="space-y-5">
+              {data.topProducts.map((product, idx) => {
+                const maxProdClicks = Math.max(...data.topProducts.map(p => p.count), 1);
+                const prodPercentage = (product.count / maxProdClicks) * 100;
+                return (
+                  <div key={idx} className="group">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs text-white/60 font-sans truncate max-w-[160px] group-hover:text-white transition-colors">
+                        {product.name}
+                      </span>
+                      <span className="text-[10px] text-brand-orange font-bold">{product.count} clicks</span>
+                    </div>
+                    <div className="h-[2px] w-full bg-white/5 relative overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${prodPercentage}%` }}
+                        transition={{ delay: 0.5 + idx * 0.05, duration: 0.6 }}
+                        className="absolute top-0 left-0 h-full bg-brand-orange/60 group-hover:bg-brand-orange transition-all"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-white/20">
+              <ShoppingCart className="w-8 h-8 mb-4 opacity-10" />
+              <p className="text-[10px] uppercase tracking-widest font-bold">Sem dados de produtos</p>
             </div>
           )}
         </motion.div>

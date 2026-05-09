@@ -81,7 +81,7 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
       .rpt-header h1{font-size:22px;font-weight:800;letter-spacing:-0.5px}
       .rpt-header .subtitle{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-top:2px}
       .rpt-header .meta{text-align:right;font-size:10px;color:#999;line-height:1.6}
-      .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+      .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
       .kpi-card{border:1px solid #e5e5e5;padding:14px 16px;border-radius:4px;background:#fafafa}
       .kpi-card .label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#999;font-weight:700;margin-bottom:6px}
       .kpi-card .value{font-size:26px;font-weight:800;color:#1a1a1a;line-height:1.1}
@@ -644,6 +644,11 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
               <p className="value">{data.bounceRate}%</p>
               <p className="desc">Taxa de saída</p>
             </div>
+            <div className="kpi-card">
+              <p className="label">Conversão</p>
+              <p className="value">{data.conversionRate}%</p>
+              <p className="desc">Vendas e Doações</p>
+            </div>
           </div>
 
           <div className="two-col">
@@ -713,6 +718,49 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="two-col-equal" style={{ marginTop: '16px' }}>
+            <div>
+              <h3 className="section-title">Horários de Pico</h3>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '60px', marginTop: '10px' }}>
+                {data.peakHours.map((hourData, idx) => {
+                  const maxPeak = Math.max(...data.peakHours.map(h => h.count), 1);
+                  const barHeight = (hourData.count / maxPeak) * 100;
+                  return (
+                    <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', background: 'transparent' }}>
+                        <div style={{ width: '100%', height: `${Math.max(barHeight, hourData.count > 0 ? 5 : 0)}%`, background: hourData.count > 0 ? '#BE3144' : '#f0f0f0', borderRadius: '2px' }} />
+                      </div>
+                      <span style={{ fontSize: '6px', color: '#999' }}>{hourData.hour}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <h3 className="section-title">Produtos Mais Desejados</h3>
+              {data.topProducts && data.topProducts.length > 0 ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th className="right">Cliques</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.topProducts.map((product, idx) => (
+                      <tr key={idx}>
+                        <td>{product.name}</td>
+                        <td className="right">{product.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p style={{ fontSize: '10px', color: '#999', marginTop: '10px' }}>Sem dados de produtos.</p>
+              )}
             </div>
           </div>
 

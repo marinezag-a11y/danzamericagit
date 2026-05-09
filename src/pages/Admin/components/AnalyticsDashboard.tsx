@@ -407,6 +407,96 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
             <p className="text-xs text-white/20 italic text-center py-8">Sem dados de páginas ainda.</p>
           )}
         </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28 }}
+          className="bg-white/5 border border-white/10 p-8"
+        >
+          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Como as pessoas acessam</p>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 bg-brand-orange/10 rounded-full">
+              <Smartphone className="w-4 h-4 text-brand-orange" />
+            </div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Dispositivos</h4>
+          </div>
+
+          <div className="space-y-8 mt-4">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <Smartphone className="w-5 h-5 text-white/60" />
+                  <span className="text-sm font-sans text-white/80">Mobile</span>
+                </div>
+                <span className="text-sm font-bold text-white">{mobilePct}%</span>
+              </div>
+              <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${mobilePct}%` }} transition={{ delay: 0.5, duration: 1 }} className="h-full bg-brand-orange" />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <Monitor className="w-5 h-5 text-white/60" />
+                  <span className="text-sm font-sans text-white/80">Desktop</span>
+                </div>
+                <span className="text-sm font-bold text-white">{desktopPct}%</span>
+              </div>
+              <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${desktopPct}%` }} transition={{ delay: 0.6, duration: 1 }} className="h-full bg-white/40" />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white/5 border border-white/10 p-8"
+        >
+          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">De onde vêm os acessos</p>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 bg-brand-orange/10 rounded-full">
+              <Share2 className="w-4 h-4 text-brand-orange" />
+            </div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Fontes de Tráfego</h4>
+          </div>
+
+          {data.trafficSources && data.trafficSources.length > 0 ? (
+            <div className="space-y-5">
+              {data.trafficSources.map((source, idx) => {
+                const totalTraffic = data.trafficSources.reduce((sum, s) => sum + s.count, 0) || 1;
+                const sourcePercentage = (source.count / totalTraffic) * 100;
+                return (
+                  <div key={idx} className="group">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs text-white/60 font-sans truncate max-w-[160px] group-hover:text-white transition-colors">
+                        {source.source}
+                      </span>
+                      <span className="text-[10px] text-brand-orange font-bold">{source.count}</span>
+                    </div>
+                    <div className="h-[2px] w-full bg-white/5 relative overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${sourcePercentage}%` }}
+                        transition={{ delay: 0.5 + idx * 0.05, duration: 0.6 }}
+                        className="absolute top-0 left-0 h-full bg-brand-orange/60 group-hover:bg-brand-orange transition-all"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-white/20">
+              <Share2 className="w-8 h-8 mb-4 opacity-10" />
+              <p className="text-[10px] uppercase tracking-widest font-bold">Sem dados de tráfego</p>
+            </div>
+          )}
+        </motion.div>
       </div>
 
       {/* Hidden Print Section */}

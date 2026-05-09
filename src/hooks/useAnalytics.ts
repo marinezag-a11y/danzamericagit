@@ -44,6 +44,7 @@ export interface AnalyticsData {
   trafficSources: TrafficSource[];
   dailyViews: DailyView[];
   conversionRate: string;
+  cartAbandonment: string;
   peakHours: PeakHour[];
   topProducts: TopEvent[];
 }
@@ -94,6 +95,7 @@ export function useAnalytics() {
     trafficSources: [],
     dailyViews: [],
     conversionRate: '0.0',
+    cartAbandonment: '0.0',
     peakHours: [],
     topProducts: [],
   });
@@ -252,6 +254,11 @@ export function useAnalytics() {
       const totalConversions = (ordersCount || 0) + (rafflesCount || 0);
       const conversionRate = uniqueVisitors > 0 ? ((totalConversions / uniqueVisitors) * 100).toFixed(1) : '0.0';
 
+      // Abandono de Carrinho
+      const cartOpens = eventCounts['Abrir Carrinho'] || 0;
+      const orderStarts = eventCounts['Finalizar Pedido'] || 0;
+      const cartAbandonment = cartOpens > 0 ? (100 - (orderStarts / cartOpens * 100)).toFixed(1) : '0.0';
+
       setData({
         totalViews,
         uniqueVisitors,
@@ -263,6 +270,7 @@ export function useAnalytics() {
         trafficSources,
         dailyViews,
         conversionRate,
+        cartAbandonment,
         peakHours,
         topProducts,
       });

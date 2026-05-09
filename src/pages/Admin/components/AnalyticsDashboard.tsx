@@ -190,7 +190,7 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
       </motion.div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -277,6 +277,24 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
           </div>
           <p className="text-4xl font-sans text-white mb-1">
             {data.conversionRate}%
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white/5 border border-white/10 p-8 group hover:border-brand-orange/30 transition-all duration-500"
+        >
+          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Pessoas que abriram o carrinho mas não compraram</p>
+          <div className="flex items-center justify-between mb-6">
+            <div className="p-3 bg-brand-orange/10 rounded-full group-hover:bg-brand-orange/20 transition-all">
+              <ShoppingBag className="w-5 h-5 text-brand-orange" />
+            </div>
+            <span className="text-[9px] uppercase tracking-widest text-white/20 font-bold">Abandono</span>
+          </div>
+          <p className="text-4xl font-sans text-white mb-1">
+            {data.cartAbandonment}%
           </p>
         </motion.div>
       </div>
@@ -648,6 +666,11 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
               <p className="label">Conversão</p>
               <p className="value">{data.conversionRate}%</p>
               <p className="desc">Vendas e Doações</p>
+            </div>
+            <div className="kpi-card">
+              <p className="label">Abandono</p>
+              <p className="value">{data.cartAbandonment}%</p>
+              <p className="desc">Saíram sem comprar</p>
             </div>
           </div>
 

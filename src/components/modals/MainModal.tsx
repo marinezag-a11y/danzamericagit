@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin, Plus, Minus, Copy } from 'lucide-react';
 import { useHelpOrders } from '../../hooks/useHelpOrders';
 import { HelpItem } from '../../hooks/useHelpItems';
+import { usePageTracking } from '../../hooks/usePageTracking';
+import { useEventTracking } from '../../hooks/useEventTracking';
 import { supabase } from '../../lib/supabase';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 
@@ -26,6 +28,7 @@ interface MainModalProps {
 
 export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: MainModalProps) {
   const { addOrder } = useHelpOrders();
+  const { trackEvent } = useEventTracking();
   
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -36,6 +39,16 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (activeModal === 'store') {
+      trackEvent('Abrir Carrinho', 'view');
+    }
+    if (activeModal) {
+      setSuccess(false);
+      setError(null);
+    }
+  }, [activeModal]);
 
   const products = useMemo(() => {
     if (!helpItems || !Array.isArray(helpItems)) return [];
@@ -168,6 +181,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
       if (result.success) {
         setSuccess(true); // Mostra sucesso imediatamente
+        trackEvent('Finalizar Pedido', 'conversion', { total: totalPrice });
 
         // Dispara o e-mail em segundo plano (background)
         if (supabase) {

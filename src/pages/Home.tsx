@@ -195,7 +195,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const sections = ['essencia', 'jornada', 'desafio', 'galeria', 'ajudar', 'patrocinio'];
+    const sections = ['essencia', 'jornada', 'desafio', 'galeria', 'ajudar', 'rifas', 'patrocinio'];
     const observerOptions = {
       root: null,
       rootMargin: '-40% 0px -40% 0px',

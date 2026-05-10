@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Ticket, Loader2, Smartphone, Mail, User, RotateCw, Check, Copy } from 'lucide-react';
 import { WheelPicker } from '../ui/WheelPicker';
 import { LuckyRoulette } from '../ui/LuckyRoulette';
+import { Toast } from '../ui/Toast';
 import { useDancers, Dancer } from '../../hooks/useDancers';
 import { useRaffles, RaffleCampaign } from '../../hooks/useRaffles';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
@@ -44,6 +45,15 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
+    show: false,
+    message: '',
+    variant: 'success'
+  });
+
+  const showToast = (message: string, variant: 'success' | 'danger' | 'warning' | 'info' = 'success') => {
+    setToast({ show: true, message, variant });
+  };
 
   const toggleFixNumber = (index: number) => {
     if (isSpinning) return;
@@ -137,11 +147,11 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         }
       } else {
         console.error('Order creation failed:', res?.error);
-        alert('Erro ao criar pedido. Por favor, tente novamente.');
+        showToast('Erro ao criar pedido. Por favor, tente novamente.', 'danger');
       }
     } catch (error) {
       console.error('Error submitting order:', error);
-      alert('Ocorreu um erro inesperado.');
+      showToast('Ocorreu um erro inesperado.', 'danger');
     } finally {
       setIsSubmitting(false);
     }
@@ -599,7 +609,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                           onClick={() => {
                             const key = settings['pix_key_checkout']?.value || settings['pix_key']?.value || 'ballettatianafigueiredo@gmail.com';
                             navigator.clipboard.writeText(key);
-                            alert('Chave PIX copiada!');
+                            showToast('Chave PIX copiada!', 'success');
                           }}
                           className="mt-3 w-full py-3 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all flex items-center justify-center gap-2"
                         >
@@ -643,6 +653,12 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
           </div>
         </div>
       </motion.div>
+      <Toast 
+        show={toast.show} 
+        message={toast.message} 
+        variant={toast.variant} 
+        onClose={() => setToast(prev => ({ ...prev, show: false }))} 
+      />
     </div>
   );
 }

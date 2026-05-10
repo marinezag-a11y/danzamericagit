@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Ticket, Loader2 } from 'lucide-react';
+import { ChevronRight, Ticket, Loader2, Share2 } from 'lucide-react';
 import { useRaffles, RaffleCampaign } from '../hooks/useRaffles';
 import { DancerSponsorshipModal } from './modals/DancerSponsorshipModal';
+import { Toast } from './ui/Toast';
 
 export function RaffleSection() {
   const { campaigns, loading, fetchTakenTickets } = useRaffles();
   const [selectedCampaign, setSelectedCampaign] = useState<RaffleCampaign | null>(null);
   const [soldCounts, setSoldCounts] = useState<Record<string, number>>({});
+  const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
+    show: false,
+    message: '',
+    variant: 'success'
+  });
+
+  const showToast = (message: string, variant: 'success' | 'danger' | 'warning' | 'info' = 'success') => {
+    setToast({ show: true, message, variant });
+  };
 
   const activeCampaigns = campaigns.filter(c => c.is_active);
 
@@ -22,6 +32,18 @@ export function RaffleSection() {
     };
     if (activeCampaigns.length > 0) {
       loadProgress();
+      
+      // Auto-open campaign from URL parameter ?rifa=ID
+      const params = new URLSearchParams(window.location.search);
+      const raffleId = params.get('rifa');
+      if (raffleId) {
+        const campaign = activeCampaigns.find(c => c.id === raffleId);
+        if (campaign) {
+          setSelectedCampaign(campaign);
+          // Scroll to section
+          document.getElementById('rifas')?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
     }
   }, [campaigns]);
 
@@ -29,7 +51,7 @@ export function RaffleSection() {
   if (activeCampaigns.length === 0) return null;
 
   return (
-    <section className="py-24 bg-brand-white px-6 lg:px-12 border-t border-black/5">
+    <section id="rifas" className="py-24 bg-brand-white px-6 lg:px-12 border-t border-black/5">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
           <div className="max-w-xl">
@@ -105,9 +127,24 @@ export function RaffleSection() {
                     </div>
                   </div>
                 </div>
-                <button className="flex items-center gap-4 text-[10px] uppercase tracking-[0.3em] font-bold text-brand-orange">
-                  Escolher Números <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex flex-wrap items-center justify-between gap-4 mt-auto">
+                  <button className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] font-bold text-brand-orange hover:gap-4 transition-all">
+                    Escolher Números <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = `${window.location.origin}${window.location.pathname}?rifa=${campaign.id}`;
+                      navigator.clipboard.writeText(url);
+                      showToast('Link da campanha copiado!', 'success');
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-brand-orange/10 hover:bg-brand-orange text-brand-orange hover:text-white transition-all rounded-full group/share border border-brand-orange/20"
+                    title="Copiar link desta campanha"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span className="text-[9px] uppercase tracking-widest font-black">Copiar Link</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}
@@ -123,6 +160,12 @@ export function RaffleSection() {
           />
         )}
       </AnimatePresence>
+      <Toast 
+        show={toast.show} 
+        message={toast.message} 
+        variant={toast.variant} 
+        onClose={() => setToast(prev => ({ ...prev, show: false }))} 
+      />
     </section>
   );
 }

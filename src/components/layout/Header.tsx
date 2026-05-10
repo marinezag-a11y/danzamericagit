@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: '#desafio', label: 'O Desafio', id: 'desafio' },
   { href: '#galeria', label: 'Galeria', id: 'galeria' },
   { href: '#ajudar', label: 'Compre um sonho', id: 'ajudar' },
+  { href: '#rifas', label: 'Ação entre amigos', id: 'rifas' },
   { href: '#patrocinio', label: 'Patrocínio', id: 'patrocinio' },
 ];
 

@@ -66,50 +66,64 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
     const printContent = reportRef.current.innerHTML;
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
-    iframe.style.top = '-10000px';
-    iframe.style.left = '-10000px';
-    iframe.style.width = '210mm';
-    iframe.style.height = '297mm';
+    iframe.style.bottom = '0';
+    iframe.style.right = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
     document.body.appendChild(iframe);
+    
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) return;
+    
     doc.open();
-    doc.write(`<!DOCTYPE html><html><head><style>
-      @page{size:A4 portrait;margin:15mm 18mm}
-      *{margin:0;padding:0;box-sizing:border-box}
-      body{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;color:#1a1a1a;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:12px;line-height:1.5}
-      .rpt-header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #BE3144;padding-bottom:12px;margin-bottom:20px}
-      .rpt-header h1{font-size:22px;font-weight:800;letter-spacing:-0.5px}
-      .rpt-header .subtitle{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-top:2px}
-      .rpt-header .meta{text-align:right;font-size:10px;color:#999;line-height:1.6}
-      .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
-      .kpi-card{border:1px solid #e5e5e5;padding:14px 16px;border-radius:4px;background:#fafafa}
-      .kpi-card .label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#999;font-weight:700;margin-bottom:6px}
-      .kpi-card .value{font-size:26px;font-weight:800;color:#1a1a1a;line-height:1.1}
-      .kpi-card .desc{font-size:9px;color:#bbb;margin-top:4px}
-      .section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#BE3144;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
-      .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px}
-      .two-col-equal{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-      table{width:100%;border-collapse:collapse}
-      th{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;font-weight:700;text-align:left;padding:6px 10px;border-bottom:2px solid #e5e5e5}
-      th.right{text-align:right}
-      td{padding:6px 10px;font-size:11px;border-bottom:1px solid #eee}
-      .rpt-footer{margin-top:20px;padding-top:10px;border-top:1px solid #e5e5e5;display:flex;justify-content:space-between;align-items:center}
-      .rpt-footer p{font-size:9px;color:#bbb}
-      .rpt-footer .brand{font-weight:800;color:#BE3144;font-size:10px;letter-spacing:1px}
-      .bar-bg{background:#f0f0f0;border-radius:3px;height:14px;position:relative}
-      .bar-fill{background:#BE3144;height:100%;border-radius:3px;min-width:2px}
-      .device-bar{display:flex;height:18px;border-radius:4px;overflow:hidden;margin:8px 0 6px}
-      .device-legend{display:flex;gap:16px;margin-top:4px}
-      .device-legend span{font-size:10px;color:#666;display:flex;align-items:center;gap:4px}
-      .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-    </style></head><body>${printContent}</body></html>`);
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Relatório Danzamerica - ${periodLabels[period]}</title>
+          <style>
+            @page { size: A4 portrait; margin: 15mm; }
+            * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; line-height: 1.4; font-size: 11px; background: white; }
+            .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #BE3144; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { font-size: 20px; color: #BE3144; text-transform: uppercase; letter-spacing: -0.5px; }
+            .header .meta { text-align: right; font-size: 9px; color: #666; }
+            
+            .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+            .kpi-card { background: #fcfcfc; border: 1px solid #eee; padding: 12px; border-radius: 4px; }
+            .kpi-label { font-size: 8px; text-transform: uppercase; color: #999; font-weight: 700; margin-bottom: 4px; }
+            .kpi-value { font-size: 22px; font-weight: 800; color: #1a1a1a; }
+            
+            .section-title { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #BE3144; margin: 20px 0 10px; padding-bottom: 4px; border-bottom: 1px solid #f0f0f0; }
+            
+            .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+            .chart-container { height: 100px; display: flex; align-items: flex-end; gap: 4px; padding-top: 20px; border-bottom: 1px solid #eee; position: relative; }
+            .bar-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; }
+            .bar { width: 100%; background: #BE3144 !important; border-radius: 2px 2px 0 0; min-height: 1px; }
+            .bar-label { font-size: 6px; color: #999; margin-top: 4px; white-space: nowrap; }
+            
+            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+            th { text-align: left; font-size: 8px; color: #999; text-transform: uppercase; padding: 6px 8px; border-bottom: 2px solid #eee; }
+            td { padding: 6px 8px; border-bottom: 1px solid #f9f9f9; font-size: 10px; }
+            .right { text-align: right; }
+            
+            .footer { margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #bbb; }
+            .brand { font-weight: 800; color: #BE3144; }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `);
     doc.close();
+
     iframe.contentWindow?.focus();
     setTimeout(() => {
       iframe.contentWindow?.print();
       setTimeout(() => document.body.removeChild(iframe), 1000);
-    }, 300);
+    }, 600);
   };
 
   if (loading && data.totalViews === 0) {
@@ -300,15 +314,15 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
         </motion.div>
       </div>
 
-      {/* Chart + Top Pages Row */}
+      {/* Row 3: Charts & Clicks List */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Daily Views Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="lg:col-span-2 bg-white/5 border border-white/10 p-8"
         >
-          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Volume de visitas ao longo da semana</p>
           <div className="flex items-center gap-3 mb-8">
             <div className="p-2 bg-brand-orange/10 rounded-full">
               <CalendarDays className="w-4 h-4 text-brand-orange" />
@@ -318,8 +332,6 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
 
           <div className="flex items-end gap-3 h-56 pt-8">
             {data.dailyViews.map((day, idx) => {
-              // Ajuste de escala: garante que as variações fiquem visíveis mesmo com poucos dados
-              // Se o máximo for 5, a escala se ajusta para que 5 seja 80% da altura, permitindo ver a diferença para 4, 3, etc.
               const chartMax = Math.max(maxDailyViews * 1.1, 5); 
               const barHeight = (day.count / chartMax) * 100;
               const dayLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' });
@@ -331,39 +343,28 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
                   }`}>
                     {day.count}
                   </span>
-                  <div className="w-full bg-white/5 rounded-t-xl relative h-40 overflow-hidden flex items-end group-hover:bg-white/10 transition-all">
+                  <div className="w-full bg-white/5 rounded-t-xl relative h-40 overflow-hidden flex items-end">
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(barHeight, day.count > 0 ? 5 : 0)}%` }}
-                      transition={{ delay: 0.2 + idx * 0.05, duration: 0.8, ease: 'backOut' }}
-                      className="w-full bg-gradient-to-t from-brand-orange/40 to-brand-orange rounded-t-lg relative"
-                    >
-                      {/* Brilho sutil no topo da barra */}
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 rounded-t-lg" />
-                    </motion.div>
+                      transition={{ delay: 0.2 + idx * 0.05, duration: 0.8 }}
+                      className="w-full bg-gradient-to-t from-brand-orange/40 to-brand-orange rounded-t-lg"
+                    />
                   </div>
                   <span className="text-[9px] text-white/30 uppercase tracking-widest font-bold">{dayLabel}</span>
                 </div>
               );
             })}
           </div>
-
-          {data.totalViews === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-white/20">
-              <BarChart3 className="w-12 h-12 mb-4 opacity-20" />
-              <p className="text-xs uppercase tracking-widest font-bold">Nenhum dado disponível</p>
-              <p className="text-[10px] mt-2 opacity-50">Os acessos começarão a aparecer aqui automaticamente.</p>
-            </div>
-          )}
         </motion.div>
 
+        {/* Clicks List */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.22 }}
           className="bg-white/5 border border-white/10 p-8"
         >
-          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Onde as pessoas estão clicando</p>
           <div className="flex items-center gap-3 mb-8">
             <div className="p-2 bg-brand-orange/10 rounded-full">
               <MousePointerClick className="w-4 h-4 text-brand-orange" />
@@ -371,174 +372,30 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Links mais Clicados</h4>
           </div>
 
-          {data.topEvents.length > 0 ? (
-            <div className="space-y-5">
-              {data.topEvents.map((event, idx) => {
-                const totalEvents = data.topEvents.reduce((sum, e) => sum + e.count, 0) || 1;
-                const eventPercentage = (event.count / totalEvents) * 100;
-                return (
-                  <div key={idx} className="group">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-white/60 font-sans truncate max-w-[160px] group-hover:text-white transition-colors">
-                        {event.name}
-                      </span>
-                      <span className="text-[10px] text-brand-orange font-bold">{event.count}</span>
-                    </div>
-                    <div className="h-[2px] w-full bg-white/5 relative overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${eventPercentage}%` }}
-                        transition={{ delay: 0.4 + idx * 0.05, duration: 0.6 }}
-                        className="absolute top-0 left-0 h-full bg-brand-orange/60 group-hover:bg-brand-orange transition-all"
-                      />
-                    </div>
+          <div className="space-y-5">
+            {data.topEvents.map((event, idx) => {
+              const totalEvents = data.topEvents.reduce((sum, e) => sum + e.count, 0) || 1;
+              return (
+                <div key={idx}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-white/60 truncate max-w-[160px]">{event.name}</span>
+                    <span className="text-[10px] text-brand-orange font-bold">{event.count}</span>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-white/20">
-              <MousePointerClick className="w-8 h-8 mb-4 opacity-10" />
-              <p className="text-[10px] uppercase tracking-widest font-bold">Sem cliques registrados</p>
-            </div>
-          )}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="bg-white/5 border border-white/10 p-8"
-        >
-          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Partes do site que geram mais interesse</p>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 bg-brand-orange/10 rounded-full">
-              <Globe className="w-4 h-4 text-brand-orange" />
-            </div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Páginas Mais Visitadas</h4>
-          </div>
-
-          {data.topPages.length > 0 ? (
-            <div className="space-y-5">
-              {data.topPages.map((page, idx) => {
-                const pagePercentage = data.totalViews > 0 ? (page.views / data.totalViews) * 100 : 0;
-                return (
-                  <div key={idx} className="group">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-white/60 font-sans truncate max-w-[160px] group-hover:text-white transition-colors">
-                        {page.path === '/' ? 'Página Inicial' : page.path}
-                      </span>
-                      <span className="text-[10px] text-brand-orange font-bold">{page.views}</span>
-                    </div>
-                    <div className="h-[2px] w-full bg-white/5 relative overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pagePercentage}%` }}
-                        transition={{ delay: 0.4 + idx * 0.05, duration: 0.6 }}
-                        className="absolute top-0 left-0 h-full bg-brand-orange/60 group-hover:bg-brand-orange transition-all"
-                      />
-                    </div>
+                  <div className="h-[2px] w-full bg-white/5">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(event.count / totalEvents) * 100}%` }}
+                      className="h-full bg-brand-orange/60"
+                    />
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-white/20 italic text-center py-8">Sem dados de páginas ainda.</p>
-          )}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.28 }}
-          className="bg-white/5 border border-white/10 p-8"
-        >
-          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Como as pessoas acessam</p>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 bg-brand-orange/10 rounded-full">
-              <Smartphone className="w-4 h-4 text-brand-orange" />
-            </div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Dispositivos</h4>
-          </div>
-
-          <div className="space-y-8 mt-4">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <Smartphone className="w-5 h-5 text-white/60" />
-                  <span className="text-sm font-sans text-white/80">Mobile</span>
                 </div>
-                <span className="text-sm font-bold text-white">{mobilePct}%</span>
-              </div>
-              <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${mobilePct}%` }} transition={{ delay: 0.5, duration: 1 }} className="h-full bg-brand-orange" />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <Monitor className="w-5 h-5 text-white/60" />
-                  <span className="text-sm font-sans text-white/80">Desktop</span>
-                </div>
-                <span className="text-sm font-bold text-white">{desktopPct}%</span>
-              </div>
-              <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${desktopPct}%` }} transition={{ delay: 0.6, duration: 1 }} className="h-full bg-white/40" />
-              </div>
-            </div>
+              );
+            })}
           </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white/5 border border-white/10 p-8"
-        >
-          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">De onde vêm os acessos</p>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 bg-brand-orange/10 rounded-full">
-              <Share2 className="w-4 h-4 text-brand-orange" />
-            </div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Fontes de Tráfego</h4>
-          </div>
-
-          {data.trafficSources && data.trafficSources.length > 0 ? (
-            <div className="space-y-5">
-              {data.trafficSources.map((source, idx) => {
-                const totalTraffic = data.trafficSources.reduce((sum, s) => sum + s.count, 0) || 1;
-                const sourcePercentage = (source.count / totalTraffic) * 100;
-                return (
-                  <div key={idx} className="group">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-white/60 font-sans truncate max-w-[160px] group-hover:text-white transition-colors">
-                        {source.source}
-                      </span>
-                      <span className="text-[10px] text-brand-orange font-bold">{source.count}</span>
-                    </div>
-                    <div className="h-[2px] w-full bg-white/5 relative overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${sourcePercentage}%` }}
-                        transition={{ delay: 0.5 + idx * 0.05, duration: 0.6 }}
-                        className="absolute top-0 left-0 h-full bg-brand-orange/60 group-hover:bg-brand-orange transition-all"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-white/20">
-              <Share2 className="w-8 h-8 mb-4 opacity-10" />
-              <p className="text-[10px] uppercase tracking-widest font-bold">Sem dados de tráfego</p>
-            </div>
-          )}
         </motion.div>
       </div>
 
-      {/* Row 4: Novas Estatísticas */}
+      {/* Row 4: Peak Hours & Products */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -546,7 +403,6 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
           transition={{ delay: 0.35 }}
           className="lg:col-span-2 bg-white/5 border border-white/10 p-8"
         >
-          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Quando o site é mais acessado</p>
           <div className="flex items-center gap-3 mb-8">
             <div className="p-2 bg-brand-orange/10 rounded-full">
               <Clock className="w-4 h-4 text-brand-orange" />
@@ -554,23 +410,17 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Horários de Pico</h4>
           </div>
 
-          <div className="flex items-end gap-1 sm:gap-2 h-40 pt-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <div className="flex items-end justify-between gap-1 h-48 pt-4">
             {data.peakHours.map((hourData, idx) => {
               const maxPeak = Math.max(...data.peakHours.map(h => h.count), 1);
               const barHeight = (hourData.count / maxPeak) * 100;
               return (
-                <div key={idx} className="flex-1 min-w-[20px] flex flex-col items-center gap-2 group">
-                  <span className={`text-[8px] font-bold transition-all duration-300 opacity-0 group-hover:opacity-100 ${
-                    hourData.count > 0 ? 'text-brand-orange' : 'text-white/30'
-                  }`}>
-                    {hourData.count}
-                  </span>
-                  <div className="w-full bg-white/5 rounded-t-sm relative h-full overflow-hidden flex items-end group-hover:bg-white/10 transition-all">
+                <div key={idx} className="flex-1 flex flex-col items-center justify-end gap-2 group">
+                  <div className="w-full bg-white/5 rounded-t-sm relative h-32 flex items-end">
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(barHeight, hourData.count > 0 ? 5 : 0)}%` }}
-                      transition={{ delay: 0.4 + idx * 0.02, duration: 0.8 }}
-                      className="w-full bg-gradient-to-t from-brand-orange/40 to-brand-orange relative"
+                      className="w-full bg-brand-orange/40 group-hover:bg-brand-orange transition-all"
                     />
                   </div>
                   <span className="text-[8px] text-white/30 font-bold">{hourData.hour}h</span>
@@ -586,7 +436,6 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
           transition={{ delay: 0.4 }}
           className="bg-white/5 border border-white/10 p-8"
         >
-          <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold mb-4">Interesse em produtos</p>
           <div className="flex items-center gap-3 mb-8">
             <div className="p-2 bg-brand-orange/10 rounded-full">
               <ShoppingCart className="w-4 h-4 text-brand-orange" />
@@ -594,47 +443,36 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Mais Desejados</h4>
           </div>
 
-          {data.topProducts && data.topProducts.length > 0 ? (
-            <div className="space-y-5">
-              {data.topProducts.map((product, idx) => {
-                const maxProdClicks = Math.max(...data.topProducts.map(p => p.count), 1);
-                const prodPercentage = (product.count / maxProdClicks) * 100;
-                return (
-                  <div key={idx} className="group">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-white/60 font-sans truncate max-w-[160px] group-hover:text-white transition-colors">
-                        {product.name}
-                      </span>
-                      <span className="text-[10px] text-brand-orange font-bold">{product.count} clicks</span>
-                    </div>
-                    <div className="h-[2px] w-full bg-white/5 relative overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${prodPercentage}%` }}
-                        transition={{ delay: 0.5 + idx * 0.05, duration: 0.6 }}
-                        className="absolute top-0 left-0 h-full bg-brand-orange/60 group-hover:bg-brand-orange transition-all"
-                      />
-                    </div>
+          <div className="space-y-5">
+            {data.topProducts.map((product, idx) => {
+              const maxProdClicks = Math.max(...data.topProducts.map(p => p.count), 1);
+              return (
+                <div key={idx}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-white/60 truncate max-w-[160px]">{product.name}</span>
+                    <span className="text-[10px] text-brand-orange font-bold">{product.count} clicks</span>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-white/20">
-              <ShoppingCart className="w-8 h-8 mb-4 opacity-10" />
-              <p className="text-[10px] uppercase tracking-widest font-bold">Sem dados de produtos</p>
-            </div>
-          )}
+                  <div className="h-[2px] w-full bg-white/5">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(product.count / maxProdClicks) * 100}%` }}
+                      className="h-full bg-brand-orange"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </motion.div>
       </div>
 
       {/* Hidden Print Section */}
       <div className="hidden">
         <div ref={reportRef}>
-          <div className="rpt-header">
+          <div className="header">
             <div>
               <h1>Relatório de Performance</h1>
-              <p className="subtitle">Danzamerica - Dashboard Administrativo</p>
+              <p style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>Danzamerica - Dashboard Administrativo</p>
             </div>
             <div className="meta">
               <p>Período: {periodLabels[period]}</p>
@@ -644,49 +482,83 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
 
           <div className="kpi-grid">
             <div className="kpi-card">
-              <p className="label">Visualizações</p>
-              <p className="value">{data.totalViews.toLocaleString('pt-BR')}</p>
-              <p className="desc">Total de acessos</p>
+              <p className="kpi-label">Visualizações</p>
+              <p className="kpi-value">{data.totalViews.toLocaleString('pt-BR')}</p>
             </div>
             <div className="kpi-card">
-              <p className="label">Visitantes</p>
-              <p className="value">{data.uniqueVisitors.toLocaleString('pt-BR')}</p>
-              <p className="desc">Pessoas únicas</p>
+              <p className="kpi-label">Visitantes</p>
+              <p className="kpi-value">{data.uniqueVisitors.toLocaleString('pt-BR')}</p>
             </div>
             <div className="kpi-card">
-              <p className="label">Permanência</p>
-              <p className="value">{formatDuration(data.avgDuration)}</p>
-              <p className="desc">Média por sessão</p>
+              <p className="kpi-label">Permanência</p>
+              <p className="kpi-value">{formatDuration(data.avgDuration)}</p>
             </div>
             <div className="kpi-card">
-              <p className="label">Rejeição</p>
-              <p className="value">{data.bounceRate}%</p>
-              <p className="desc">Taxa de saída</p>
+              <p className="kpi-label">Rejeição</p>
+              <p className="kpi-value">{data.bounceRate}%</p>
             </div>
             <div className="kpi-card">
-              <p className="label">Conversão</p>
-              <p className="value">{data.conversionRate}%</p>
-              <p className="desc">Vendas e Doações</p>
+              <p className="kpi-label">Conversão</p>
+              <p className="kpi-value">{data.conversionRate}%</p>
             </div>
             <div className="kpi-card">
-              <p className="label">Abandono</p>
-              <p className="value">{data.cartAbandonment}%</p>
-              <p className="desc">Saíram sem comprar</p>
+              <p className="kpi-label">Abandono</p>
+              <p className="kpi-value">{data.cartAbandonment}%</p>
             </div>
           </div>
 
-          <div className="two-col">
+          <h3 className="section-title">Volume de Acessos (Últimos 7 Dias)</h3>
+          <div className="chart-container">
+            {data.dailyViews.map((day, idx) => {
+              const chartMax = Math.max(maxDailyViews * 1.1, 5);
+              const height = (day.count / chartMax) * 100;
+              const dayLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' });
+              return (
+                <div key={idx} className="bar-wrapper">
+                  <div className="bar" style={{ height: `${Math.max(height, day.count > 0 ? 5 : 0)}%` }} />
+                  <span className="bar-label">{dayLabel} ({day.count})</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="chart-row">
+            <div>
+              <h3 className="section-title">Horários de Pico</h3>
+              <div className="chart-container" style={{ height: '80px', gap: '2px' }}>
+                {data.peakHours.map((hourData, idx) => {
+                  const maxPeak = Math.max(...data.peakHours.map(h => h.count), 1);
+                  const height = (hourData.count / maxPeak) * 100;
+                  return (
+                    <div key={idx} className="bar-wrapper">
+                      <div className="bar" style={{ height: `${Math.max(height, hourData.count > 0 ? 5 : 0)}%` }} />
+                      <span className="bar-label" style={{ fontSize: '5px' }}>{hourData.hour}h</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <h3 className="section-title">Dispositivos</h3>
+              <p>Desktop: <strong>{desktopPct}%</strong> | Mobile: <strong>{mobilePct}%</strong></p>
+              <div style={{ marginTop: '10px' }}>
+                <h3 className="section-title" style={{ marginTop: '0', fontSize: '8px' }}>Fontes Principais</h3>
+                {data.trafficSources.slice(0, 3).map((s, i) => (
+                  <p key={i} style={{ fontSize: '9px' }}>{s.source}: {s.count}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="chart-row">
             <div>
               <h3 className="section-title">Páginas Mais Visitadas</h3>
               <table>
                 <thead>
-                  <tr>
-                    <th>URL / Página</th>
-                    <th className="right">Visualizações</th>
-                  </tr>
+                  <tr><th>URL / Página</th><th className="right">Visitas</th></tr>
                 </thead>
                 <tbody>
-                  {data.topPages.map((page, idx) => (
+                  {data.topPages.slice(0, 5).map((page, idx) => (
                     <tr key={idx}>
                       <td>{page.path === '/' ? 'Página Inicial' : page.path}</td>
                       <td className="right">{page.views}</td>
@@ -696,19 +568,16 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
               </table>
             </div>
             <div>
-              <h3 className="section-title">Engajamento (Cliques)</h3>
+              <h3 className="section-title">Produtos Mais Desejados</h3>
               <table>
                 <thead>
-                  <tr>
-                    <th>Elemento / Link</th>
-                    <th className="right">Cliques</th>
-                  </tr>
+                  <tr><th>Produto</th><th className="right">Clicks</th></tr>
                 </thead>
                 <tbody>
-                  {data.topEvents.map((event, idx) => (
+                  {data.topProducts.slice(0, 5).map((p, idx) => (
                     <tr key={idx}>
-                      <td>{event.name}</td>
-                      <td className="right">{event.count}</td>
+                      <td>{p.name}</td>
+                      <td className="right">{p.count}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -716,79 +585,7 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
             </div>
           </div>
 
-          <div className="two-col-equal">
-            <div>
-              <h3 className="section-title">Dispositivos</h3>
-              <div className="device-bar">
-                <div className="bar-fill" style={{ width: `${desktopPct}%`, background: '#BE3144' }} />
-                <div className="bar-fill" style={{ width: `${mobilePct}%`, background: '#e5e5e5' }} />
-              </div>
-              <div className="device-legend">
-                <span><div className="dot" style={{ background: '#BE3144' }} /> Desktop ({desktopPct}%)</span>
-                <span><div className="dot" style={{ background: '#e5e5e5' }} /> Mobile ({mobilePct}%)</span>
-              </div>
-            </div>
-            <div>
-              <h3 className="section-title">Fontes de Tráfego</h3>
-              {data.trafficSources.map((source, idx) => {
-                const pct = Math.round((source.count / (data.trafficSources.reduce((s, d) => s + d.count, 0) || 1)) * 100);
-                return (
-                  <div key={idx} style={{ marginBottom: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '3px' }}>
-                      <span>{source.source}</span>
-                      <span>{pct}%</span>
-                    </div>
-                    <div className="bar-bg"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="two-col-equal" style={{ marginTop: '16px' }}>
-            <div>
-              <h3 className="section-title">Horários de Pico</h3>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '60px', marginTop: '10px' }}>
-                {data.peakHours.map((hourData, idx) => {
-                  const maxPeak = Math.max(...data.peakHours.map(h => h.count), 1);
-                  const barHeight = (hourData.count / maxPeak) * 100;
-                  return (
-                    <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', background: 'transparent' }}>
-                        <div style={{ width: '100%', height: `${Math.max(barHeight, hourData.count > 0 ? 5 : 0)}%`, background: hourData.count > 0 ? '#BE3144' : '#f0f0f0', borderRadius: '2px' }} />
-                      </div>
-                      <span style={{ fontSize: '6px', color: '#999' }}>{hourData.hour}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <h3 className="section-title">Produtos Mais Desejados</h3>
-              {data.topProducts && data.topProducts.length > 0 ? (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Produto</th>
-                      <th className="right">Cliques</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.topProducts.map((product, idx) => (
-                      <tr key={idx}>
-                        <td>{product.name}</td>
-                        <td className="right">{product.count}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p style={{ fontSize: '10px', color: '#999', marginTop: '10px' }}>Sem dados de produtos.</p>
-              )}
-            </div>
-          </div>
-
-          <div className="rpt-footer">
+          <div className="footer">
             <p>Relatório gerado automaticamente pelo Sistema de Gestão Danzamerica.</p>
             <span className="brand">DANZAMERICA 2026</span>
           </div>

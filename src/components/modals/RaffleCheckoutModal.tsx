@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy } from 'lucide-react';
 import { RaffleCampaign, useRaffles } from '../../hooks/useRaffles';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { supabase } from '../../lib/supabase';
 
 interface RaffleCheckoutModalProps {
@@ -21,10 +22,15 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const { settings } = useSiteSettings();
+  const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
+  const pixType = settings?.pix_checkout_type?.value || "E-mail";
+  const pixReceiver = settings?.pix_checkout_receiver?.value || "Tatiana Figueiredo";
+  const pixBank = settings?.pix_checkout_bank?.value || "NuBank";
 
   const handleCopyPix = async () => {
     try {
-      await navigator.clipboard.writeText('ballettatianafigueiredo@gmail.com');
+      await navigator.clipboard.writeText(pixKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     } catch (err) {
@@ -94,7 +100,11 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
               order_id: newOrderId,
               type: 'raffle_order',
               product_name: `Rifa: ${campaign?.name || 'Campanha'} (Números: ${(selectedNumbers || []).join(', ')})`,
-              items: (selectedNumbers || []).map(n => ({ id: `ticket-${n}`, name: `Número ${n}`, price: campaign?.price_per_number || 0 }))
+              items: (selectedNumbers || []).map(n => ({ id: `ticket-${n}`, name: `Número ${n}`, price: campaign?.price_per_number || 0 })),
+              pix_key: pixKey,
+              pix_type: pixType,
+              pix_receiver: pixReceiver,
+              pix_bank: pixBank
             }
           }).catch(e => console.error('Background email error:', e));
         }
@@ -137,24 +147,41 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 Seus números <strong>({selectedNumbers.join(', ')})</strong> foram reservados. 
                 Faça o PIX de <strong>R$ {totalPrice.toFixed(2)}</strong> e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>.
               </p>
-              <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-4 text-center">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold">Chave PIX para Pagamento</span>
-                <code className="text-brand-dark font-bold text-base md:text-lg break-all">ballettatianafigueiredo@gmail.com</code>
-                <button 
-                  onClick={handleCopyPix}
-                  className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors"
-                >
-                  {copied ? (
-                    <span className="flex items-center gap-2 text-green-600">
-                      <CheckCircle className="w-3 h-3" /> Copiado!
-                    </span>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" /> Copiar Chave
-                    </>
-                  )}
-                </button>
-              </div>
+                <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-6">
+                  <div className="text-center">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold block mb-2">Chave PIX para Pagamento</span>
+                    <code className="text-brand-dark font-bold text-base md:text-lg break-all">{pixKey}</code>
+                    <button 
+                      onClick={handleCopyPix}
+                      className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors mt-2 mx-auto"
+                    >
+                      {copied ? (
+                        <span className="flex items-center gap-2 text-green-600">
+                          <CheckCircle className="w-3 h-3" /> Copiado!
+                        </span>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" /> Copiar Chave
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-brand-dark/5 text-left text-brand-dark">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Tipo</p>
+                      <p className="text-xs font-serif capitalize">{pixType}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Banco</p>
+                      <p className="text-xs font-serif">{pixBank}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Recebedor</p>
+                      <p className="text-xs font-serif">{pixReceiver}</p>
+                    </div>
+                  </div>
+                </div>
             </div>
             <button onClick={onClose} className="px-12 py-4 bg-brand-dark text-white font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all">
               Fechar Janela

@@ -138,7 +138,10 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   };
 
   const { settings } = useSiteSettings();
-  const pixKey = settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
+  const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
+  const pixType = settings?.pix_checkout_type?.value || "E-mail";
+  const pixReceiver = settings?.pix_checkout_receiver?.value || "Tatiana Figueiredo";
+  const pixBank = settings?.pix_checkout_bank?.value || "NuBank";
 
   const handleCopyPix = async () => {
     try {
@@ -186,7 +189,14 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         // Dispara o e-mail em segundo plano (background)
         if (supabase) {
           supabase.functions.invoke('send-order', {
-            body: { ...orderData, order_id: newOrderId }
+            body: { 
+              ...orderData, 
+              order_id: newOrderId,
+              pix_key: pixKey,
+              pix_type: pixType,
+              pix_receiver: pixReceiver,
+              pix_bank: pixBank
+            }
           }).catch(e => console.error('Background email error:', e));
         }
       } else {
@@ -341,23 +351,40 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     <p className="text-sm text-brand-dark/70 font-serif mb-6 leading-relaxed">
                       Faça o PIX do valor total do seu pedido e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>. Você receberá um contato em seguida para finalização e envio.
                     </p>
-                    <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-4 text-center">
-                      <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold">Chave PIX para Pagamento</span>
-                      <code className="text-brand-dark font-bold text-base md:text-lg break-all">{pixKey}</code>
-                      <button 
-                        onClick={handleCopyPix}
-                        className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors"
-                      >
-                        {copied ? (
-                          <span className="flex items-center gap-2 text-green-600">
-                            <CheckCircle className="w-3 h-3" /> Copiado!
-                          </span>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3" /> Copiar Chave
-                          </>
-                        )}
-                      </button>
+                    <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-6">
+                      <div className="text-center">
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold block mb-2">Chave PIX para Pagamento</span>
+                        <code className="text-brand-dark font-bold text-base md:text-lg break-all">{pixKey}</code>
+                        <button 
+                          onClick={handleCopyPix}
+                          className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors mt-2 mx-auto"
+                        >
+                          {copied ? (
+                            <span className="flex items-center gap-2 text-green-600">
+                              <CheckCircle className="w-3 h-3" /> Copiado!
+                            </span>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" /> Copiar Chave
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-brand-dark/5 text-left">
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Tipo</p>
+                          <p className="text-xs font-serif text-brand-dark capitalize">{pixType}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Banco</p>
+                          <p className="text-xs font-serif text-brand-dark">{pixBank}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Recebedor</p>
+                          <p className="text-xs font-serif text-brand-dark">{pixReceiver}</p>
+                        </div>
+                      </div>
                     </div>
 
                   </div>

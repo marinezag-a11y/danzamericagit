@@ -122,7 +122,7 @@ export function useAnalytics() {
       }
 
       // Limit data fetching to 5000 for stats calculation
-      const { data: rows, error: fetchError, count } = await baseQuery.limit(5000);
+      const { data: rawRows, error: fetchError, count } = await baseQuery.limit(5000);
       
       if (fetchError) {
         console.error('[Analytics] Fetch error:', fetchError);
@@ -131,11 +131,11 @@ export function useAnalytics() {
         return;
       }
 
-      // Total views from the 'count' property (bypasses row limit)
-      const totalViews = count || (rows?.length || 0);
+      const rows = rawRows || [];
+      const totalViews = count || rows.length;
 
       // Unique visitors (distinct session_id)
-      const uniqueSessions = new Set(rows.map((r: any) => r.session_id));
+      const uniqueSessions = new Set(rows.filter(r => r.session_id).map((r: any) => r.session_id));
       const uniqueVisitors = uniqueSessions.size;
 
       // Average duration (excluding 0-second views)
@@ -147,7 +147,9 @@ export function useAnalytics() {
       // Bounce rate: sessions with exactly 1 page view
       const sessionCounts: Record<string, number> = {};
       rows.forEach((r: any) => {
-        sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
+        if (r.session_id) {
+          sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1;
+        }
       });
       const totalSessions = Object.keys(sessionCounts).length;
       const bounceSessions = Object.values(sessionCounts).filter(c => c === 1).length;
@@ -207,26 +209,38 @@ export function useAnalytics() {
       for (let i = 6; i >= 0; i--) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
-        const key = d.toISOString().split('T')[0];
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const key = `${year}-${month}-${day}`;
         dailyMap[key] = 0;
       }
+      const peakHoursMap = Array(24).fill(0);
       rows.forEach((r: any) => {
-        const dateKey = new Date(r.created_at).toISOString().split('T')[0];
-        if (dailyMap[dateKey] !== undefined) {
-          dailyMap[dateKey]++;
+        if (r.created_at) {
+          try {
+            const dateStr = r.created_at.replace(' ', 'T');
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              const dateKey = `${year}-${month}-${day}`;
+              
+              if (dailyMap[dateKey] !== undefined) {
+                dailyMap[dateKey]++;
+              }
+              const hour = date.getHours();
+              if (hour >= 0 && hour < 24) {
+                peakHoursMap[hour]++;
+              }
+            }
+          } catch (e) {
+            console.warn('[Analytics] Date error:', r.created_at, e);
+          }
         }
       });
       const dailyViews = Object.entries(dailyMap).map(([date, count]) => ({ date, count }));
-
-      // Horários de Pico (heatmap)
-      const peakHoursMap = Array(24).fill(0);
-      rows.forEach((r: any) => {
-        const date = new Date(r.created_at);
-        const hour = date.getHours();
-        if (hour >= 0 && hour < 24) {
-          peakHoursMap[hour]++;
-        }
-      });
       const peakHours = peakHoursMap.map((count, hour) => ({ hour, count }));
 
       // Produtos Mais Desejados (baseado nos eventos "Abrir ...")
@@ -247,7 +261,7 @@ export function useAnalytics() {
       if (dateFilter) ordersQuery = ordersQuery.gte('created_at', dateFilter);
       const { count: ordersCount } = await ordersQuery;
 
-      let rafflesQuery = supabase.from('raffle_purchases').select('id', { count: 'exact', head: true });
+      let rafflesQuery = supabase.from('raffle_orders').select('id', { count: 'exact', head: true });
       if (dateFilter) rafflesQuery = rafflesQuery.gte('created_at', dateFilter);
       const { count: rafflesCount } = await rafflesQuery;
 

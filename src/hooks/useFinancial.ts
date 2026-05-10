@@ -106,8 +106,8 @@ export function useFinancial() {
   }, [fetchRecords]);
 
   const totals = useMemo(() => {
-    const baseTotals = records.reduce((acc, curr) => {
-      const amount = Number(curr.amount);
+    const baseTotals = (records || []).reduce((acc, curr) => {
+      const amount = Number(curr.amount) || 0;
       if (curr.type === 'income') {
         acc.income += amount;
       } else {

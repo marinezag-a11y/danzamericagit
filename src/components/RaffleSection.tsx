@@ -47,20 +47,21 @@ export function RaffleSection() {
           {activeCampaigns.map((campaign, idx) => (
             <motion.div 
               key={campaign.id}
-              initial={{ opacity: 0, x: idx % 2 === 0 ? -20 : 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-brand-grey group flex flex-col md:flex-row overflow-hidden hover:shadow-2xl transition-all duration-500 cursor-pointer"
+              className="bg-brand-grey group flex flex-col overflow-hidden hover:shadow-[0_64px_128px_-16px_rgba(0,0,0,0.15)] transition-all duration-700 cursor-pointer rounded-[3rem] border border-black/5"
               onClick={() => setSelectedCampaign(campaign)}
             >
-              <div className="md:w-1/2 aspect-square md:aspect-auto relative overflow-hidden bg-white">
+              <div className="w-full aspect-video relative overflow-hidden bg-white">
                 <img 
                   src={campaign.image_url || 'https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?q=80&w=1200&auto=format&fit=crop'} 
                   alt={campaign.name}
-                  className="w-full h-full object-cover transition-all duration-1000 scale-[1.6] group-hover:scale-[1.8]"
+                  className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-105"
                 />
+                <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-700" />
               </div>
-              <div className="md:w-1/2 p-10 flex flex-col justify-between">
+              <div className="p-8 sm:p-12 flex flex-col justify-between bg-white">
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <Ticket className="w-4 h-4 text-brand-orange" />

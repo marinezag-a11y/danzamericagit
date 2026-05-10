@@ -78,7 +78,7 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
     
     if (result.success) {
       try {
-        await supabase.functions.invoke('send-order', {
+        await supabase.functions.invoke('send-order-v2', {
           body: orderData
         });
       } catch (err) {
@@ -100,9 +100,9 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-brand-dark border border-white/10 w-full max-w-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] relative rounded-[3.5rem] overflow-hidden"
+        className="bg-brand-dark border border-white/10 w-full max-w-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] relative rounded-[2.5rem] overflow-hidden"
       >
-        <div className="p-10 md:p-14 border-b border-white/5 flex justify-between items-center bg-white/5">
+        <div className="p-8 md:p-10 border-b border-white/5 flex justify-between items-center bg-white/5">
           <div>
             <p className="text-brand-orange text-[9px] uppercase tracking-[0.5em] font-black mb-3">ADMINISTRAÇÃO DE VENDAS</p>
             <h3 className="text-3xl font-serif italic text-white leading-tight">Incluir Pedido Manual</h3>
@@ -115,7 +115,7 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-10 md:p-14 space-y-8">
+        <form onSubmit={handleSubmit} className="p-8 md:p-10 space-y-8">
           <div className="space-y-4">
             <p className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-black ml-2">DADOS DO CLIENTE</p>
             <div className="space-y-4">

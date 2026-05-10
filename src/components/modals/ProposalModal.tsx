@@ -45,10 +45,12 @@ export function ProposalModal({ tierName, tierPrice, tierBenefits, onClose }: Pr
 
       if (insertError) throw insertError;
 
-      // Call Edge Function
-      await supabase.functions.invoke('send-proposal', { body: data });
+      setSuccess(true); // Sucesso instantâneo para o usuário
 
-      setSuccess(true);
+      // Dispara a notificação por e-mail em segundo plano
+      supabase.functions.invoke('send-proposal', { body: data })
+        .catch(e => console.error('Error sending proposal notification:', e));
+
       setTimeout(onClose, 4000);
     } catch (err: any) {
       setError(err.message || 'Erro ao enviar solicitação.');
@@ -64,9 +66,9 @@ export function ProposalModal({ tierName, tierPrice, tierBenefits, onClose }: Pr
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="bg-brand-dark/90 border border-white/10 w-full max-w-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] relative rounded-[3.5rem] overflow-hidden"
+          className="bg-brand-dark/90 border border-white/10 w-full max-w-md shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] relative rounded-[2rem] overflow-hidden"
         >
-          <div className="p-10 md:p-14 border-b border-white/5 flex justify-between items-center bg-white/5">
+          <div className="p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
             <div>
               <p className="text-brand-orange text-[9px] uppercase tracking-[0.5em] font-black mb-3">PARCERIA COMERCIAL</p>
               <h3 className="text-3xl font-serif italic text-white leading-tight">{tierName}</h3>
@@ -79,7 +81,7 @@ export function ProposalModal({ tierName, tierPrice, tierBenefits, onClose }: Pr
             </button>
           </div>
 
-          <div className="p-10 md:p-14">
+          <div className="p-6 md:p-8">
             <AnimatePresence mode="wait">
               {success ? (
                 <motion.div 
@@ -88,8 +90,8 @@ export function ProposalModal({ tierName, tierPrice, tierBenefits, onClose }: Pr
                   animate={{ opacity: 1, scale: 1 }}
                   className="text-center py-12"
                 >
-                  <div className="w-24 h-24 bg-emerald-500/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 border border-emerald-500/20 shadow-2xl shadow-emerald-500/20">
-                    <CheckCircle2 className="w-12 h-12 text-emerald-500" strokeWidth={1.5} />
+                  <div className="w-16 h-16 bg-emerald-500/10 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 border border-emerald-500/20 shadow-2xl shadow-emerald-500/20">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500" strokeWidth={1.5} />
                   </div>
                   <h4 className="text-3xl font-serif text-white mb-6 italic leading-tight">Solicitação Enviada!</h4>
                   <p className="text-white/40 font-serif leading-relaxed italic px-4">
@@ -156,9 +158,9 @@ export function ProposalModal({ tierName, tierPrice, tierBenefits, onClose }: Pr
                   <div className="space-y-6">
                     <button 
                       disabled={loading}
-                      className="w-full bg-brand-orange text-white py-7 rounded-[2rem] font-black uppercase tracking-[0.4em] text-[11px] hover:bg-brand-dark transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 active:scale-95"
+                      className="w-full bg-brand-orange text-white py-5 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-[10px] hover:bg-brand-dark transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-50 active:scale-95"
                     >
-                      {loading ? 'PROCESSANDO...' : 'SOLICITAR PROPOSTA COMERCIAL'}
+                      {loading ? 'PROCESSANDO...' : 'SOLICITAR PROPOSTA'}
                     </button>
                     <p className="text-center text-[8px] uppercase tracking-widest font-black text-white/10 italic">
                       NOSSA EQUIPE ANALISARÁ E RESPONDERÁ EM ATÉ 24 HORAS

@@ -188,7 +188,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
         // Dispara o e-mail em segundo plano (background)
         if (supabase) {
-          supabase.functions.invoke('send-order', {
+          supabase.functions.invoke('send-order-v2', {
             body: { 
               ...orderData, 
               order_id: newOrderId,
@@ -230,10 +230,10 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-white/90 backdrop-blur-2xl w-full max-w-6xl rounded-[4rem] overflow-hidden z-[10000] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] border border-white/40 flex flex-col max-h-[90vh]"
+        className="relative bg-white/90 backdrop-blur-2xl w-full max-w-4xl rounded-[4rem] overflow-hidden z-[10000] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] border border-white/40 flex flex-col max-h-[90vh]"
       >
         {/* Header Bar */}
-        <div className="p-8 md:p-12 border-b border-black/5 flex justify-between items-center bg-black/[0.02]">
+        <div className="p-8 md:p-10 border-b border-black/5 flex justify-between items-center bg-black/[0.02]">
           <div className="flex items-center gap-4">
              <div className="w-2 h-12 bg-brand-orange rounded-full" />
              <div>
@@ -241,7 +241,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                   {activeModal === 'store' ? 'CARRINHO SOLIDÁRIO' : 
                    activeModal === 'contact' ? 'FALE CONOSCO' : 'PATROCÍNIO DIRETO'}
                 </p>
-                <h2 className="text-3xl md:text-4xl font-serif text-brand-dark italic leading-tight">
+                <h2 className="text-3xl font-serif text-brand-dark italic leading-tight">
                   {activeModal === 'store' ? 'Itens de Apoio' : 
                    activeModal === 'contact' ? 'Nossos Contatos' : 'Contribuição'}
                 </h2>
@@ -283,10 +283,10 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                             className="flex gap-8 items-start cursor-pointer w-full"
                             onClick={() => toggleProduct(product.id)}
                           >
-                            <div className="relative w-28 h-28 overflow-hidden rounded-[2rem] bg-white border border-black/5 shrink-0 shadow-xl group-hover:rotate-2 transition-transform">
+                            <div className="relative w-28 h-28 overflow-hidden rounded-[2.5rem] bg-white border border-black/5 shrink-0 shadow-xl group-hover:rotate-3 transition-transform">
                               <img 
                                 src={product.image} 
-                                className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                                className="w-full h-full object-cover transition-all duration-1000 scale-[1.6] group-hover:scale-[1.8]" 
                                 alt={product.name}
                               />
                             </div>
@@ -361,40 +361,40 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     animate={{ opacity: 1, scale: 1 }}
                     className="h-full flex flex-col items-center justify-center py-12 text-center"
                   >
-                    <div className="relative mb-12">
-                      <div className="w-32 h-32 bg-emerald-500 rounded-[3rem] flex items-center justify-center text-white shadow-[0_20px_40px_-12px_rgba(16,185,129,0.5)] rotate-12">
-                        <CheckCircle className="w-16 h-16" strokeWidth={1.5} />
+                    <div className="relative mb-6">
+                      <div className="w-16 h-16 bg-emerald-500 rounded-[1.5rem] flex items-center justify-center text-white shadow-[0_15px_30px_-10px_rgba(16,185,129,0.5)] rotate-12">
+                        <CheckCircle className="w-8 h-8" strokeWidth={1.5} />
                       </div>
-                      <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white rounded-[1.5rem] shadow-2xl flex items-center justify-center">
-                         <ShoppingBag className="w-8 h-8 text-brand-orange" strokeWidth={1.5} />
+                      <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-[1rem] shadow-xl flex items-center justify-center">
+                         <ShoppingBag className="w-5 h-5 text-brand-orange" strokeWidth={1.5} />
                       </div>
                     </div>
 
-                    <h3 className="text-4xl font-serif text-brand-dark mb-6 italic leading-tight">Pedido Recebido com Sucesso!</h3>
+                    <h3 className="text-2xl font-serif text-brand-dark mb-4 italic leading-tight">Pedido Recebido com Sucesso!</h3>
                     
-                    <div className="bg-white p-10 md:p-14 rounded-[3.5rem] border border-black/5 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] mb-12 max-w-xl mx-auto text-left space-y-10">
-                      <div className="space-y-4">
-                        <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-black italic opacity-60">CONFIRMAÇÃO VIA PIX</p>
-                        <p className="text-sm text-brand-dark/60 font-serif leading-relaxed italic">
-                          Sua contribuição é vital! Para confirmar, realize o PIX e envie o comprovante para nosso WhatsApp. Estamos ansiosos para agradecer pessoalmente!
+                    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-black/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] mb-8 max-w-sm mx-auto text-left space-y-6">
+                      <div className="space-y-2">
+                        <p className="text-brand-orange text-[9px] uppercase tracking-[0.3em] font-black italic opacity-60">CONFIRMAÇÃO VIA PIX</p>
+                        <p className="text-xs text-brand-dark/60 font-serif leading-relaxed italic">
+                          Para confirmar seu apoio, realize o PIX e envie o comprovante para nosso WhatsApp.
                         </p>
                       </div>
 
-                      <div className="space-y-6">
-                        <div className="bg-black/5 p-8 rounded-3xl border border-transparent hover:border-brand-orange/20 transition-all group cursor-copy" onClick={handleCopyPix}>
-                          <span className="text-[9px] uppercase tracking-[0.3em] text-brand-dark/30 font-black block mb-3">CHAVE PIX ({pixType})</span>
-                          <p className="text-brand-dark font-mono font-black text-lg break-all tracking-tight leading-none">{pixKey}</p>
-                          <p className="text-[8px] uppercase tracking-widest text-brand-orange font-black mt-4 opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA COPIAR CHAVE</p>
+                      <div className="space-y-4">
+                        <div className="bg-black/5 p-4 rounded-2xl border border-transparent hover:border-brand-orange/20 transition-all group cursor-copy" onClick={handleCopyPix}>
+                          <span className="text-[8px] uppercase tracking-[0.2em] text-brand-dark/30 font-black block mb-2">CHAVE PIX ({pixType})</span>
+                          <p className="text-brand-dark font-mono font-black text-sm break-all tracking-tight leading-none">{pixKey}</p>
+                          <p className="text-[7px] uppercase tracking-widest text-brand-orange font-black mt-3 opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA COPIAR CHAVE</p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-10 px-4">
-                          <div className="space-y-1">
-                            <p className="text-[9px] uppercase tracking-widest text-brand-dark/30 font-black">BANCO</p>
-                            <p className="text-sm font-black text-brand-dark">{pixBank}</p>
+                        <div className="grid grid-cols-2 gap-6 px-2">
+                          <div className="space-y-0.5">
+                            <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black">BANCO</p>
+                            <p className="text-xs font-black text-brand-dark">{pixBank}</p>
                           </div>
-                          <div className="space-y-1">
-                            <p className="text-[9px] uppercase tracking-widest text-brand-dark/30 font-black">RECEBEDOR</p>
-                            <p className="text-sm font-black text-brand-dark">{pixReceiver}</p>
+                          <div className="space-y-0.5">
+                            <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black">RECEBEDOR</p>
+                            <p className="text-xs font-black text-brand-dark">{pixReceiver}</p>
                           </div>
                         </div>
                       </div>
@@ -402,16 +402,16 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                       <a 
                         href={`https://wa.me/5531992127292?text=${encodeURIComponent(`Olá! Realizei um pedido de apoio e gostaria de enviar o comprovante. Nome: ${customerName}`)}`}
                         target="_blank"
-                        className="w-full py-6 bg-[#25D366] text-white rounded-[2rem] text-[11px] uppercase tracking-[0.3em] font-black hover:shadow-[#25D366]/40 transition-all shadow-2xl flex items-center justify-center gap-4 active:scale-95"
+                        className="w-full py-4 bg-[#25D366] text-white rounded-[1.5rem] text-[10px] uppercase tracking-[0.3em] font-black hover:shadow-[#25D366]/40 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
                       >
-                        <Phone size={18} />
+                        <Phone size={16} />
                         Enviar Comprovante
                       </a>
                     </div>
 
                     <button 
                       onClick={onClose}
-                      className="px-16 py-6 border-2 border-black/5 text-brand-dark/20 rounded-[2rem] text-[10px] uppercase tracking-[0.4em] font-black hover:border-brand-dark hover:text-brand-dark transition-all"
+                      className="px-10 py-4 border border-black/5 text-brand-dark/20 rounded-[1.5rem] text-[9px] uppercase tracking-[0.3em] font-black hover:border-brand-dark hover:text-brand-dark transition-all"
                     >
                       CONCLUIR E FECHAR
                     </button>
@@ -423,7 +423,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                 <div className="flex flex-col min-h-[500px]">
                   {selectedProducts.length > 0 ? (
                     <div className="h-full flex flex-col gap-12">
-                      <div className="bg-brand-dark text-white p-10 md:p-14 rounded-[4rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+                      <div className="bg-brand-dark text-white p-6 md:p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-110 transition-transform duration-1000" />
                         
                         <div className="relative z-10 space-y-10">
@@ -458,7 +458,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                                 type="text" required value={customerName}
                                 onChange={(e) => setCustomerName(e.target.value)}
                                 placeholder="Nome Completo *"
-                                className="w-full p-6 bg-black/5 border border-transparent rounded-[1.8rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20"
+                                className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
                               />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -466,13 +466,13 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                                 type="email" required value={customerEmail}
                                 onChange={(e) => setCustomerEmail(e.target.value)}
                                 placeholder="E-mail *"
-                                className="w-full p-6 bg-black/5 border border-transparent rounded-[1.8rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20"
+                                className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
                               />
                               <input 
                                 type="tel" required value={customerPhone}
                                 onChange={(e) => setCustomerPhone(maskPhone(e.target.value))}
                                 placeholder="WhatsApp *"
-                                className="w-full p-6 bg-black/5 border border-transparent rounded-[1.8rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20"
+                                className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
                               />
                             </div>
                           </div>
@@ -488,7 +488,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                            <button 
                              type="submit"
                              disabled={submitting}
-                             className="w-full bg-brand-dark text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.4em] text-[11px] hover:bg-brand-orange transition-all shadow-[0_20px_40px_-12px_rgba(0,0,0,0.4)] flex items-center justify-center gap-4 group disabled:opacity-50 active:scale-95"
+                             className="w-full bg-brand-dark text-white py-5 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-[10px] hover:bg-brand-orange transition-all shadow-xl flex items-center justify-center gap-4 group disabled:opacity-50 active:scale-95"
                            >
                              {submitting ? (
                                <Loader2 className="w-6 h-6 animate-spin" />

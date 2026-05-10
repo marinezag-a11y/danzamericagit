@@ -94,7 +94,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
 
         // Notificação em segundo plano
         if (supabase) {
-          supabase.functions.invoke('send-order', {
+          supabase.functions.invoke('send-order-v2', {
             body: {
               ...orderData,
               order_id: newOrderId,
@@ -129,7 +129,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-brand-white w-full max-w-6xl p-8 md:p-16 max-h-[90vh] overflow-y-auto z-10 shadow-2xl"
+        className="relative bg-brand-white w-full max-w-4xl p-8 md:p-12 max-h-[90vh] overflow-y-auto z-10 shadow-2xl rounded-[3rem]"
       >
         <button onClick={onClose} className="absolute top-8 right-8 text-brand-dark/20 hover:text-brand-orange transition-colors">
           <X className="w-8 h-8" strokeWidth={1} />
@@ -137,20 +137,20 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
 
         {success ? (
           <div className="max-w-2xl mx-auto text-center py-12">
-            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-green-500/20">
-              <CheckCircle className="w-12 h-12 text-white" />
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-6 mx-auto shadow-xl shadow-green-500/20">
+              <CheckCircle className="w-8 h-8 text-white" />
             </div>
-            <h3 className="text-4xl font-serif text-brand-dark mb-6 italic">Pedido de Rifa Recebido!</h3>
-            <div className="bg-brand-grey p-8 border border-brand-dark/5 mb-8 text-left">
-              <p className="text-brand-orange text-[10px] uppercase tracking-widest font-bold mb-4">Próximo Passo: Pagamento</p>
-              <p className="text-sm text-brand-dark/70 font-serif mb-6 leading-relaxed">
+            <h3 className="text-2xl font-serif text-brand-dark mb-4 italic">Pedido de Rifa Recebido!</h3>
+            <div className="bg-brand-grey p-6 border border-brand-dark/5 mb-6 text-left rounded-2xl">
+              <p className="text-brand-orange text-[9px] uppercase tracking-widest font-bold mb-3">Próximo Passo: Pagamento</p>
+              <p className="text-xs text-brand-dark/70 font-serif mb-4 leading-relaxed">
                 Seus números <strong>({selectedNumbers.join(', ')})</strong> foram reservados. 
-                Faça o PIX de <strong>R$ {totalPrice.toFixed(2)}</strong> e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>.
+                Faça o PIX de <strong>R$ {totalPrice.toFixed(2)}</strong> e envie o comprovante.
               </p>
-                <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-6">
+                <div className="bg-white p-4 border border-brand-dark/5 flex flex-col gap-4 rounded-xl">
                   <div className="text-center">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold block mb-2">Chave PIX para Pagamento</span>
-                    <code className="text-brand-dark font-bold text-base md:text-lg break-all">{pixKey}</code>
+                    <span className="text-[9px] uppercase tracking-[0.1em] text-brand-orange font-bold block mb-1">Chave PIX para Pagamento</span>
+                    <code className="text-brand-dark font-bold text-sm md:text-base break-all">{pixKey}</code>
                     <button 
                       onClick={handleCopyPix}
                       className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors mt-2 mx-auto"
@@ -192,7 +192,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
             <div className="flex flex-col">
               <div className="mb-8">
                 <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-bold mb-2">Seleção de Números</p>
-                <h2 className="text-4xl font-serif text-brand-dark italic">{campaign.name}</h2>
+                <h2 className="text-3xl font-serif text-brand-dark italic">{campaign.name}</h2>
               </div>
 
               {loading ? (

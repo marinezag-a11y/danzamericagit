@@ -37,7 +37,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
     if (result.success) {
       if (data.status !== order.status) {
         try {
-          await supabase.functions.invoke('send-order', {
+          await supabase.functions.invoke('send-order-v2', {
             body: {
               type: 'status_update',
               order_id: order.id,
@@ -68,7 +68,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
     const result = await onUpdate(order.id, { status: pendingStatus });
     if (result.success) {
       try {
-        await supabase.functions.invoke('send-order', {
+        await supabase.functions.invoke('send-order-v2', {
           body: {
             type: 'status_update',
             order_id: order.id,
@@ -179,7 +179,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
               const result = await onUpdate(order.id, { status: newStatus });
               if (result.success) {
                 try {
-                  await supabase.functions.invoke('send-order', {
+                  await supabase.functions.invoke('send-order-v2', {
                     body: {
                       type: 'status_update',
                       order_id: order.id,

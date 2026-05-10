@@ -217,6 +217,15 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                               />
                             </div>
                           </div>
+                          <div className="space-y-4">
+                            <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Descrição da Ação</label>
+                            <textarea 
+                              rows={3} value={newDescription}
+                              onChange={(e) => setNewDescription(e.target.value)}
+                              placeholder="Descreva os prêmios e detalhes da ação..."
+                              className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl resize-none shadow-inner"
+                            />
+                          </div>
                         </div>
                         
                         <div className="space-y-8">
@@ -289,7 +298,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                 const order = orders.find(o => o.id === id);
                 if (order) {
                   try {
-                    await supabase.functions.invoke('send-order', {
+                    await supabase.functions.invoke('send-order-v2', {
                       body: {
                         type: 'status_update',
                         order_id: id,
@@ -334,6 +343,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
   const [localName, setLocalName] = useState(campaign.name);
   const [localDescription, setLocalDescription] = useState(campaign.description);
   const [localPrice, setLocalPrice] = useState(campaign.price_per_number);
+  const [localTotal, setLocalTotal] = useState(campaign.total_numbers);
   const [localImageUrl, setLocalImageUrl] = useState(campaign.image_url);
   const [itemToDelete, setItemToDelete] = useState<boolean>(false);
 
@@ -342,6 +352,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
       setLocalName(campaign.name);
       setLocalDescription(campaign.description);
       setLocalPrice(campaign.price_per_number);
+      setLocalTotal(campaign.total_numbers);
       setLocalImageUrl(campaign.image_url);
     }
   }, [campaign, isOpen]);
@@ -361,6 +372,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
       name: localName,
       description: localDescription,
       price_per_number: localPrice,
+      total_numbers: localTotal,
       image_url: localImageUrl
     });
     setSaving(false);
@@ -422,13 +434,24 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                       className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
                     />
                   </div>
-                  <div className="space-y-4">
-                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço/Número</label>
-                    <input 
-                      type="text" value={maskBRL(localPrice)}
-                      onChange={(e) => setLocalPrice(parseBRL(e.target.value))}
-                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
-                    />
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço/Número</label>
+                      <input 
+                        type="text" value={maskBRL(localPrice)}
+                        onChange={(e) => setLocalPrice(parseBRL(e.target.value))}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Total de Números</label>
+                      <input 
+                        type="number" value={localTotal}
+                        onChange={(e) => setLocalTotal(parseInt(e.target.value))}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner text-xl"
+                      />
+                      <p className="text-[9px] text-white/20 ml-1 italic">* Atenção: Alterar o total de números após o início das vendas pode causar inconsistências se o novo total for menor que o número de bilhetes já vendidos.</p>
+                    </div>
                   </div>
                   <div className="space-y-4">
                     <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Descrição</label>

@@ -243,12 +243,16 @@ const DancerAccordion: React.FC<DancerAccordionProps> = ({ dancer, index, onUpda
           <div className="text-[11px] font-black text-white/5 group-hover:text-brand-orange transition-all duration-500 font-sans w-8 text-center italic tracking-widest">
             {index.toString().padStart(2, '0')}
           </div>
-          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/5 bg-black/40 flex-shrink-0 shadow-lg">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 bg-white flex-shrink-0 shadow-xl relative">
             {dancer.photo_url ? (
-              <img src={dancer.photo_url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" alt="" />
+              <img 
+                src={dancer.photo_url} 
+                className="w-full h-full object-cover transition-all duration-700 scale-[1.8] group-hover:scale-[2.0]" 
+                alt="" 
+              />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <User className="w-6 h-6 text-white/10" strokeWidth={1} />
+              <div className="w-full h-full flex items-center justify-center bg-brand-orange/5">
+                <User className="w-6 h-6 text-brand-orange/20" strokeWidth={1} />
               </div>
             )}
           </div>

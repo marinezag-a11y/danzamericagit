@@ -98,18 +98,19 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
       const res = await createOrder(orderData);
       
       if (res.success) {
-        // Trigger notification email
-        await supabase.functions.invoke('send-order', {
+        setStep('success'); // Transição instantânea
+        
+        // Dispara o e-mail em segundo plano
+        supabase.functions.invoke('send-order-v2', {
           body: {
             ...orderData,
-            type: 'raffle',
+            type: 'raffle_order',
             pix_key: settings['pix_key_checkout']?.value,
             pix_receiver: settings['pix_checkout_receiver']?.value,
             pix_bank: settings['pix_checkout_bank']?.value,
             pix_type: settings['pix_checkout_type']?.value
           }
-        });
-        setStep('success');
+        }).catch(e => console.error('Background email error:', e));
       }
     } catch (error) {
       console.error('Error submitting order:', error);
@@ -134,7 +135,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative w-full max-w-4xl bg-white/90 backdrop-blur-2xl rounded-[4rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] overflow-hidden border border-white/40"
+        className="relative w-full max-w-4xl bg-white/90 backdrop-blur-2xl rounded-[4rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] overflow-hidden border border-white/40 min-h-[90vh] sm:min-h-[600px]"
       >
         {/* Progress Bar */}
         {step !== 'success' && (
@@ -160,14 +161,14 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
           <X size={24} />
         </button>
 
-        <div className="p-6 sm:p-16">
+        <div className="p-6 sm:p-12">
           {/* Header */}
           <div className="mb-10 sm:mb-16 text-center">
             <motion.h2 
               key={step}
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-3xl sm:text-6xl font-serif italic text-brand-dark leading-tight"
+              className="text-3xl sm:text-4xl font-serif italic text-brand-dark leading-tight"
             >
               {step === 'dancer' ? 'Escolha seu Talento' : 
                step === 'quantity' ? 'Quantidade de Números' :
@@ -190,7 +191,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   exit={{ opacity: 0, x: -50 }}
                   className="flex-1 flex flex-col gap-12"
                 >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 max-h-[450px] overflow-y-auto pr-4 custom-scrollbar">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
                     {loadingDancers ? (
                       <div className="col-span-full py-20 flex flex-col items-center gap-6">
                         <Loader2 className="w-12 h-12 text-brand-orange animate-spin" />
@@ -201,43 +202,43 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                         <button
                           key={dancer.id}
                           onClick={() => setSelectedDancer(dancer)}
-                          className={`group relative aspect-[3/4] rounded-[2.5rem] overflow-hidden transition-all duration-500 border-2 ${
+                          className={`group relative aspect-[3/4] rounded-[3rem] overflow-hidden transition-all duration-700 border-2 bg-white ${
                             selectedDancer?.id === dancer.id 
-                              ? 'border-brand-orange shadow-2xl scale-[1.02] z-10' 
-                              : 'border-transparent hover:border-black/10'
+                              ? 'border-brand-orange shadow-[0_32px_64px_-16px_rgba(204,0,0,0.4)] scale-[1.05] z-10' 
+                              : 'border-brand-orange/10 hover:border-brand-orange/30 shadow-xl'
                           }`}
                         >
-                          {dancer.photo_url ? (
-                            <img 
-                              src={dancer.photo_url} 
-                              className={`w-full h-full object-cover transition-all duration-700 ${
-                                selectedDancer?.id === dancer.id ? 'scale-110 grayscale-0' : 'grayscale group-hover:grayscale-0 group-hover:scale-105'
-                              }`} 
-                              alt={dancer.name} 
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-brand-dark/5 flex flex-col items-center justify-center gap-4">
-                              <User className="w-12 h-12 text-brand-dark/10" strokeWidth={1} />
-                              <span className="text-[8px] uppercase tracking-widest font-black text-brand-dark/20">Sem Retrato</span>
-                            </div>
-                          )}
+                          {/* Full-bleed photo with aggressive zoom to hide black borders */}
+                          <div className="absolute inset-0 bg-white overflow-hidden">
+                            {dancer.photo_url ? (
+                              <img 
+                                src={dancer.photo_url} 
+                                className="w-full h-full object-cover transition-all duration-1000 scale-[1.8] group-hover:scale-[2.0]" 
+                                alt={dancer.name} 
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-brand-orange/5 flex flex-col items-center justify-center">
+                                <User className="w-12 h-12 text-brand-orange/10" strokeWidth={1} />
+                              </div>
+                            )}
+                          </div>
                           
-                          <div className={`absolute inset-x-0 bottom-0 p-6 pt-12 bg-gradient-to-t transition-opacity duration-500 ${
-                            selectedDancer?.id === dancer.id ? 'from-brand-dark opacity-100' : 'from-black/60 opacity-0 group-hover:opacity-100'
-                          }`}>
-                            <p className="text-white font-serif italic text-lg leading-tight">{dancer.name}</p>
+                          {/* Permanent Light Overlay for Name - Works on Mobile and Desktop */}
+                          <div className={`absolute inset-x-0 bottom-0 p-3 sm:p-4 pt-8 sm:pt-12 bg-gradient-to-t from-white/98 via-white/80 to-transparent transition-all duration-500`}>
+                            <p className="text-brand-dark font-serif italic text-xs sm:text-sm leading-tight">{dancer.name}</p>
+                            <p className="text-brand-orange text-[6px] sm:text-[7px] uppercase tracking-[0.2em] font-black mt-1">Destaque</p>
+                          </div>
                             {selectedDancer?.id === dancer.id && (
                               <motion.div 
                                 initial={{ width: 0 }}
                                 animate={{ width: '100%' }}
-                                className="h-0.5 bg-brand-orange mt-2" 
+                                className="h-1 bg-brand-orange mt-3 sm:mt-4 rounded-full shadow-[0_0_15px_rgba(204,0,0,0.3)]" 
                               />
                             )}
-                          </div>
 
                           {selectedDancer?.id === dancer.id && (
-                            <div className="absolute top-4 right-4 w-10 h-10 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-xl">
-                              <Check size={20} strokeWidth={3} />
+                            <div className="absolute top-4 right-4 w-12 h-12 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white">
+                              <Check size={24} strokeWidth={4} />
                             </div>
                           )}
                         </button>
@@ -268,11 +269,15 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                 >
                   <div className="relative group">
                     <div className="absolute inset-0 bg-brand-orange/20 rounded-full blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-                    <div className="relative w-40 h-40 rounded-[3rem] overflow-hidden border-8 border-white shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rotate-3 group-hover:rotate-0 transition-transform duration-700">
+                    <div className="relative w-40 h-40 rounded-[3rem] overflow-hidden border-8 border-white shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rotate-3 group-hover:rotate-0 transition-transform duration-700 bg-white">
                       {selectedDancer?.photo_url ? (
-                        <img src={selectedDancer.photo_url} className="w-full h-full object-cover" alt="" />
+                        <img 
+                          src={selectedDancer.photo_url} 
+                          className="w-full h-full object-cover scale-[1.8] group-hover:scale-[2.0] transition-transform duration-700" 
+                          alt="" 
+                        />
                       ) : (
-                        <div className="w-full h-full bg-brand-dark/5 flex items-center justify-center"><User className="w-12 h-12 text-brand-dark/10" /></div>
+                        <div className="w-full h-full bg-brand-orange/5 flex items-center justify-center"><User className="w-12 h-12 text-brand-orange/10" /></div>
                       )}
                     </div>
                     <motion.div 
@@ -302,7 +307,11 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                         <p className="text-[10px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mt-2">NÚMEROS</p>
                       </div>
                       <button 
-                        onClick={() => setQuantity(Math.min(activeCampaign?.numbers_per_order || 20, quantity + 1))}
+                        onClick={() => setQuantity(Math.min(
+                          activeCampaign?.numbers_per_order || 20, 
+                          availableNumbers.length,
+                          quantity + 1
+                        ))}
                         className="w-20 h-20 rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-brand-dark hover:bg-brand-dark hover:text-white transition-all text-4xl font-light border border-black/5 active:scale-90"
                       >
                         +
@@ -338,11 +347,15 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   className="flex-1 flex flex-col items-center gap-12"
                 >
                   <div className="flex items-center gap-6 bg-white shadow-2xl px-10 py-5 rounded-[2.5rem] border border-black/5">
-                    <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg border-2 border-white flex-shrink-0">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg border-2 border-white flex-shrink-0 bg-white">
                       {selectedDancer?.photo_url ? (
-                        <img src={selectedDancer.photo_url} className="w-full h-full object-cover" alt="" />
+                        <img 
+                          src={selectedDancer.photo_url} 
+                          className="w-full h-full object-cover scale-[1.8]" 
+                          alt="" 
+                        />
                       ) : (
-                        <div className="w-full h-full bg-brand-dark/5 flex items-center justify-center"><User className="w-6 h-6 text-brand-dark/20" /></div>
+                        <div className="w-full h-full bg-brand-orange/5 flex items-center justify-center"><User className="w-6 h-6 text-brand-orange/20" /></div>
                       )}
                     </div>
                     <div className="text-left">
@@ -415,9 +428,13 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     <div className="relative z-10 h-full flex flex-col justify-between gap-12">
                       <div className="space-y-10">
                         <div className="flex items-center gap-8">
-                          <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl flex-shrink-0 rotate-3">
+                          <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl flex-shrink-0 rotate-3 bg-white">
                             {selectedDancer?.photo_url ? (
-                              <img src={selectedDancer.photo_url} className="w-full h-full object-cover" alt="" />
+                              <img 
+                                src={selectedDancer.photo_url} 
+                                className="w-full h-full object-cover scale-[1.8]" 
+                                alt="" 
+                              />
                             ) : (
                               <div className="w-full h-full bg-white/5 flex items-center justify-center"><User className="w-10 h-10 text-white/10" /></div>
                             )}
@@ -460,7 +477,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                                 placeholder="Nome Completo *"
                                 value={form.name} 
                                 onChange={e => setForm({...form, name: e.target.value})}
-                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20"
+                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
                               />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -470,7 +487,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                                 placeholder="WhatsApp *"
                                 value={form.phone} 
                                 onChange={e => setForm({...form, phone: e.target.value})}
-                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20"
+                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
                               />
                               <input 
                                 type="email" 
@@ -478,7 +495,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                                 placeholder="E-mail *"
                                 value={form.email} 
                                 onChange={e => setForm({...form, email: e.target.value})}
-                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20"
+                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
                               />
                             </div>
                          </div>
@@ -512,22 +529,22 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   key="step-success"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex-1 flex flex-col items-center justify-center text-center gap-12 py-10"
+                  className="flex-1 flex flex-col items-center justify-center text-center gap-6 py-4"
                 >
                   <div className="relative">
                     <motion.div 
                       initial={{ scale: 0, rotate: -45 }}
                       animate={{ scale: 1, rotate: 12 }}
                       transition={{ type: "spring", damping: 15, stiffness: 100, delay: 0.2 }}
-                      className="w-40 h-40 bg-emerald-500 rounded-[4rem] flex items-center justify-center text-white shadow-[0_40px_80px_-20px_rgba(16,185,129,0.5)]"
+                      className="w-20 h-20 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-white shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)]"
                     >
-                      <Check size={72} strokeWidth={4} />
+                      <Check size={36} strokeWidth={4} />
                     </motion.div>
                     <motion.div 
                       initial={{ opacity: 0, x: 30 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.6 }}
-                      className="absolute -bottom-6 -right-6 w-24 h-24 rounded-[2.5rem] border-8 border-white overflow-hidden shadow-2xl -rotate-12"
+                      className="absolute -bottom-3 -right-3 w-14 h-14 rounded-[1.5rem] border-4 border-white overflow-hidden shadow-2xl -rotate-12"
                     >
                       {selectedDancer?.photo_url ? (
                         <img src={selectedDancer.photo_url} className="w-full h-full object-cover" alt="" />
@@ -537,32 +554,32 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     </motion.div>
                   </div>
 
-                  <div className="space-y-6">
-                    <h3 className="text-5xl font-serif italic text-brand-dark leading-tight">Pedido Recebido!</h3>
-                    <p className="text-lg text-brand-dark/50 max-w-lg mx-auto leading-relaxed italic">
-                      Sua reserva para apoiar <span className="text-brand-dark font-black underline decoration-brand-orange/40 decoration-4 underline-offset-8">{selectedDancer?.name}</span> foi processada. Agora falta pouco!
+                  <div className="space-y-3">
+                    <h3 className="text-3xl font-serif italic text-brand-dark leading-tight">Pedido Recebido!</h3>
+                    <p className="text-xs text-brand-dark/50 max-w-sm mx-auto leading-relaxed italic">
+                      Sua reserva para apoiar <span className="text-brand-dark font-black underline decoration-brand-orange/40 decoration-2 underline-offset-4">{selectedDancer?.name}</span> foi processada. Agora falta pouco!
                     </p>
                   </div>
 
-                  <div className="w-full max-w-xl bg-white p-12 md:p-16 rounded-[5rem] border border-black/5 shadow-[0_64px_128px_-32px_rgba(0,0,0,0.15)] space-y-12">
-                    <div className="space-y-6">
-                      <p className="text-[11px] uppercase tracking-[0.5em] text-brand-dark/30 font-black">CHAVE PIX ({settings['pix_checkout_type']?.value || 'E-mail'})</p>
-                      <div className="bg-black/[0.04] p-10 rounded-[3rem] border border-transparent hover:border-brand-orange/30 transition-all group cursor-copy active:scale-95 shadow-inner" onClick={() => {
+                  <div className="w-full max-w-sm bg-white p-6 rounded-[2rem] border border-black/5 shadow-xl space-y-6">
+                    <div className="space-y-4">
+                      <p className="text-[9px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">CHAVE PIX ({settings['pix_checkout_type']?.value || 'E-mail'})</p>
+                      <div className="bg-black/[0.04] p-6 rounded-[2rem] border border-transparent hover:border-brand-orange/30 transition-all group cursor-copy active:scale-95 shadow-inner" onClick={() => {
                         navigator.clipboard.writeText(settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com');
                       }}>
-                        <p className="font-mono text-xl text-brand-dark break-all font-black tracking-tight">{settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com'}</p>
-                        <p className="text-[9px] uppercase tracking-[0.4em] text-brand-orange font-black mt-5 opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA COPIAR CHAVE</p>
+                        <p className="font-mono text-sm text-brand-dark break-all font-black tracking-tight">{settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com'}</p>
+                        <p className="text-[8px] uppercase tracking-[0.3em] text-brand-orange font-black mt-3 opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA COPIAR CHAVE</p>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-12 text-left border-t border-black/5 pt-12">
+                    <div className="grid grid-cols-2 gap-6 text-left border-t border-black/5 pt-8">
                       <div>
-                        <p className="text-[10px] uppercase tracking-[0.4em] text-brand-dark/30 font-black mb-2">BANCO</p>
-                        <p className="text-lg font-black text-brand-dark tracking-tight">{settings['pix_checkout_bank']?.value || 'SICOOB'}</p>
+                        <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">BANCO</p>
+                        <p className="text-sm font-black text-brand-dark tracking-tight">{settings['pix_checkout_bank']?.value || 'SICOOB'}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase tracking-[0.4em] text-brand-dark/30 font-black mb-2">RECEBEDOR</p>
-                        <p className="text-lg font-black text-brand-dark tracking-tight">{settings['pix_checkout_receiver']?.value || 'Tatiana Figueiredo'}</p>
+                        <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">RECEBEDOR</p>
+                        <p className="text-sm font-black text-brand-dark tracking-tight">{settings['pix_checkout_receiver']?.value || 'Tatiana Figueiredo'}</p>
                       </div>
                     </div>
 
@@ -571,16 +588,16 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                         const msg = encodeURIComponent(`Olá! Acabei de apoiar o talento ${selectedDancer?.name} na ação entre amigos. Meus números: ${selectedNumbers.join(', ')}. Aqui está meu comprovante!`);
                         window.open(`https://wa.me/5532988358215?text=${msg}`);
                       }}
-                      className="w-full py-8 bg-[#25D366] text-white rounded-[2.5rem] text-[13px] uppercase tracking-[0.4em] font-black hover:shadow-[0_20px_40px_-10px_rgba(37,211,102,0.5)] transition-all shadow-2xl flex items-center justify-center gap-4 active:scale-95"
+                      className="w-full py-5 bg-[#25D366] text-white rounded-[1.5rem] text-[11px] uppercase tracking-[0.3em] font-black hover:shadow-[0_15px_30px_-5px_rgba(37,211,102,0.4)] transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
                     >
-                      <Smartphone size={22} />
+                      <Smartphone size={18} />
                       ENVIAR COMPROVANTE AGORA
                     </button>
                   </div>
 
                   <button 
                     onClick={onClose}
-                    className="px-16 py-6 text-[11px] uppercase tracking-[0.5em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic"
+                    className="px-10 py-4 text-[9px] uppercase tracking-[0.4em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic"
                   >
                     CONCLUIR E FECHAR
                   </button>

@@ -44,7 +44,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
-    console.log('--- START SEND-ORDER (v18) ---')
+    console.log('--- START SEND-ORDER (v19 - FULL INFO) ---')
     
     const { 
       type = 'new_order', 
@@ -208,6 +208,60 @@ serve(async (req) => {
         </div>
       `
 
+      // Professional Customer Confirmation Email
+      const customerEmailHtml = `
+        <div style="font-family: sans-serif; background-color: #f4f4f4; padding: 40px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <div style="background-color: #FF5A1F; padding: 40px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px;">Pedido Recebido!</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Danzamerica 2026 • Argentina</p>
+            </div>
+            
+            <div style="padding: 40px; color: #333;">
+              <p style="font-size: 18px; margin-bottom: 25px;">Olá, <strong>${customer_name}</strong>!</p>
+              <p style="line-height: 1.6; color: #666; margin-bottom: 30px;">
+                Recebemos seu pedido de apoio com sucesso. Sua contribuição é fundamental para realizarmos este sonho em Córdoba, na Argentina!
+              </p>
+
+              <div style="background-color: #f9f9f9; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                <h3 style="margin: 0 0 20px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #999; border-bottom: 1px solid #eee; padding-bottom: 10px;">Resumo do Pedido</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  ${itemsHtml}
+                  <tr>
+                    <td style="padding: 20px 0 0 0; font-weight: bold; font-size: 16px;">TOTAL</td>
+                    <td style="padding: 20px 0 0 0; text-align: right; font-weight: bold; color: #FF5A1F; font-size: 20px;">${formattedTotal}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background-color: #FFF5F2; border: 1px solid #FF5A1F33; border-radius: 12px; padding: 30px; text-align: center;">
+                <h3 style="margin: 0 0 15px 0; color: #FF5A1F; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Pagamento via PIX</h3>
+                <p style="font-family: monospace; font-size: 18px; font-weight: bold; color: #333; margin: 15px 0; background: white; padding: 15px; border-radius: 8px; border: 1px dashed #FF5A1F;">
+                  ${body.pix_key || 'ballettatianafigueiredo@gmail.com'}
+                </p>
+                <div style="font-size: 13px; color: #666; margin-top: 15px;">
+                  <p style="margin: 5px 0;"><strong>Banco:</strong> ${body.pix_bank || 'SICOOB'}</p>
+                  <p style="margin: 5px 0;"><strong>Recebedor:</strong> ${body.pix_receiver || 'Tatiana Aparecida Figueiredo'}</p>
+                </div>
+              </div>
+
+              <div style="margin-top: 40px; text-align: center;">
+                <p style="font-size: 13px; color: #999; margin-bottom: 20px;">Após realizar o pagamento, envie o comprovante clicando no botão abaixo:</p>
+                <a href="https://wa.me/5532988358215" style="display: inline-block; background-color: #25D366; color: white; padding: 18px 35px; border-radius: 50px; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">
+                  Enviar Comprovante via WhatsApp
+                </a>
+              </div>
+            </div>
+
+            <div style="background-color: #f9f9f9; padding: 30px; text-align: center; border-top: 1px solid #eee;">
+              <p style="margin: 0; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px;">
+                Núcleo de Dança Tatiana Figueiredo • Belo Horizonte / MG
+              </p>
+            </div>
+          </div>
+        </div>
+      `
+
       // Send to dynamic Admins
       const adminRes = await sendResendEmail({
         from: 'Danzamerica 2026 <pedidos@nucleotatianafigueiredo.com.br>',
@@ -217,12 +271,12 @@ serve(async (req) => {
         html: adminEmailHtml,
       })
 
-      // Send to Customer (Simplified for brevity)
+      // Send to Customer
       const customerRes = await sendResendEmail({
         from: 'Danzamerica 2026 <pedidos@nucleotatianafigueiredo.com.br>',
         to: [customer_email],
         subject: `Confirmamos seu pedido! - Danzamerica 2026`,
-        html: `<p>Olá ${customer_name}, recebemos seu pedido com sucesso!</p>`,
+        html: customerEmailHtml,
       })
 
       // Update Database Status if at least one email was sent

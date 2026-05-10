@@ -101,10 +101,18 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         setStep('success'); // Transição instantânea
         
         // Dispara o e-mail em segundo plano
-        supabase.functions.invoke('send-order-v2-updated', {
+        supabase.functions.invoke('send-order-v2-updated-v2', {
           body: {
             ...orderData,
             type: 'raffle_order',
+            campaign_name: activeCampaign.name,
+            items: [
+              { 
+                name: `Apoio ao Talento: ${selectedDancer?.name || 'Geral'}`, 
+                price: activeCampaign.price_per_number * selectedNumbers.length,
+                description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
+              }
+            ],
             pix_key: settings['pix_key_checkout']?.value,
             pix_receiver: settings['pix_checkout_receiver']?.value,
             pix_bank: settings['pix_checkout_bank']?.value,

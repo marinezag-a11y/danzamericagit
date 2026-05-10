@@ -94,13 +94,20 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
 
         // Notificação em segundo plano
         if (supabase) {
-          supabase.functions.invoke('send-order-v2-updated', {
+          supabase.functions.invoke('send-order-v2-updated-v2', {
             body: {
               ...orderData,
               order_id: newOrderId,
               type: 'raffle_order',
+              campaign_name: campaign.name,
               product_name: `Rifa: ${campaign?.name || 'Campanha'} (Números: ${(selectedNumbers || []).join(', ')})`,
-              items: (selectedNumbers || []).map(n => ({ id: `ticket-${n}`, name: `Número ${n}`, price: campaign?.price_per_number || 0 })),
+              items: [
+                { 
+                  name: `Rifa: ${campaign.name}`, 
+                  price: totalPrice,
+                  description: `Números: ${selectedNumbers.join(', ')}`
+                }
+              ],
               pix_key: pixKey,
               pix_type: pixType,
               pix_receiver: pixReceiver,

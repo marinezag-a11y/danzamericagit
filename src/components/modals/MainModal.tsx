@@ -188,7 +188,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
         // Dispara o e-mail em segundo plano (background)
         if (supabase) {
-          supabase.functions.invoke('send-order-v2-updated', {
+          supabase.functions.invoke('send-order-v2-updated-v2', {
             body: { 
               ...orderData, 
               order_id: newOrderId,

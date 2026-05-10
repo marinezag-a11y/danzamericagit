@@ -107,14 +107,16 @@ serve(async (req) => {
       ? safeItems.map((item: any) => `
           <tr style="border-bottom: 1px solid #eee;">
             <td style="padding: 12px 0; color: #333; font-size: 14px;">
-              ${item.name || item.title || 'Item'}
-              ${item.option ? `<br/><span style="font-size: 11px; color: #999;">Opção: ${item.option}</span>` : ''}
+              <div style="font-weight: bold;">${item.name || item.title || 'Item'}</div>
+              ${item.option ? `<div style="font-size: 12px; color: #666; margin-top: 4px;">Opção: ${item.option}</div>` : ''}
+              ${item.description ? `<div style="font-size: 12px; color: #999; margin-top: 2px;">${item.description}</div>` : ''}
+              ${item.quantity && item.quantity > 1 ? `<div style="font-size: 11px; color: #999; margin-top: 2px;">Quantidade: ${item.quantity}</div>` : ''}
             </td>
             <td style="padding: 12px 0; text-align: right; color: #FF5A1F; font-weight: bold; font-size: 14px;">R$ ${Number(item.price || 0).toFixed(2)}</td>
           </tr>
         `).join('')
       : selected_numbers.length > 0 
-        ? `<tr><td colspan="2" style="padding: 12px 0; color: #333; font-size: 14px;">Números Escolhidos: <strong>${selected_numbers.join(', ')}</strong></td></tr>`
+        ? `<tr><td colspan="2" style="padding: 12px 0; color: #333; font-size: 14px;">${body.dancer_name ? `<div style="margin-bottom: 8px;"><strong>Apoio ao Talento:</strong> ${body.dancer_name}</div>` : ''} Números Escolhidos: <strong>${selected_numbers.join(', ')}</strong></td></tr>`
         : `<tr><td colspan="2" style="padding: 12px 0; color: #333; font-size: 14px;">Pedido solidário recebido.</td></tr>`
 
     if (type === 'status_update' || type === 'order_deletion') {

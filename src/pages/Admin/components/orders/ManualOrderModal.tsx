@@ -78,7 +78,7 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
     
     if (result.success) {
       try {
-        await supabase.functions.invoke('send-order-v2-updated', {
+        await supabase.functions.invoke('send-order-v2-updated-v2', {
           body: orderData
         });
       } catch (err) {

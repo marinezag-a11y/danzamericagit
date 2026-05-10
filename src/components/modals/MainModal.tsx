@@ -219,7 +219,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-brand-dark/95 backdrop-blur-md"
+        className="fixed inset-0 bg-brand-dark/90 backdrop-blur-sm"
         onClick={() => {
           onClose();
           resetForm();

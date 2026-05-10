@@ -59,8 +59,8 @@ input[type=number] {
 }
 /* Modal System */
 .modal-container {
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
+  background-color: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(8px);
   width: 100%;
   max-width: 56rem; /* max-w-4xl */
   border-radius: 2.5rem;

@@ -136,11 +136,13 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-brand-white w-full max-w-4xl p-6 sm:p-12 max-h-[90vh] overflow-y-auto z-10 shadow-2xl rounded-[3rem]"
+        className="modal-container relative z-10"
       >
-        <button onClick={onClose} className="absolute top-8 right-8 text-brand-dark/20 hover:text-brand-orange transition-colors">
+        <button onClick={onClose} className="absolute top-6 right-6 sm:top-8 sm:right-8 text-brand-dark/20 hover:text-brand-orange transition-colors z-20">
           <X className="w-8 h-8" strokeWidth={1} />
         </button>
+
+        <div className="modal-content">
 
         {success ? (
           <div className="max-w-2xl mx-auto text-center py-12">

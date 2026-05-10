@@ -80,7 +80,7 @@ export function ReasonModal({
                 <button 
                   type="submit"
                   disabled={!reason.trim()}
-                  className={`w-full py-6 text-white text-[10px] uppercase tracking-[0.4em] font-black transition-all rounded-2xl shadow-xl active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 ${btnColors[variant]}`}
+                  className={`w-full py-6 text-white text-[10px] uppercase tracking-widest font-black transition-all rounded-2xl shadow-xl active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 ${btnColors[variant]}`}
                 >
                   <Send className="w-4 h-4" />
                   {confirmLabel}

@@ -143,7 +143,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative w-full max-w-4xl bg-white/90 backdrop-blur-2xl rounded-[2.5rem] sm:rounded-[4rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] overflow-hidden border border-white/40 max-h-[92vh] sm:max-h-[85vh] flex flex-col"
+        className="modal-container relative z-10"
       >
         {/* Progress Bar */}
         {step !== 'success' && (
@@ -169,9 +169,9 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
           <X size={24} />
         </button>
 
-        <div className="p-6 sm:p-12">
+        <div className="modal-content relative">
           {/* Header */}
-          <div className="mb-10 sm:mb-16 text-center">
+          <div className="mb-6 sm:mb-16 text-center">
             <motion.h2 
               key={step}
               initial={{ opacity: 0, y: -20 }}
@@ -197,7 +197,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   initial={{ opacity: 0, x: 50 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -50 }}
-                  className="flex-1 flex flex-col gap-12"
+                  className="flex-1 flex flex-col gap-6 sm:gap-12"
                 >
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
                     {loadingDancers ? (
@@ -273,7 +273,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 1.05 }}
-                  className="flex-1 flex flex-col items-center justify-center gap-12"
+                  className="flex-1 flex flex-col items-center justify-center gap-6 sm:gap-12"
                 >
                   <div className="relative group">
                     <div className="absolute inset-0 bg-brand-orange/20 rounded-full blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
@@ -352,7 +352,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -50 }}
-                  className="flex-1 flex flex-col items-center gap-12"
+                  className="flex-1 flex flex-col items-center gap-6 sm:gap-12"
                 >
                   <div className="flex items-center gap-6 bg-white shadow-2xl px-10 py-5 rounded-[2.5rem] border border-black/5">
                     <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg border-2 border-white flex-shrink-0 bg-white">

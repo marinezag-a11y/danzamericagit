@@ -230,10 +230,10 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-white/90 backdrop-blur-2xl w-full max-w-4xl rounded-[4rem] overflow-hidden z-[10000] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] border border-white/40 flex flex-col max-h-[90vh]"
+        className="modal-container relative z-10"
       >
         {/* Header Bar */}
-        <div className="p-8 md:p-10 border-b border-black/5 flex justify-between items-center bg-black/[0.02]">
+        <div className="modal-header">
           <div className="flex items-center gap-4">
              <div className="w-2 h-12 bg-brand-orange rounded-full" />
              <div>
@@ -258,7 +258,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 sm:p-16 custom-scrollbar">
+        <div className="modal-content">
           {(activeModal === 'store' || activeModal === 'raffle' || activeModal === 'event' || activeModal === 'donation') && (
             <div className={`${success ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24'}`}>
               <div className={success ? 'w-full' : ''}>

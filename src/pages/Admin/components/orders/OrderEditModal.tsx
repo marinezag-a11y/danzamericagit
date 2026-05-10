@@ -522,13 +522,13 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                 <button 
                   onClick={handleSave}
                   disabled={updating}
-                  className="flex-1 lg:flex-none bg-brand-orange px-12 py-5 text-[10px] uppercase tracking-widest font-bold text-white hover:bg-white hover:text-brand-dark transition-all rounded-2xl flex items-center justify-center gap-4 shadow-[0_10px_30px_rgba(180,48,64,0.3)] hover:shadow-white/10 hover:-translate-y-1 active:translate-y-0"
+                  className="flex-1 lg:flex-none bg-brand-orange px-6 py-5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-white hover:text-brand-dark transition-all rounded-2xl flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(180,48,64,0.3)] hover:shadow-white/10 hover:-translate-y-1 active:translate-y-0 whitespace-nowrap"
                 >
                   {updating ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      <Save className="w-5 h-5" />
+                      <Save className="w-5 h-5 shrink-0" />
                       Confirmar e Salvar
                     </>
                   )}
@@ -538,6 +538,19 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
           </motion.div>
         </div>
       )}
+
+      <ReasonModal
+        isOpen={isAskingReason}
+        title="Justificativa de Cancelamento"
+        message="Por favor, descreva o motivo do cancelamento deste pedido. Esta informação será registrada no histórico e poderá ser enviada ao cliente."
+        confirmLabel="Confirmar Cancelamento"
+        onConfirm={(reason) => {
+          setIsAskingReason(false);
+          performSave(reason);
+        }}
+        onCancel={() => setIsAskingReason(false)}
+        variant="danger"
+      />
     </AnimatePresence>
   );
 };

@@ -298,7 +298,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                 const order = orders.find(o => o.id === id);
                 if (order) {
                   try {
-                    await supabase.functions.invoke('send-order-v2', {
+                    await supabase.functions.invoke('send-order-v2-updated', {
                       body: {
                         type: 'status_update',
                         order_id: id,

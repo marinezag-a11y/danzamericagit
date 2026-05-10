@@ -60,7 +60,7 @@ serve(async (req) => {
           <p><strong>Você receberá um retorno em breve para darmos os próximos passos.</strong></p>
           <br />
           <p>Em caso de urgência, você pode nos contatar diretamente:</p>
-          <p>📞 (31) 98765-4321 / (31) 3456-7890</p>
+          <p>📞 (31) 99212-7292</p>
           <p>📧 nucleodedanca@yahoo.com.br</p>
         </div>
         <div style="text-align: center; margin-top: 30px; font-size: 10px; opacity: 0.5;">

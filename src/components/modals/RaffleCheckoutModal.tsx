@@ -94,7 +94,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
 
         // Notificação em segundo plano
         if (supabase) {
-          supabase.functions.invoke('send-order-v2', {
+          supabase.functions.invoke('send-order-v2-updated', {
             body: {
               ...orderData,
               order_id: newOrderId,
@@ -140,7 +140,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-6 mx-auto shadow-xl shadow-green-500/20">
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
-            <h3 className="text-2xl font-serif text-brand-dark mb-4 italic">Pedido de Rifa Recebido!</h3>
+            <h3 className="text-xl sm:text-2xl font-serif text-brand-dark mb-4 italic">Pedido de Rifa Recebido!</h3>
             <div className="bg-brand-grey p-6 border border-brand-dark/5 mb-6 text-left rounded-2xl">
               <p className="text-brand-orange text-[9px] uppercase tracking-widest font-bold mb-3">Próximo Passo: Pagamento</p>
               <p className="text-xs text-brand-dark/70 font-serif mb-4 leading-relaxed">
@@ -190,9 +190,9 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             <div className="flex flex-col">
-              <div className="mb-8">
-                <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-bold mb-2">Seleção de Números</p>
-                <h2 className="text-3xl font-serif text-brand-dark italic">{campaign.name}</h2>
+              <div className="mb-4 sm:mb-8">
+                <p className="text-brand-orange text-[9px] sm:text-[10px] uppercase tracking-[0.2em] sm:tracking-[0.3em] font-bold mb-1 sm:mb-2">Seleção de Números</p>
+                <h2 className="text-xl sm:text-3xl font-serif text-brand-dark italic">{campaign.name}</h2>
               </div>
 
               {loading ? (
@@ -272,9 +272,9 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                           <span key={n} className="px-3 py-1 bg-brand-orange text-white text-[10px] font-bold">#{String(n).padStart(2, '0')}</span>
                         ))}
                       </div>
-                      <div className="flex justify-between items-center py-6 border-y border-brand-dark/10">
-                        <span className="text-brand-dark font-serif font-bold uppercase tracking-widest text-[10px]">Total a Pagar</span>
-                        <span className="text-3xl font-display text-brand-orange">R$ {totalPrice.toFixed(2)}</span>
+                      <div className="flex justify-between items-center py-4 sm:py-6 border-y border-brand-dark/10">
+                        <span className="text-brand-dark font-serif font-bold uppercase tracking-widest text-[9px] sm:text-[10px]">Total a Pagar</span>
+                        <span className="text-2xl sm:text-3xl font-display text-brand-orange">R$ {totalPrice.toFixed(2)}</span>
                       </div>
                     </div>
 

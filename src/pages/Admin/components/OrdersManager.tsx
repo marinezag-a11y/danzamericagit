@@ -68,7 +68,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     
     if (order) {
       try {
-        await supabase.functions.invoke('send-order-v2', {
+        await supabase.functions.invoke('send-order-v2-updated', {
           body: {
             type: 'order_deletion',
             order_id: order.id,

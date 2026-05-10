@@ -155,7 +155,7 @@ serve(async (req) => {
                 </div>
               ` : ''}
               <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
-                <p style="margin: 5px 0;">📱 <strong>WhatsApp:</strong> (31) 99361-5488</p>
+                <p style="margin: 5px 0;">📱 <strong>WhatsApp:</strong> (31) 99212-7292</p>
                 <p style="margin: 5px 0;">📧 <strong>E-mail:</strong> nucleodedanca@yahoo.com.br</p>
               </div>
             </div>
@@ -247,7 +247,7 @@ serve(async (req) => {
 
               <div style="margin-top: 40px; text-align: center;">
                 <p style="font-size: 13px; color: #999; margin-bottom: 20px;">Após realizar o pagamento, envie o comprovante clicando no botão abaixo:</p>
-                <a href="https://wa.me/5532988358215" style="display: inline-block; background-color: #25D366; color: white; padding: 18px 35px; border-radius: 50px; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">
+                <a href="https://wa.me/5531992127292" style="display: inline-block; background-color: #25D366; color: white; padding: 18px 35px; border-radius: 50px; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">
                   Enviar Comprovante via WhatsApp
                 </a>
               </div>

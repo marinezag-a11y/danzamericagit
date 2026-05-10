@@ -101,7 +101,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         setStep('success'); // Transição instantânea
         
         // Dispara o e-mail em segundo plano
-        supabase.functions.invoke('send-order-v2', {
+        supabase.functions.invoke('send-order-v2-updated', {
           body: {
             ...orderData,
             type: 'raffle_order',
@@ -585,8 +585,8 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
                     <button 
                       onClick={() => {
-                        const msg = encodeURIComponent(`Olá! Acabei de apoiar o talento ${selectedDancer?.name} na ação entre amigos. Meus números: ${selectedNumbers.join(', ')}. Aqui está meu comprovante!`);
-                        window.open(`https://wa.me/5532988358215?text=${msg}`);
+                        const msg = encodeURIComponent(`Olá! Quero oficializar meu apoio para ${selectedDancer?.name}.`);
+                        window.open(`https://wa.me/5531992127292?text=${msg}`);
                       }}
                       className="w-full py-5 bg-[#25D366] text-white rounded-[1.5rem] text-[11px] uppercase tracking-[0.3em] font-black hover:shadow-[0_15px_30px_-5px_rgba(37,211,102,0.4)] transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
                     >

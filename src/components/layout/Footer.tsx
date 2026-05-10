@@ -46,9 +46,9 @@ export function Footer({ onAdminClick }: FooterProps) {
                 </a>
               </li>
               <li>
-                <a href="https://wa.me/5531993615488" target="_blank" rel="noopener noreferrer" className="flex gap-3 hover:text-brand-orange transition-colors group">
-                  <Phone className="w-4 h-4 text-brand-orange shrink-0 group-hover:scale-110 transition-transform" />
-                  <span>(31) 99361-5488</span>
+                <a href="https://wa.me/5531992127292" target="_blank" rel="noopener noreferrer" className="flex gap-3 hover:text-brand-orange transition-colors group">
+                  <Phone className="w-5 h-5 text-brand-orange shrink-0" />
+                  <span className="font-serif italic">(31) 99212-7292</span>
                 </a>
               </li>
               <li>

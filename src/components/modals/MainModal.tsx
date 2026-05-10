@@ -188,7 +188,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
         // Dispara o e-mail em segundo plano (background)
         if (supabase) {
-          supabase.functions.invoke('send-order-v2', {
+          supabase.functions.invoke('send-order-v2-updated', {
             body: { 
               ...orderData, 
               order_id: newOrderId,
@@ -528,7 +528,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
             <div className="max-w-5xl mx-auto space-y-16">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {[
-                  { icon: Phone, label: 'WhatsApp', value: '(31) 99361-5488', href: 'https://wa.me/5531993615488', color: '#25D366' },
+                  { icon: Phone, label: 'WhatsApp', value: '(31) 99212-7292', href: 'https://wa.me/5531992127292', color: '#25D366' },
                   { icon: Instagram, label: 'Instagram', value: '@nucleodedanca', href: 'https://instagram.com/nucleodedanca', color: '#E1306C' },
                   { icon: Mail, label: 'E-mail', value: 'nucleodedanca@yahoo.com.br', href: 'mailto:nucleodedanca@yahoo.com.br', color: '#EA4335' },
                   { icon: MapPin, label: 'Endereço', value: 'Av. Abílio Machado, 3997 – BH', href: 'https://www.google.com/maps/search/?api=1&query=Av.+Abílio+Machado,+3997+–+Belo+Horizonte,+MG', color: '#4285F4' }

@@ -48,7 +48,7 @@ export function ProposalModal({ tierName, tierPrice, tierBenefits, onClose }: Pr
       setSuccess(true); // Sucesso instantâneo para o usuário
 
       // Dispara a notificação por e-mail em segundo plano
-      supabase.functions.invoke('send-proposal', { body: data })
+      supabase.functions.invoke('send-proposal-v2', { body: data })
         .catch(e => console.error('Error sending proposal notification:', e));
 
       setTimeout(onClose, 4000);

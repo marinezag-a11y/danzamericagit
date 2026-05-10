@@ -50,63 +50,46 @@ export function ReasonModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md overflow-hidden">
         <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onCancel}
-          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        />
-        
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative bg-[#111] border border-white/10 w-full max-w-md p-8 shadow-2xl rounded-sm"
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="relative bg-[#111] border border-white/10 w-full max-w-md shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] rounded-[3.5rem] overflow-hidden"
         >
-          <button 
-            onClick={onCancel}
-            className="absolute top-4 right-4 text-white/20 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          <div className="flex flex-col">
-            <div className={`p-4 rounded-full mb-6 w-fit mx-auto ${colors[variant]}`}>
-              <MessageSquare className="w-8 h-8" />
+          <div className="p-10 md:p-12 flex flex-col items-center text-center">
+            <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl transition-transform hover:scale-110 ${colors[variant]}`}>
+              <MessageSquare className="w-10 h-10" strokeWidth={1.5} />
             </div>
 
-            <h3 className="text-xl font-serif italic text-white mb-2 text-center">{title}</h3>
-            <p className="text-sm text-white/60 mb-6 leading-relaxed font-sans text-center">
+            <p className="text-brand-orange text-[9px] uppercase tracking-[0.4em] font-black mb-3 italic opacity-60">REGISTRO DE MOTIVAÇÃO</p>
+            <h3 className="text-2xl font-serif italic text-white mb-4 leading-tight">{title}</h3>
+            <p className="text-sm text-white/40 mb-8 leading-relaxed italic px-4">
               {message}
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="w-full space-y-8">
               <textarea
-                autoFocus
-                required
-                value={reason}
+                autoFocus required value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder={placeholder}
-                className="w-full h-32 p-4 bg-white/5 border border-white/10 outline-none focus:border-brand-orange transition-all font-sans text-white text-sm resize-none"
+                className="w-full h-40 p-8 bg-white/[0.03] border border-white/5 rounded-[2.5rem] outline-none focus:bg-white/[0.05] focus:border-brand-orange/40 transition-all font-medium text-white text-sm resize-none placeholder:text-white/10"
               />
 
-              <div className="flex gap-3 w-full">
-                <button 
-                  type="button"
-                  onClick={onCancel}
-                  className="flex-1 px-6 py-4 border border-white/10 text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white/5 transition-all"
-                >
-                  {cancelLabel}
-                </button>
+              <div className="flex flex-col gap-3 w-full">
                 <button 
                   type="submit"
                   disabled={!reason.trim()}
-                  className={`flex-1 px-6 py-4 text-white text-[10px] uppercase tracking-widest font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${btnColors[variant]}`}
+                  className={`w-full py-6 text-white text-[10px] uppercase tracking-[0.4em] font-black transition-all rounded-2xl shadow-xl active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 ${btnColors[variant]}`}
                 >
-                  <Send className="w-3 h-3" />
+                  <Send className="w-4 h-4" />
                   {confirmLabel}
+                </button>
+                <button 
+                  type="button" onClick={onCancel}
+                  className="w-full py-4 text-white/20 text-[9px] uppercase tracking-[0.4em] font-black hover:text-white transition-colors"
+                >
+                  {cancelLabel}
                 </button>
               </div>
             </form>

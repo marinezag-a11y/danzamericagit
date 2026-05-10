@@ -96,78 +96,78 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
   };
 
   return (
-    <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10001] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md overflow-y-auto">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-brand-dark border border-white/10 p-12 max-w-lg w-full shadow-2xl relative rounded-sm"
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-brand-dark border border-white/10 w-full max-w-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] relative rounded-[3.5rem] overflow-hidden"
       >
-        <button onClick={onClose} className="absolute top-6 right-6 text-white/20 hover:text-white transition-colors">
-          <X className="w-6 h-6" />
-        </button>
+        <div className="p-10 md:p-14 border-b border-white/5 flex justify-between items-center bg-white/5">
+          <div>
+            <p className="text-brand-orange text-[9px] uppercase tracking-[0.5em] font-black mb-3">ADMINISTRAÇÃO DE VENDAS</p>
+            <h3 className="text-3xl font-serif italic text-white leading-tight">Incluir Pedido Manual</h3>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="p-4 bg-white/5 hover:bg-white/10 rounded-full text-white/30 hover:text-white transition-all transform hover:rotate-90"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
         
-        <h3 className="text-3xl font-serif text-white mb-8 italic">Incluir Pedido Manual</h3>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Cliente</label>
-            <input 
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none"
-              placeholder="Nome completo"
-            />
+        <form onSubmit={handleSubmit} className="p-10 md:p-14 space-y-8">
+          <div className="space-y-4">
+            <p className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-black ml-2">DADOS DO CLIENTE</p>
+            <div className="space-y-4">
+              <input 
+                type="text" required value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-white/5 border border-white/5 p-6 rounded-2xl text-sm text-white focus:bg-white/10 focus:border-brand-orange/40 outline-none transition-all placeholder:text-white/10 font-medium"
+                placeholder="Nome completo"
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input 
+                  type="email" required value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-white/5 border border-white/5 p-6 rounded-2xl text-sm text-white focus:bg-white/10 focus:border-brand-orange/40 outline-none transition-all placeholder:text-white/10 font-medium"
+                  placeholder="E-mail"
+                />
+                <input 
+                  type="text" required value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full bg-white/5 border border-white/5 p-6 rounded-2xl text-sm text-white focus:bg-white/10 focus:border-brand-orange/40 outline-none transition-all placeholder:text-white/10 font-medium"
+                  placeholder="WhatsApp"
+                />
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">E-mail</label>
-            <input 
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none"
-              placeholder="seu@email.com"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">WhatsApp</label>
-            <input 
-              type="text"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 p-4 text-sm text-white focus:border-brand-orange outline-none"
-              placeholder="(00) 00000-0000"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-[10px] uppercase tracking-widest text-brand-orange font-bold">Itens do Pedido</label>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-4 border border-white/5">
+
+          <div className="space-y-4">
+            <p className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-black ml-2">SELEÇÃO DE ITENS</p>
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-3 custom-scrollbar bg-white/[0.02] p-6 rounded-3xl border border-white/5">
               {(helpItems || []).map(item => {
                 const selected = selectedItems.find(i => i.id === item.id);
                 return (
-                  <div key={item.id} className="flex items-center justify-between gap-4 p-2 hover:bg-white/5 rounded-sm transition-colors group">
+                  <div key={item.id} className={`flex items-center justify-between gap-6 p-4 rounded-2xl transition-all border group ${selected ? 'bg-brand-orange/10 border-brand-orange/30' : 'bg-transparent border-transparent hover:bg-white/5 hover:border-white/5'}`}>
                     <div 
                       onClick={() => toggleItem(item)}
-                      className="flex items-center gap-3 cursor-pointer flex-1"
+                      className="flex items-center gap-4 cursor-pointer flex-1"
                     >
-                      <div className={`w-4 h-4 border flex items-center justify-center transition-all ${selected ? 'bg-brand-orange border-brand-orange' : 'border-white/20 group-hover:border-white/40'}`}>
-                        {selected && <Check className="w-3 h-3 text-white" />}
+                      <div className={`w-6 h-6 border-2 flex items-center justify-center transition-all rounded-lg ${selected ? 'bg-brand-orange border-brand-orange' : 'border-white/10 group-hover:border-white/20'}`}>
+                        {selected && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
                       </div>
                       <div className="flex flex-col">
-                        <span className={`text-[11px] uppercase tracking-widest font-bold ${selected ? 'text-white' : 'text-white/40'}`}>{item.title}</span>
-                        <span className="text-[10px] text-brand-orange/60 font-mono">{maskBRL(item.price || 0)}</span>
+                        <span className={`text-[11px] uppercase tracking-widest font-black ${selected ? 'text-white' : 'text-white/40'}`}>{item.title}</span>
+                        <span className="text-[10px] text-brand-orange font-mono font-black mt-0.5">{maskBRL(item.price || 0)}</span>
                       </div>
                     </div>
                     {selected && (
-                      <div className="flex items-center gap-3 bg-black/40 rounded-full px-3 py-1 border border-white/10">
-                        <button type="button" onClick={() => updateItemQuantity(item.id, -1)} className="text-white/40 hover:text-brand-orange transition-colors">
+                      <div className="flex items-center gap-3 bg-black/40 rounded-xl px-3 py-1.5 border border-white/10">
+                        <button type="button" onClick={() => updateItemQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center text-white/40 hover:text-brand-orange transition-colors">
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="text-[11px] font-bold text-brand-orange min-w-[16px] text-center">{selected.quantity || 1}</span>
-                        <button type="button" onClick={() => updateItemQuantity(item.id, 1)} className="text-white/40 hover:text-brand-orange transition-colors">
+                        <span className="text-[12px] font-black text-brand-orange min-w-[20px] text-center tabular-nums">{selected.quantity || 1}</span>
+                        <button type="button" onClick={() => updateItemQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-white/40 hover:text-brand-orange transition-colors">
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
@@ -176,29 +176,44 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
                 );
               })}
             </div>
-            {selectedItems.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
-                <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Total do Pedido</span>
-                <span className="text-xl font-display text-brand-orange">{maskBRL(totalPrice)}</span>
-              </div>
-            )}
           </div>
+
+          {selectedItems.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="pt-8 border-t border-white/5 flex justify-between items-center px-4"
+            >
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-white/20 font-black mb-1">TOTAL DO PEDIDO</p>
+                <p className="text-3xl font-serif italic text-brand-orange tabular-nums">{maskBRL(totalPrice)}</p>
+              </div>
+              <div className="flex flex-col items-end opacity-20">
+                 <p className="text-[8px] uppercase tracking-widest font-black text-white">{selectedItems.length} ITENS</p>
+              </div>
+            </motion.div>
+          )}
           
-          <button 
-            type="submit"
-            disabled={saving || showSuccess}
-            className={`w-full py-5 font-bold uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 rounded-sm shadow-xl ${showSuccess ? 'bg-green-500 text-white' : 'bg-brand-orange text-white hover:bg-brand-dark'}`}
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : showSuccess ? (
-              <>
-                <CheckCircle2 className="w-4 h-4" /> Pedido Incluído!
-              </>
-            ) : (
-              'Salvar Pedido'
-            )}
-          </button>
+          <div className="pt-4">
+            <button 
+              type="submit"
+              disabled={saving || showSuccess}
+              className={`w-full py-7 font-black uppercase tracking-[0.4em] text-[11px] transition-all flex items-center justify-center gap-3 rounded-[2rem] shadow-2xl active:scale-95 disabled:opacity-50 ${showSuccess ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-brand-orange text-white hover:bg-brand-dark'}`}
+            >
+              {saving ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : showSuccess ? (
+                <>
+                  <CheckCircle2 className="w-6 h-6" /> PEDIDO REGISTRADO!
+                </>
+              ) : (
+                'SALVAR REGISTRO'
+              )}
+            </button>
+            <p className="text-center text-[8px] uppercase tracking-widest font-black text-white/10 mt-6 italic">
+              UMA NOTIFICAÇÃO POR E-MAIL SERÁ ENVIADA AO CLIENTE
+            </p>
+          </div>
         </form>
       </motion.div>
     </div>

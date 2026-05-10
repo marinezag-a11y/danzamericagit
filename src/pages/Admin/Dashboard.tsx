@@ -17,6 +17,7 @@ import { ProfileManager } from './components/ProfileManager';
 import { HelpItemsManager } from './components/HelpItemsManager';
 import { FinancialManager } from './components/FinancialManager';
 import { RaffleManager } from './components/RaffleManager';
+import { DancersManager } from './components/DancersManager';
 
 export default function Dashboard() {
   const {

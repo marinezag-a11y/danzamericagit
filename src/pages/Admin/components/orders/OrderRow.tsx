@@ -119,27 +119,48 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
         </td>
         <td className="py-5 px-6">
           <div className="flex flex-wrap gap-2 max-w-md">
-            {(order.items || []).slice(0, 2).map((item: any, idx: number) => (
-              <span key={idx} className="text-[10px] bg-white/5 border border-white/10 text-white/60 px-2 py-0.5 rounded-sm uppercase tracking-widest">
-                {item.quantity}x {item.name}
-              </span>
-            ))}
-            {order.items?.length > 2 && (
-              <span className="text-[10px] text-brand-orange font-bold italic">+{order.items.length - 2} mais...</span>
-            )}
-            {!order.items?.length && (
-              <span className="text-[10px] text-white/20 italic">{order.product_name}</span>
+            {order.type === 'raffle' ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] bg-brand-orange/10 border border-brand-orange/20 text-brand-orange px-2 py-0.5 rounded-sm uppercase tracking-widest font-bold">
+                  Ação entre Amigos
+                </span>
+                <span className="text-[11px] text-white font-medium italic">
+                  Apoiado: {order.dancer_name || 'Geral'}
+                </span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {(order.selected_numbers || []).map((n: number) => (
+                    <span key={n} className="text-[9px] bg-white/5 border border-white/10 text-white/40 px-1 rounded-sm tabular-nums">#{n}</span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                {(order.items || []).slice(0, 2).map((item: any, idx: number) => (
+                  <span key={idx} className="text-[10px] bg-white/5 border border-white/10 text-white/60 px-2 py-0.5 rounded-sm uppercase tracking-widest">
+                    {item.quantity}x {item.name}
+                  </span>
+                ))}
+                {order.items?.length > 2 && (
+                  <span className="text-[10px] text-brand-orange font-bold italic">+{order.items.length - 2} mais...</span>
+                )}
+                {!order.items?.length && (
+                  <span className="text-[10px] text-white/20 italic">{order.product_name}</span>
+                )}
+              </>
             )}
           </div>
         </td>
         <td className="py-5 px-6">
           <span className="text-sm font-display font-bold text-brand-orange tracking-tight">
-            {maskBRL(order.product_price)}
+            {maskBRL(order.total_price || order.product_price)}
           </span>
         </td>
         <td className="py-5 px-6">
           <span className="text-sm font-display font-bold text-emerald-500 tracking-tight">
-            {maskBRL((order.product_price || 0) - (order.items || []).reduce((sum: number, i: any) => sum + (Number(i.cost_price || 0) * (i.quantity || 1)), 0))}
+            {order.type === 'raffle' 
+              ? maskBRL(order.total_price || order.product_price)
+              : maskBRL((order.product_price || 0) - (order.items || []).reduce((sum: number, i: any) => sum + (Number(i.cost_price || 0) * (i.quantity || 1)), 0))
+            }
           </span>
         </td>
         <td className="py-5 px-6">

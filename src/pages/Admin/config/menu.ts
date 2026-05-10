@@ -23,5 +23,5 @@ export const ADMIN_MENU_ITEMS = [
   { id: 'sponsorship', label: 'Apoiadores', icon: Star },
   { id: 'financial', label: 'Financeiro', icon: DollarSign },
   { id: 'banners', label: 'Banners Iniciais', icon: ImageIcon },
-  { id: 'users', label: 'Administradores', icon: Users },
+  { id: 'users', label: 'Administradores', icon: Settings },
 ];

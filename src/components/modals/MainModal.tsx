@@ -230,342 +230,343 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-brand-white w-full max-w-5xl p-8 md:p-16 max-h-[90vh] overflow-y-auto z-[10000] shadow-2xl"
+        className="relative bg-white/90 backdrop-blur-2xl w-full max-w-6xl rounded-[4rem] overflow-hidden z-[10000] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] border border-white/40 flex flex-col max-h-[90vh]"
       >
-        <button 
-          onClick={() => {
-            onClose();
-            resetForm();
-          }}
-          className="absolute top-8 right-8 text-brand-dark/20 hover:text-brand-orange transition-colors"
-        >
-          <X className="w-8 h-8" strokeWidth={1} />
-        </button>
+        {/* Header Bar */}
+        <div className="p-8 md:p-12 border-b border-black/5 flex justify-between items-center bg-black/[0.02]">
+          <div className="flex items-center gap-4">
+             <div className="w-2 h-12 bg-brand-orange rounded-full" />
+             <div>
+                <p className="text-brand-orange text-[10px] uppercase tracking-[0.5em] font-black mb-1">
+                  {activeModal === 'store' ? 'CARRINHO SOLIDÁRIO' : 
+                   activeModal === 'contact' ? 'FALE CONOSCO' : 'PATROCÍNIO DIRETO'}
+                </p>
+                <h2 className="text-3xl md:text-4xl font-serif text-brand-dark italic leading-tight">
+                  {activeModal === 'store' ? 'Itens de Apoio' : 
+                   activeModal === 'contact' ? 'Nossos Contatos' : 'Contribuição'}
+                </h2>
+             </div>
+          </div>
+          <button 
+            onClick={() => {
+              onClose();
+              resetForm();
+            }}
+            className="p-4 bg-black/5 hover:bg-black/10 rounded-full text-brand-dark/30 hover:text-brand-dark transition-all transform hover:rotate-90"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-        {(activeModal === 'store' || activeModal === 'raffle' || activeModal === 'event' || activeModal === 'donation') && (
-          <div className={`${success ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 lg:grid-cols-2 gap-16'}`}>
-            <div className={success ? 'w-full' : ''}>
-              {!success && (
-                <div className="mb-8">
-                  <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-bold mb-2">Seleção Solidária</p>
-                  <h2 className="text-4xl font-serif text-brand-dark italic">Itens para Apoiar</h2>
-                </div>
-              )}
-
-              {!success ? (
-                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
-                  {products.map(product => {
-                    const isSelected = !!quantities[product.id];
-                    return (
-                      <div 
-                        key={product.id} 
-                        className={`p-6 flex flex-col gap-6 transition-all border group ${isSelected ? 'bg-brand-orange/5 border-brand-orange shadow-md' : 'bg-brand-grey border-transparent hover:border-brand-dark/10'}`}
-                      >
-                        {/* Top: Image and Text */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-16 custom-scrollbar">
+          {(activeModal === 'store' || activeModal === 'raffle' || activeModal === 'event' || activeModal === 'donation') && (
+            <div className={`${success ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24'}`}>
+              <div className={success ? 'w-full' : ''}>
+                {!success ? (
+                  <div className="space-y-6">
+                    {products.map(product => {
+                      const isSelected = !!quantities[product.id];
+                      return (
                         <div 
-                          className="flex gap-6 items-start cursor-pointer w-full"
-                          onClick={() => toggleProduct(product.id)}
+                          key={product.id} 
+                          className={`p-8 rounded-[3rem] flex flex-col gap-8 transition-all border group relative overflow-hidden ${isSelected ? 'bg-brand-orange/[0.03] border-brand-orange shadow-[0_20px_40px_-12px_rgba(204,0,0,0.1)]' : 'bg-black/[0.02] border-transparent hover:border-black/5 hover:bg-black/[0.04]'}`}
                         >
-                          <div className="relative w-24 h-24 overflow-hidden bg-white border border-brand-dark/5 shrink-0 shadow-sm">
-                            <img 
-                              src={product.image} 
-                              className="w-full h-full object-cover transition-transform group-hover:scale-110" 
-                              alt={product.name}
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0 pt-1">
-                            <h4 className="font-serif text-xl text-brand-dark leading-tight mb-2">{product.name}</h4>
-                            <p className="text-brand-orange font-display text-lg">R$ {product.price.toFixed(2)}</p>
-                          </div>
-                        </div>
+                          {isSelected && (
+                            <div className="absolute top-0 right-0 p-6">
+                               <div className="w-8 h-8 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-lg">
+                                  <CheckCircle className="w-5 h-5" />
+                               </div>
+                            </div>
+                          )}
 
-                        {/* Bottom: Options and Quantity Controls */}
-                        {isSelected && (
-                          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pt-4 border-t border-brand-dark/5">
-                            {product.options && product.options.length > 0 ? (
-                              <div className="flex-1">
-                                <label className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold block mb-3 opacity-80 italic">Escolha uma opção:</label>
-                                <div className="flex flex-row flex-wrap items-center gap-2">
-                                  {product.options.map(opt => (
-                                    <button
-                                      key={opt}
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedOptions(prev => ({ ...prev, [product.id]: opt }));
-                                      }}
-                                      className={`h-10 min-w-[44px] px-4 flex items-center justify-center text-[12px] uppercase tracking-widest font-extrabold border transition-all rounded-md ${
-                                        selectedOptions[product.id] === opt
-                                          ? 'bg-brand-orange border-brand-orange text-white shadow-lg scale-105'
-                                          : 'bg-white border-brand-dark/10 text-brand-dark/40 hover:border-brand-orange/40 hover:text-brand-orange'
-                                      }`}
-                                    >
-                                      {opt}
-                                    </button>
-                                  ))}
+                          <div 
+                            className="flex gap-8 items-start cursor-pointer w-full"
+                            onClick={() => toggleProduct(product.id)}
+                          >
+                            <div className="relative w-28 h-28 overflow-hidden rounded-[2rem] bg-white border border-black/5 shrink-0 shadow-xl group-hover:rotate-2 transition-transform">
+                              <img 
+                                src={product.image} 
+                                className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                                alt={product.name}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0 pt-2">
+                              <h4 className="font-serif text-2xl text-brand-dark leading-tight mb-2">{product.name}</h4>
+                              <p className="text-brand-orange font-serif italic text-xl">R$ {product.price.toFixed(2)}</p>
+                              {product.description && (
+                                <p className="text-brand-dark/40 text-xs mt-3 line-clamp-2 leading-relaxed italic">{product.description}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex flex-col sm:flex-row sm:items-end justify-between gap-8 pt-8 border-t border-black/5"
+                            >
+                              {product.options && product.options.length > 0 ? (
+                                <div className="flex-1">
+                                  <label className="text-[9px] uppercase tracking-[0.3em] text-brand-orange font-black block mb-4 italic opacity-60">VARIAÇÃO DISPONÍVEL</label>
+                                  <div className="flex flex-row flex-wrap items-center gap-3">
+                                    {product.options.map(opt => (
+                                      <button
+                                        key={opt}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedOptions(prev => ({ ...prev, [product.id]: opt }));
+                                        }}
+                                        className={`h-12 min-w-[50px] px-6 flex items-center justify-center text-[11px] uppercase tracking-widest font-black border transition-all rounded-2xl ${
+                                          selectedOptions[product.id] === opt
+                                            ? 'bg-brand-orange border-brand-orange text-white shadow-xl scale-105'
+                                            : 'bg-white border-black/5 text-brand-dark/30 hover:border-brand-orange/30 hover:text-brand-orange'
+                                        }`}
+                                      >
+                                        {opt}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex-1"></div>
+                              )}
+
+                              <div className="flex items-center gap-4 shrink-0">
+                                <div className="flex items-center bg-white border border-black/5 rounded-full p-2 shadow-xl">
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, -1); }}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors text-brand-dark/40 hover:text-brand-orange"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </button>
+                                  <span className="w-12 text-center text-lg font-serif italic text-brand-dark tabular-nums">{quantities[product.id]}</span>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, 1); }}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors text-brand-dark/40 hover:text-brand-orange"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
-                            ) : (
-                              <div className="flex-1"></div>
-                            )}
-
-                            <div className="flex items-center gap-4 self-start sm:self-auto shrink-0">
-                              <div className="flex items-center bg-white border border-brand-dark/10 rounded-full p-1 shadow-sm">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, -1); }}
-                                  className="p-3 hover:text-brand-orange transition-colors"
-                                >
-                                  <Minus className="w-4 h-4" />
-                                </button>
-                                <span className="w-10 text-center text-sm font-bold text-brand-dark">{quantities[product.id]}</span>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, 1); }}
-                                  className="p-3 hover:text-brand-orange transition-colors"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </button>
-                              </div>
-
-                              <div 
-                                onClick={() => toggleProduct(product.id)}
-                                className="w-12 h-12 rounded-full border flex items-center justify-center transition-all cursor-pointer bg-brand-orange border-brand-orange text-white shadow-md hover:scale-105"
-                                title="Remover item"
-                              >
-                                <CheckCircle className="w-6 h-6" />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-8 shadow-2xl shadow-green-500/20 animate-bounce">
-                    <CheckCircle className="w-12 h-12 text-white" />
-                  </div>
-                  <h3 className="text-4xl font-serif text-brand-dark mb-6 italic">Pedido Recebido!</h3>
-                  <div className="bg-brand-grey p-8 border border-brand-dark/5 mb-8 max-w-lg mx-auto text-left">
-                    <p className="text-brand-orange text-[10px] uppercase tracking-widest font-bold mb-4">Pagamento via PIX</p>
-                    <p className="text-sm text-brand-dark/70 font-serif mb-6 leading-relaxed">
-                      Faça o PIX do valor total do seu pedido e envie o comprovante para o WhatsApp: <strong>(31) 99212-7292</strong>. Você receberá um contato em seguida para finalização e envio.
-                    </p>
-                    <div className="bg-white p-6 border border-brand-dark/5 flex flex-col gap-6">
-                      <div className="text-center">
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold block mb-2">Chave PIX para Pagamento</span>
-                        <code className="text-brand-dark font-bold text-base md:text-lg break-all">{pixKey}</code>
-                        <button 
-                          onClick={handleCopyPix}
-                          className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors mt-2 mx-auto"
-                        >
-                          {copied ? (
-                            <span className="flex items-center gap-2 text-green-600">
-                              <CheckCircle className="w-3 h-3" /> Copiado!
-                            </span>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" /> Copiar Chave
-                            </>
+                            </motion.div>
                           )}
-                        </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="h-full flex flex-col items-center justify-center py-12 text-center"
+                  >
+                    <div className="relative mb-12">
+                      <div className="w-32 h-32 bg-emerald-500 rounded-[3rem] flex items-center justify-center text-white shadow-[0_20px_40px_-12px_rgba(16,185,129,0.5)] rotate-12">
+                        <CheckCircle className="w-16 h-16" strokeWidth={1.5} />
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-brand-dark/5 text-left">
-                        <div>
-                          <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Tipo</p>
-                          <p className="text-xs font-serif text-brand-dark capitalize">{pixType}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Banco</p>
-                          <p className="text-xs font-serif text-brand-dark">{pixBank}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-[9px] uppercase tracking-widest text-brand-dark/40 font-bold mb-1">Recebedor</p>
-                          <p className="text-xs font-serif text-brand-dark">{pixReceiver}</p>
-                        </div>
+                      <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white rounded-[1.5rem] shadow-2xl flex items-center justify-center">
+                         <ShoppingBag className="w-8 h-8 text-brand-orange" strokeWidth={1.5} />
                       </div>
                     </div>
 
-                  </div>
+                    <h3 className="text-4xl font-serif text-brand-dark mb-6 italic leading-tight">Pedido Recebido com Sucesso!</h3>
+                    
+                    <div className="bg-white p-10 md:p-14 rounded-[3.5rem] border border-black/5 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] mb-12 max-w-xl mx-auto text-left space-y-10">
+                      <div className="space-y-4">
+                        <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-black italic opacity-60">CONFIRMAÇÃO VIA PIX</p>
+                        <p className="text-sm text-brand-dark/60 font-serif leading-relaxed italic">
+                          Sua contribuição é vital! Para confirmar, realize o PIX e envie o comprovante para nosso WhatsApp. Estamos ansiosos para agradecer pessoalmente!
+                        </p>
+                      </div>
 
-                  <button 
-                    onClick={onClose}
-                    className="px-12 py-4 bg-brand-dark text-white font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all shadow-xl"
-                  >
-                    Fechar Janela
-                  </button>
+                      <div className="space-y-6">
+                        <div className="bg-black/5 p-8 rounded-3xl border border-transparent hover:border-brand-orange/20 transition-all group cursor-copy" onClick={handleCopyPix}>
+                          <span className="text-[9px] uppercase tracking-[0.3em] text-brand-dark/30 font-black block mb-3">CHAVE PIX ({pixType})</span>
+                          <p className="text-brand-dark font-mono font-black text-lg break-all tracking-tight leading-none">{pixKey}</p>
+                          <p className="text-[8px] uppercase tracking-widest text-brand-orange font-black mt-4 opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA COPIAR CHAVE</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-10 px-4">
+                          <div className="space-y-1">
+                            <p className="text-[9px] uppercase tracking-widest text-brand-dark/30 font-black">BANCO</p>
+                            <p className="text-sm font-black text-brand-dark">{pixBank}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[9px] uppercase tracking-widest text-brand-dark/30 font-black">RECEBEDOR</p>
+                            <p className="text-sm font-black text-brand-dark">{pixReceiver}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <a 
+                        href={`https://wa.me/5531992127292?text=${encodeURIComponent(`Olá! Realizei um pedido de apoio e gostaria de enviar o comprovante. Nome: ${customerName}`)}`}
+                        target="_blank"
+                        className="w-full py-6 bg-[#25D366] text-white rounded-[2rem] text-[11px] uppercase tracking-[0.3em] font-black hover:shadow-[#25D366]/40 transition-all shadow-2xl flex items-center justify-center gap-4 active:scale-95"
+                      >
+                        <Phone size={18} />
+                        Enviar Comprovante
+                      </a>
+                    </div>
+
+                    <button 
+                      onClick={onClose}
+                      className="px-16 py-6 border-2 border-black/5 text-brand-dark/20 rounded-[2rem] text-[10px] uppercase tracking-[0.4em] font-black hover:border-brand-dark hover:text-brand-dark transition-all"
+                    >
+                      CONCLUIR E FECHAR
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+
+              {!success && (
+                <div className="flex flex-col min-h-[500px]">
+                  {selectedProducts.length > 0 ? (
+                    <div className="h-full flex flex-col gap-12">
+                      <div className="bg-brand-dark text-white p-10 md:p-14 rounded-[4rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-110 transition-transform duration-1000" />
+                        
+                        <div className="relative z-10 space-y-10">
+                          <div className="space-y-2">
+                             <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-black">RESUMO DO APOIO</p>
+                             <div className="space-y-4 pt-4 max-h-[160px] overflow-y-auto custom-scrollbar pr-4">
+                               {selectedProducts.map(p => (
+                                 <div key={p.id} className="flex justify-between items-center text-sm font-serif italic text-white/60">
+                                   <div className="flex gap-4 items-center">
+                                     <span className="w-8 h-8 rounded-2xl bg-white/10 flex items-center justify-center text-[10px] text-white font-black not-italic tabular-nums">{quantities[p.id]}x</span>
+                                     <span className="text-white/90">{p.name} {selectedOptions[p.id] && <span className="text-[10px] text-brand-orange font-black not-italic ml-2 tracking-widest uppercase">[{selectedOptions[p.id]}]</span>}</span>
+                                   </div>
+                                   <span className="text-white/40 tabular-nums">R$ {(p.price * (quantities[p.id] || 0)).toFixed(2)}</span>
+                                 </div>
+                               ))}
+                             </div>
+                          </div>
+
+                          <div className="pt-10 border-t border-white/10 flex items-center justify-between">
+                            <span className="text-white/30 font-black uppercase tracking-[0.4em] text-[10px]">TOTAL FINAL</span>
+                            <span className="text-4xl md:text-5xl font-serif italic text-brand-orange tabular-nums">R$ {totalPrice.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleOrder} className="space-y-10 flex-1">
+                        <div className="space-y-6 px-4">
+                          <p className="text-[10px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">INFORMAÇÕES PESSOAIS <span className="text-brand-orange">*</span></p>
+                          <div className="space-y-4">
+                            <div className="relative group">
+                              <input 
+                                type="text" required value={customerName}
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                placeholder="Nome Completo *"
+                                className="w-full p-6 bg-black/5 border border-transparent rounded-[1.8rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20"
+                              />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <input 
+                                type="email" required value={customerEmail}
+                                onChange={(e) => setCustomerEmail(e.target.value)}
+                                placeholder="E-mail *"
+                                className="w-full p-6 bg-black/5 border border-transparent rounded-[1.8rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20"
+                              />
+                              <input 
+                                type="tel" required value={customerPhone}
+                                onChange={(e) => setCustomerPhone(maskPhone(e.target.value))}
+                                placeholder="WhatsApp *"
+                                className="w-full p-6 bg-black/5 border border-transparent rounded-[1.8rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {error && (
+                          <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="p-6 bg-brand-orange/10 border-l-4 border-brand-orange text-brand-orange text-xs font-black tracking-widest uppercase">
+                            {error}
+                          </motion.div>
+                        )}
+                        
+                        <div className="space-y-6">
+                           <button 
+                             type="submit"
+                             disabled={submitting}
+                             className="w-full bg-brand-dark text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.4em] text-[11px] hover:bg-brand-orange transition-all shadow-[0_20px_40px_-12px_rgba(0,0,0,0.4)] flex items-center justify-center gap-4 group disabled:opacity-50 active:scale-95"
+                           >
+                             {submitting ? (
+                               <Loader2 className="w-6 h-6 animate-spin" />
+                             ) : (
+                               <>
+                                 FINALIZAR APOIO <ArrowRight className="w-5 h-5 group-hover:translate-x-3 transition-transform" />
+                               </>
+                             )}
+                           </button>
+                           <p className="text-center text-[9px] uppercase tracking-[0.2em] text-brand-dark/20 font-black italic">
+                              Pagamento Seguro via PIX • Seus dados estão protegidos
+                           </p>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center py-20">
+                      <motion.div 
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="w-28 h-28 bg-black/5 rounded-[3rem] flex items-center justify-center mb-8 border border-black/5"
+                      >
+                        <ShoppingBag className="w-10 h-10 text-brand-dark/20" strokeWidth={1} />
+                      </motion.div>
+                      <h4 className="text-2xl font-serif italic text-brand-dark/40 mb-4 leading-tight">Sua sacola de apoio<br/>está vazia</h4>
+                      <p className="text-[10px] uppercase tracking-widest font-black text-brand-dark/20 max-w-[240px] leading-relaxed">
+                        Escolha um ou mais itens ao lado para iniciar sua contribuição com nossa equipe.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+          )}
 
-            {!success && (
-              <div className="bg-brand-grey p-8 md:p-12 flex flex-col min-h-[500px]">
-                {selectedProducts.length > 0 ? (
-                  <div className="h-full flex flex-col">
-                    <div className="mb-8">
-                      <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-bold mb-4">Resumo do Carrinho</p>
-                      <div className="space-y-3 mb-6">
-                        {selectedProducts.map(p => (
-                          <div key={p.id} className="flex justify-between items-center text-sm font-serif italic text-brand-dark/60">
-                            <div className="flex gap-2 items-center">
-                              <span className="w-6 h-6 rounded-full bg-brand-orange/10 flex items-center justify-center text-[10px] text-brand-orange font-bold not-italic">{quantities[p.id]}x</span>
-                              <span>{p.name} {selectedOptions[p.id] && <span className="text-[10px] opacity-60 ml-1">({selectedOptions[p.id]})</span>}</span>
-                            </div>
-                            <span>R$ {(p.price * (quantities[p.id] || 0)).toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex justify-between items-center py-6 border-y border-brand-dark/10">
-                        <span className="text-brand-dark font-serif font-bold uppercase tracking-widest text-[10px]">Total do Pedido</span>
-                        <span className="text-3xl font-display text-brand-orange">R$ {totalPrice.toFixed(2)}</span>
-                      </div>
+          {activeModal === 'contact' && (
+            <div className="max-w-5xl mx-auto space-y-16">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {[
+                  { icon: Phone, label: 'WhatsApp', value: '(31) 99361-5488', href: 'https://wa.me/5531993615488', color: '#25D366' },
+                  { icon: Instagram, label: 'Instagram', value: '@nucleodedanca', href: 'https://instagram.com/nucleodedanca', color: '#E1306C' },
+                  { icon: Mail, label: 'E-mail', value: 'nucleodedanca@yahoo.com.br', href: 'mailto:nucleodedanca@yahoo.com.br', color: '#EA4335' },
+                  { icon: MapPin, label: 'Endereço', value: 'Av. Abílio Machado, 3997 – BH', href: 'https://www.google.com/maps/search/?api=1&query=Av.+Abílio+Machado,+3997+–+Belo+Horizonte,+MG', color: '#4285F4' }
+                ].map((item, idx) => (
+                  <motion.a 
+                    key={item.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    href={item.href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-8 p-10 bg-black/[0.02] hover:bg-white hover:shadow-2xl hover:scale-[1.02] border border-transparent hover:border-black/5 rounded-[3rem] group transition-all duration-500"
+                  >
+                    <div className="w-16 h-16 bg-white shadow-xl flex items-center justify-center rounded-[1.8rem] group-hover:rotate-12 transition-transform">
+                      <item.icon className="w-7 h-7" style={{ color: item.color }} />
                     </div>
-
-                    <form onSubmit={handleOrder} className="space-y-6 flex-1">
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">Seu Nome</label>
-                        <input 
-                          type="text"
-                          required
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                          placeholder="Nome completo"
-                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif text-brand-dark"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">E-mail para Confirmação</label>
-                        <input 
-                          type="email"
-                          required
-                          value={customerEmail}
-                          onChange={(e) => setCustomerEmail(e.target.value)}
-                          placeholder="seu@email.com"
-                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif text-brand-dark"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-widest text-brand-dark/40 font-bold">WhatsApp</label>
-                        <input 
-                          type="tel"
-                          required
-                          value={customerPhone}
-                          onChange={(e) => setCustomerPhone(maskPhone(e.target.value))}
-                          placeholder="(00) 00000-0000"
-                          className="w-full p-4 bg-white border border-brand-dark/5 outline-none focus:border-brand-orange transition-all font-serif text-brand-dark"
-                        />
-                      </div>
-                      
-                      {error && (
-                        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-serif italic mb-6">
-                          {error}
-                        </div>
-                      )}
-                      
-                      <button 
-                        type="submit"
-                        disabled={submitting}
-                        className="w-full bg-brand-orange text-white py-6 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-dark transition-all shadow-lg flex items-center justify-center gap-4 group disabled:opacity-50"
-                      >
-                        {submitting ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            Finalizar Pedido Solidário <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                    <div className="w-20 h-20 bg-brand-dark/5 rounded-full flex items-center justify-center mb-6">
-                      <ShoppingBag className="w-8 h-8 text-brand-dark" strokeWidth={1} />
+                    <div className="text-left">
+                      <p className="text-[9px] uppercase font-black tracking-[0.3em] text-brand-dark/20 group-hover:text-brand-orange transition-colors">{item.label}</p>
+                      <p className="text-xl font-serif italic text-brand-dark leading-tight mt-1">{item.value}</p>
                     </div>
-                    <h4 className="text-xl font-serif italic mb-2">Seu carrinho está vazio</h4>
-                    <p className="text-sm font-serif max-w-[200px]">Selecione um ou mais itens ao lado para apoiar nossa jornada.</p>
-                  </div>
-                )}
+                  </motion.a>
+                ))}
               </div>
-            )}
-          </div>
-        )}
 
-        {activeModal === 'contact' && (
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Entre em Contato</p>
-              <h2 className="text-4xl md:text-6xl font-serif text-brand-dark italic">Fale Conosco</h2>
+              <div className="pt-16 border-t border-black/5 flex flex-col items-center gap-4 text-center">
+                 <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.5em] font-black text-brand-dark/10">
+                    <div className="w-8 h-px bg-current" />
+                    DANZAMERICA 2026
+                    <div className="w-8 h-px bg-current" />
+                 </div>
+                 <p className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/20 italic">
+                    Talentos de Minas • Córdoba, Argentina • Realizando Sonhos
+                 </p>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-              <a 
-                href="https://wa.me/5531993615488" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500 shadow-sm hover:shadow-xl"
-              >
-                <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
-                  <Phone className="w-6 h-6 text-brand-orange" />
-                </div>
-                <div className="text-left">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">WhatsApp</p>
-                  <p className="text-xl font-serif text-brand-dark group-hover:text-white">(31) 99361-5488</p>
-                </div>
-              </a>
-
-              <a 
-                href="https://instagram.com/nucleodedanca" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500 shadow-sm hover:shadow-xl"
-              >
-                <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
-                  <Instagram className="w-6 h-6 text-brand-orange" />
-                </div>
-                <div className="text-left">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">Instagram</p>
-                  <p className="text-xl font-serif text-brand-dark group-hover:text-white">@nucleodedanca</p>
-                </div>
-              </a>
-
-              <a 
-                href="mailto:nucleodedanca@yahoo.com.br" 
-                className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500 shadow-sm hover:shadow-xl"
-              >
-                <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
-                  <Mail className="w-6 h-6 text-brand-orange" />
-                </div>
-                <div className="text-left">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">E-mail</p>
-                  <p className="text-base md:text-xl font-serif text-brand-dark group-hover:text-white break-all">nucleodedanca@yahoo.com.br</p>
-                </div>
-              </a>
-
-              <a 
-                href="https://www.google.com/maps/search/?api=1&query=Av.+Abílio+Machado,+3997+–+Belo+Horizonte,+MG" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-6 p-8 bg-brand-grey hover:bg-brand-orange group transition-all duration-500 shadow-sm hover:shadow-xl"
-              >
-                <div className="w-12 h-12 bg-white flex items-center justify-center rounded-full group-hover:scale-110 transition-transform">
-                  <MapPin className="w-6 h-6 text-brand-orange" />
-                </div>
-                <div className="text-left">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-brand-dark/40 group-hover:text-white/60">Endereço</p>
-                  <p className="text-sm md:text-base font-serif text-brand-dark group-hover:text-white leading-tight">Av. Abílio Machado, 3997 – BH</p>
-                </div>
-              </a>
-            </div>
-
-            <div className="mt-12 pt-8 border-t border-brand-dark/5 text-center">
-              <p className="text-[11px] uppercase tracking-[0.3em] font-bold text-brand-dark/20 italic">
-                Danzamerica 2026 • Talentos de Minas • Córdoba, Argentina
-              </p>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </motion.div>
     </div>
   );

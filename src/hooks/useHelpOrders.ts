@@ -10,17 +10,21 @@ export interface HelpOrderItem {
 
 export interface HelpOrder {
   id: string;
+  type: 'store' | 'raffle';
   customer_name: string;
   customer_phone: string;
   customer_email: string;
-  product_id: string; // Keep for backward compatibility or single item ref
-  product_name: string; // Summary of items
-  product_price: number; // Total price
-  items: HelpOrderItem[];
+  product_name: string; 
+  product_price?: number; 
   total_price: number;
   status: 'pending' | 'paid' | 'sent' | 'cancelled';
   created_at: string;
   updated_at: string;
+  // Specific to raffle
+  dancer_name?: string;
+  selected_numbers?: number[];
+  // Specific to store
+  items?: HelpOrderItem[];
 }
 
 export function useHelpOrders() {
@@ -32,13 +36,34 @@ export function useHelpOrders() {
     if (!supabase) return;
     try {
       setLoading(true);
-      const { data, error: fetchError } = await supabase
+      
+      // Fetch Store Orders
+      const { data: storeOrders, error: storeError } = await supabase
         .from('help_orders')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (fetchError) throw fetchError;
-      setOrders(data || []);
+      if (storeError) throw storeError;
+
+      // Fetch Raffle Orders
+      const { data: raffleOrders, error: raffleError } = await supabase
+        .from('raffle_orders')
+        .select('*, raffle_campaigns(name)')
+        .order('created_at', { ascending: false });
+
+      if (raffleError) throw raffleError;
+
+      const unifiedOrders: HelpOrder[] = [
+        ...(storeOrders || []).map(o => ({ ...o, type: 'store' as const })),
+        ...(raffleOrders || []).map(o => ({ 
+          ...o, 
+          type: 'raffle' as const,
+          product_name: `Rifa: ${o.raffle_campaigns?.name || 'Campanha'}`,
+          product_price: o.total_price // Ensure consistency
+        }))
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setOrders(unifiedOrders);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -53,54 +78,46 @@ export function useHelpOrders() {
     }
     fetchOrders();
 
-    // Subscribe to realtime changes
-    const channel = supabase
+    const helpChannel = supabase
       .channel('help_orders_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'help_orders'
-        },
-        () => {
-          fetchOrders();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'help_orders' }, () => fetchOrders())
+      .subscribe();
+
+    const raffleChannel = supabase
+      .channel('raffle_orders_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'raffle_orders' }, () => fetchOrders())
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(helpChannel);
+      supabase.removeChannel(raffleChannel);
     };
   }, []);
 
   const addOrder = async (order: Partial<HelpOrder>) => {
+    const table = order.type === 'raffle' ? 'raffle_orders' : 'help_orders';
     try {
-      // 1. Inserir sem .select() para evitar erro de RLS (anônimos não podem ler)
       const { error: addError } = await supabase
-        .from('help_orders')
+        .from(table)
         .insert([order]);
 
       if (addError) throw addError;
-
-      // 2. Tentar atualizar a lista local (se for admin, funciona. Se for público, falha silenciosamente)
-      try {
-        await fetchOrders();
-      } catch (e) {
-        // Silencioso para não quebrar a UI de sucesso do cliente
-      }
-
+      await fetchOrders();
       return { success: true };
     } catch (err: any) {
-      console.error('Add order error:', err);
       return { success: false, error: err.message };
     }
   };
 
   const updateOrder = async (id: string, updates: Partial<HelpOrder>) => {
+    const order = orders.find(o => o.id === id);
+    if (!order) return { success: false, error: 'Order not found' };
+    
+    const table = order.type === 'raffle' ? 'raffle_orders' : 'help_orders';
+    
     try {
       const { data, error: updateError } = await supabase
-        .from('help_orders')
+        .from(table)
         .update(updates)
         .eq('id', id)
         .select();
@@ -114,9 +131,14 @@ export function useHelpOrders() {
   };
 
   const deleteOrder = async (id: string) => {
+    const order = orders.find(o => o.id === id);
+    if (!order) return { success: false, error: 'Order not found' };
+    
+    const table = order.type === 'raffle' ? 'raffle_orders' : 'help_orders';
+
     try {
       const { error: deleteError } = await supabase
-        .from('help_orders')
+        .from(table)
         .delete()
         .eq('id', id);
 

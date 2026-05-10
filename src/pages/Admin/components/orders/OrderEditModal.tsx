@@ -14,7 +14,8 @@ import {
   Clock,
   CheckCircle2,
   Truck,
-  AlertCircle
+  AlertCircle,
+  Ticket
 } from 'lucide-react';
 import { ReasonModal } from '../../../../components/modals/ReasonModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -110,18 +111,25 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
 
   const performSave = async (reason: string) => {
     setUpdating(true);
-    const itemsText = orderItems.map(item => `${item.quantity || 1}x ${item.name}`).join(', ');
-    await onSave({
+    
+    const payload: any = {
       customer_name: customerName,
       customer_phone: customerPhone,
       customer_email: customerEmail,
-      product_name: itemsText,
-      product_price: manualPrice,
-      total_price: manualPrice,
-      items: orderItems,
       status: status,
-      reason: reason
-    });
+      reason: reason,
+      total_price: manualPrice
+    };
+
+    // Only update items and product_name for store orders
+    if (order?.type !== 'raffle') {
+      const itemsText = orderItems.map(item => `${item.quantity || 1}x ${item.name}`).join(', ');
+      payload.product_name = itemsText;
+      payload.product_price = manualPrice;
+      payload.items = orderItems;
+    }
+
+    await onSave(payload);
     setUpdating(false);
   };
 
@@ -197,193 +205,273 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-1 lg:grid-cols-12">
                 
-                {/* Left Panel: Customer & Tools (4 cols) */}
-                <div className="lg:col-span-4 p-8 border-r border-white/5 space-y-10 bg-white/[0.02]">
-                  <section>
-                    <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange mb-8 flex items-center gap-3">
-                      <div className="w-1.5 h-1.5 bg-brand-orange rounded-full animate-pulse" />
-                      Dados do Comprador
-                    </h3>
-                    <div className="space-y-6">
-                      <div className="relative group">
-                        <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-white/40 font-bold z-10">Nome Completo</label>
-                        <input 
-                          value={customerName}
-                          onChange={e => setCustomerName(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange focus:bg-brand-orange/5 transition-all font-serif italic rounded-xl"
-                        />
-                      </div>
-                      <div className="relative group">
-                        <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-white/40 font-bold z-10">Telefone para Contato</label>
-                        <div className="flex items-center">
-                           <Phone className="absolute left-4 w-4 h-4 text-white/20 group-focus-within:text-brand-orange transition-colors" />
-                           <input 
-                             value={customerPhone}
-                             onChange={e => setCustomerPhone(e.target.value)}
-                             className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-xl"
-                           />
-                        </div>
-                      </div>
-                      <div className="relative group">
-                        <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-white/40 font-bold z-10">Endereço de E-mail</label>
-                        <div className="flex items-center">
-                           <Mail className="absolute left-4 w-4 h-4 text-white/20 group-focus-within:text-brand-orange transition-colors" />
-                           <input 
-                             value={customerEmail}
-                             onChange={e => setCustomerEmail(e.target.value)}
-                             className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-xl"
-                           />
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section>
-                    <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-6 flex items-center gap-3">
-                      <Package className="w-4 h-4" /> Catálogo Rápido
-                    </h3>
-                    <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-3 custom-scrollbar">
-                      {(helpItems || []).map(item => {
-                        const isSelected = orderItems.find(i => i.id === item.id);
-                        return (
-                          <motion.button 
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            key={item.id}
-                            onClick={() => toggleQuickAdd(item)}
-                            className={`flex items-center gap-4 p-3 rounded-xl border transition-all text-left group ${isSelected ? 'bg-brand-orange/10 border-brand-orange/30 shadow-[0_0_20px_rgba(180,48,64,0.1)]' : 'bg-white/5 border-white/5 hover:border-white/20'}`}
-                          >
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-black/40 border border-white/5 flex-shrink-0">
-                               <img src={item.image_url} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-[10px] uppercase tracking-widest font-bold truncate ${isSelected ? 'text-brand-orange' : 'text-white/60'}`}>{item.title}</p>
-                              <p className="text-[10px] text-white/20 font-mono mt-0.5">{maskBRL(item.price)}</p>
-                            </div>
-                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${isSelected ? 'bg-brand-orange border-brand-orange' : 'border-white/10 group-hover:border-brand-orange/50'}`}>
-                               <Plus className={`w-3 h-3 ${isSelected ? 'text-white rotate-45' : 'text-white/20 group-hover:text-brand-orange'}`} />
-                            </div>
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                </div>
-
-                {/* Right Panel: Items List (8 cols) */}
-                <div className="lg:col-span-8 p-8 md:p-12 space-y-10">
-                  <div>
-                    <div className="flex justify-between items-end mb-10">
-                      <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange flex items-center gap-3">
-                         <div className="w-8 h-[1px] bg-brand-orange/30" />
-                         Itens do Carrinho Estratificado
-                      </h3>
-                      <p className="text-[10px] text-white/20 font-mono italic">Total de {orderItems.length} tipos de itens</p>
-                    </div>
-
-                    <div className="space-y-6">
-                      <AnimatePresence mode="popLayout">
-                        {orderItems.map((item, idx) => {
-                          // Find original product for image if missing in item JSON
-                          const originalProduct = helpItems.find(h => h.id === item.id);
-                          const imageUrl = item.image_url || originalProduct?.image_url;
-
-                          return (
-                            <motion.div 
-                              layout
-                              initial={{ opacity: 0, x: 20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              key={item.id || idx} 
-                              className="group relative bg-gradient-to-r from-white/[0.03] to-transparent border border-white/5 hover:border-brand-orange/20 p-6 rounded-2xl transition-all flex flex-col sm:flex-row gap-8 items-center"
-                            >
-                              <div className="w-24 h-24 rounded-2xl overflow-hidden bg-black/60 border border-white/10 shadow-2xl flex-shrink-0 group-hover:scale-105 transition-transform duration-500">
-                                 <img src={imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                              </div>
-
-                              <div className="flex-1 space-y-4 w-full">
-                                <div className="flex justify-between items-start">
-                                  <input 
-                                    value={item.name}
-                                    onChange={e => {
-                                      const newItems = [...orderItems];
-                                      newItems[idx].name = e.target.value;
-                                      setOrderItems(newItems);
-                                    }}
-                                    className="bg-transparent border-b border-white/5 py-1 text-sm text-white outline-none focus:border-brand-orange font-serif italic flex-1"
-                                    placeholder="Nome do Item"
-                                  />
-                                  <button 
-                                    onClick={() => {
-                                      const newItems = orderItems.filter((_, i) => i !== idx);
-                                      setOrderItems(newItems);
-                                      syncTotal(newItems);
-                                    }}
-                                    className="ml-4 p-2 text-white/10 hover:text-red-500 transition-colors bg-white/5 rounded-lg opacity-0 group-hover:opacity-100"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                                
-                                <div className="flex flex-wrap items-center justify-between gap-6">
-                                  <div className="flex items-center gap-4 bg-black/40 p-1.5 rounded-full border border-white/5 shadow-inner">
-                                    <button onClick={() => updateItemQuantity(item.id, -1)} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-brand-orange/20 hover:text-brand-orange rounded-full transition-all">
-                                      <Minus className="w-3 h-3" />
-                                    </button>
-                                    <span className="text-sm font-bold text-white min-w-[30px] text-center">{item.quantity || 1}</span>
-                                    <button onClick={() => updateItemQuantity(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-brand-orange/20 hover:text-brand-orange rounded-full transition-all">
-                                      <Plus className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                  
-                                  <div className="flex flex-wrap items-center gap-6">
-                                    <div className="text-right">
-                                      <p className="text-[8px] uppercase tracking-widest text-white/20 mb-0.5">Preço Unitário</p>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs text-brand-orange font-bold">R$</span>
-                                        <input 
-                                          value={maskBRL(item.price).replace('R$', '').trim()}
-                                          onChange={e => handleItemPriceChange(idx, parseBRL(e.target.value))}
-                                          className="w-24 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-sm text-brand-orange text-right outline-none focus:border-brand-orange font-mono font-bold"
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-[8px] uppercase tracking-widest text-white/20 mb-0.5">Custo Unitário</p>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs text-white/40 font-bold">R$</span>
-                                        <input 
-                                          value={maskBRL(item.cost_price || 0).replace('R$', '').trim()}
-                                          onChange={e => handleItemCostChange(idx, parseBRL(e.target.value))}
-                                          className="w-24 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-sm text-white/40 text-right outline-none focus:border-brand-orange font-mono font-bold"
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="h-8 w-[1px] bg-white/10" />
-                                    <div className="text-right">
-                                       <p className="text-[8px] uppercase tracking-widest text-emerald-500/60 mb-0.5">Margem Total</p>
-                                       <p className="text-sm text-emerald-500 font-mono font-bold">{maskBRL((Number(item.price) - Number(item.cost_price || 0)) * (item.quantity || 1))}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                      </AnimatePresence>
-
-                      {orderItems.length === 0 && (
-                        <div className="text-center py-24 bg-white/[0.01] border-2 border-dashed border-white/5 rounded-3xl">
-                          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <ShoppingCart className="w-10 h-10 text-white/10" />
+                {/* Panel Switching based on Order Type */}
+                {order?.type === 'raffle' ? (
+                  <div className="lg:col-span-12 p-8 md:p-12 space-y-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                      {/* Customer Info */}
+                      <div className="space-y-8 bg-white/[0.02] p-8 rounded-3xl border border-white/5">
+                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange flex items-center gap-3">
+                          <User className="w-4 h-4" /> Detalhes do Apoiador
+                        </h3>
+                        <div className="space-y-6">
+                          <div className="relative group">
+                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">Nome Completo *</label>
+                            <input 
+                              type="text"
+                              required
+                              placeholder="Como devemos te chamar?"
+                              value={form.name} 
+                              onChange={e => setForm({...form, name: e.target.value})} 
+                              className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-white/10" 
+                            />
                           </div>
-                          <h4 className="text-white/40 font-serif italic text-lg">Seu carrinho está vazio</h4>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-white/20 mt-2">Selecione produtos no catálogo à esquerda</p>
+                          <div className="relative group">
+                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">WhatsApp *</label>
+                            <input 
+                              type="tel"
+                              required
+                              placeholder="(00) 00000-0000"
+                              value={form.phone} 
+                              onChange={e => setForm({...form, phone: e.target.value})} 
+                              className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-white/10" 
+                            />
+                          </div>
+                          <div className="relative group">
+                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">E-mail *</label>
+                            <input 
+                              type="email"
+                              required
+                              placeholder="seu@email.com"
+                              value={form.email} 
+                              onChange={e => setForm({...form, email: e.target.value})} 
+                              className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-white/10" 
+                            />
+                          </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Raffle Info */}
+                      <div className="space-y-8 bg-brand-orange/5 p-8 rounded-3xl border border-brand-orange/10">
+                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange flex items-center gap-3">
+                          <Ticket className="w-4 h-4" /> Detalhes da Ação
+                        </h3>
+                        <div className="space-y-6">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-black/40 rounded-2xl border border-white/5 gap-2">
+                            <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Bailarino Apoiado:</span>
+                            <span className="text-lg text-white font-serif italic">{order.dancer_name || 'Geral'}</span>
+                          </div>
+                          <div className="space-y-3">
+                            <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold block ml-1">Números Reservados:</span>
+                            <div className="flex flex-wrap gap-2">
+                              {(order.selected_numbers || []).map((n: number) => (
+                                <span key={n} className="px-3 py-1 bg-brand-orange text-white rounded-lg text-sm font-mono font-bold shadow-lg">#{n}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Left Panel: Customer & Tools (4 cols) */}
+                    <div className="lg:col-span-4 p-8 border-r border-white/5 space-y-10 bg-white/[0.02]">
+                      <section>
+                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange mb-8 flex items-center gap-3">
+                          <div className="w-1.5 h-1.5 bg-brand-orange rounded-full animate-pulse" />
+                          Dados do Comprador
+                        </h3>
+                        <div className="space-y-6">
+                          <div className="relative group">
+                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">Nome Completo *</label>
+                            <input 
+                              type="text"
+                              required
+                              value={customerName}
+                              onChange={e => setCustomerName(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange focus:bg-brand-orange/5 transition-all font-serif italic rounded-xl"
+                            />
+                          </div>
+                          <div className="relative group">
+                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">WhatsApp *</label>
+                            <div className="flex items-center">
+                               <Phone className="absolute left-4 w-4 h-4 text-white/20 group-focus-within:text-brand-orange transition-colors" />
+                               <input 
+                                 type="tel"
+                                 required
+                                 value={customerPhone}
+                                 onChange={e => setCustomerPhone(e.target.value)}
+                                 className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-xl"
+                               />
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">E-mail *</label>
+                            <div className="flex items-center">
+                               <Mail className="absolute left-4 w-4 h-4 text-white/20 group-focus-within:text-brand-orange transition-colors" />
+                               <input 
+                                 type="email"
+                                 required
+                                 value={customerEmail}
+                                 onChange={e => setCustomerEmail(e.target.value)}
+                                 className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-xl"
+                               />
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section>
+                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-6 flex items-center gap-3">
+                          <Package className="w-4 h-4" /> Catálogo Rápido
+                        </h3>
+                        <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-3 custom-scrollbar">
+                          {(helpItems || []).map(item => {
+                            const isSelected = orderItems.find(i => i.id === item.id);
+                            return (
+                              <motion.button 
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                key={item.id}
+                                onClick={() => toggleQuickAdd(item)}
+                                className={`flex items-center gap-4 p-3 rounded-xl border transition-all text-left group ${isSelected ? 'bg-brand-orange/10 border-brand-orange/30 shadow-[0_0_20px_rgba(180,48,64,0.1)]' : 'bg-white/5 border-white/5 hover:border-white/20'}`}
+                              >
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-black/40 border border-white/5 flex-shrink-0">
+                                   <img src={item.image_url} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-[10px] uppercase tracking-widest font-bold truncate ${isSelected ? 'text-brand-orange' : 'text-white/60'}`}>{item.title}</p>
+                                  <p className="text-[10px] text-white/20 font-mono mt-0.5">{maskBRL(item.price)}</p>
+                                </div>
+                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${isSelected ? 'bg-brand-orange border-brand-orange' : 'border-white/10 group-hover:border-brand-orange/50'}`}>
+                                   <Plus className={`w-3 h-3 ${isSelected ? 'text-white rotate-45' : 'text-white/20 group-hover:text-brand-orange'}`} />
+                                </div>
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    </div>
+
+                    {/* Right Panel: Items List (8 cols) */}
+                    <div className="lg:col-span-8 p-8 md:p-12 space-y-10">
+                      <div>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-10 gap-4">
+                          <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange flex items-center gap-3">
+                             <div className="w-8 h-[1px] bg-brand-orange/30" />
+                             Itens do Carrinho
+                          </h3>
+                          <p className="text-[10px] text-white/20 font-mono italic">Total de {orderItems.length} tipos de itens</p>
+                        </div>
+
+                        <div className="space-y-6">
+                          <AnimatePresence mode="popLayout">
+                            {orderItems.map((item, idx) => {
+                              // Find original product for image if missing in item JSON
+                              const originalProduct = helpItems.find(h => h.id === item.id);
+                              const imageUrl = item.image_url || originalProduct?.image_url;
+
+                              return (
+                                <motion.div 
+                                  layout
+                                  initial={{ opacity: 0, x: 20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95 }}
+                                  key={item.id || idx} 
+                                  className="group relative bg-gradient-to-r from-white/[0.03] to-transparent border border-white/5 hover:border-brand-orange/20 p-4 sm:p-6 rounded-2xl transition-all flex flex-col sm:flex-row gap-6 sm:gap-8 items-center"
+                                >
+                                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-black/60 border border-white/10 shadow-2xl flex-shrink-0 group-hover:scale-105 transition-transform duration-500">
+                                     <img src={imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                  </div>
+
+                                  <div className="flex-1 space-y-4 w-full">
+                                    <div className="flex justify-between items-start">
+                                      <input 
+                                        type="text"
+                                        required
+                                        value={item.name}
+                                        onChange={e => {
+                                          const newItems = [...orderItems];
+                                          newItems[idx].name = e.target.value;
+                                          setOrderItems(newItems);
+                                        }}
+                                        className="bg-transparent border-b border-white/5 py-1 text-sm text-white outline-none focus:border-brand-orange font-serif italic flex-1"
+                                        placeholder="Nome do Item"
+                                      />
+                                      <button 
+                                        onClick={() => {
+                                          const newItems = orderItems.filter((_, i) => i !== idx);
+                                          setOrderItems(newItems);
+                                          syncTotal(newItems);
+                                        }}
+                                        className="ml-4 p-2 text-white/10 hover:text-red-500 transition-colors bg-white/5 rounded-lg opacity-100 group-hover:opacity-100 sm:opacity-0"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                    
+                                    <div className="flex flex-wrap items-center justify-between gap-6">
+                                      <div className="flex items-center gap-4 bg-black/40 p-1.5 rounded-full border border-white/5 shadow-inner">
+                                        <button onClick={() => updateItemQuantity(item.id, -1)} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-brand-orange/20 hover:text-brand-orange rounded-full transition-all">
+                                          <Minus className="w-3 h-3" />
+                                        </button>
+                                        <span className="text-sm font-bold text-white min-w-[30px] text-center">{item.quantity || 1}</span>
+                                        <button onClick={() => updateItemQuantity(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-brand-orange/20 hover:text-brand-orange rounded-full transition-all">
+                                          <Plus className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                      
+                                      <div className="flex flex-wrap items-center gap-6">
+                                        <div className="text-right">
+                                          <p className="text-[8px] uppercase tracking-widest text-white/20 mb-0.5">Preço Unitário</p>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs text-brand-orange font-bold">R$</span>
+                                            <input 
+                                              value={maskBRL(item.price).replace('R$', '').trim()}
+                                              onChange={e => handleItemPriceChange(idx, parseBRL(e.target.value))}
+                                              className="w-20 sm:w-24 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-sm text-brand-orange text-right outline-none focus:border-brand-orange font-mono font-bold"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="text-right hidden sm:block">
+                                          <p className="text-[8px] uppercase tracking-widest text-white/20 mb-0.5">Custo Unitário</p>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs text-white/40 font-bold">R$</span>
+                                            <input 
+                                              value={maskBRL(item.cost_price || 0).replace('R$', '').trim()}
+                                              onChange={e => handleItemCostChange(idx, parseBRL(e.target.value))}
+                                              className="w-24 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-sm text-white/40 text-right outline-none focus:border-brand-orange font-mono font-bold"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="h-8 w-[1px] bg-white/10 hidden sm:block" />
+                                        <div className="text-right">
+                                           <p className="text-[8px] uppercase tracking-widest text-emerald-500/60 mb-0.5">Subtotal</p>
+                                           <p className="text-sm text-emerald-500 font-mono font-bold">{maskBRL(Number(item.price) * (item.quantity || 1))}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </AnimatePresence>
+
+                          {orderItems.length === 0 && (
+                            <div className="text-center py-24 bg-white/[0.01] border-2 border-dashed border-white/5 rounded-3xl">
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <ShoppingCart className="w-8 h-8 sm:w-10 sm:h-10 text-white/10" />
+                              </div>
+                              <h4 className="text-white/40 font-serif italic text-lg">Seu carrinho está vazio</h4>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-white/20 mt-2">Selecione produtos no catálogo à esquerda</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

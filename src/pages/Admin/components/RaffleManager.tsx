@@ -21,6 +21,7 @@ import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { NotificationSettings } from './ui/NotificationSettings';
 import { RaffleOrdersModal } from './raffles/RaffleOrdersModal';
 import { OptimizedImageUploader } from './OptimizedImageUploader';
+import { DancersManager } from './DancersManager';
 
 interface RaffleManagerProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
@@ -41,6 +42,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
   const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
   const { profiles } = useProfiles();
   
+  const [view, setView] = useState<'campaigns' | 'dancers'>('campaigns');
   const [isAdding, setIsAdding] = useState(false);
   const [viewingOrdersId, setViewingOrdersId] = useState<string | null>(null);
   const [orders, setOrders] = useState<RaffleOrder[]>([]);
@@ -110,137 +112,169 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
 
   return (
     <div className="space-y-6 pb-20">
-      {userRole === 'master' && (
-        <div className="bg-black/10 border border-white/5 rounded-[2.5rem] p-10 mb-12">
-          <NotificationSettings 
-            title="Notificações das Rifas"
-            description="Selecione os administradores ou insira e-mails manualmente para receber alertas"
-            profiles={profiles}
-            currentEmails={currentEmails}
-            onSave={handleSaveEmails}
-          />
+      {/* Sub-tabs for Raffle Section */}
+      <div className="flex gap-4 mb-12">
+        <button 
+          onClick={() => setView('campaigns')}
+          className={`px-8 py-4 text-[10px] uppercase tracking-[0.3em] font-bold rounded-xl transition-all border ${
+            view === 'campaigns' 
+              ? 'bg-brand-orange border-brand-orange text-white shadow-2xl' 
+              : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/20'
+          }`}
+        >
+          Campanhas de Rifa
+        </button>
+        <button 
+          onClick={() => setView('dancers')}
+          className={`px-8 py-4 text-[10px] uppercase tracking-[0.3em] font-bold rounded-xl transition-all border ${
+            view === 'dancers' 
+              ? 'bg-brand-orange border-brand-orange text-white shadow-2xl' 
+              : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/20'
+          }`}
+        >
+          Bailarinos Participantes
+        </button>
+      </div>
+
+      {view === 'campaigns' ? (
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {userRole === 'master' && (
+            <div className="bg-black/10 border border-white/5 rounded-[2.5rem] p-10 mb-12">
+              <NotificationSettings 
+                title="Notificações das Rifas"
+                description="Selecione os administradores ou insira e-mails manualmente para receber alertas"
+                profiles={profiles}
+                currentEmails={currentEmails}
+                onSave={handleSaveEmails}
+              />
+            </div>
+          )}
+
+          {/* Accordion for New Campaign */}
+          <div className={`border transition-all duration-500 overflow-hidden rounded-[2.5rem] ${
+            isAdding 
+              ? 'bg-black/30 border-white/10 shadow-2xl' 
+              : 'bg-black/10 border-white/5 hover:border-white/20'
+          }`}>
+            <button 
+              onClick={() => setIsAdding(!isAdding)}
+              className="w-full p-10 flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-6">
+                <div className={`p-4 rounded-2xl border transition-all duration-500 ${
+                  isAdding 
+                    ? 'bg-brand-orange/20 border-brand-orange/40 text-brand-orange' 
+                    : 'bg-white/5 border-white/5 text-white/20 group-hover:text-white/40'
+                }`}>
+                  <Plus className={`w-6 h-6 transition-transform duration-500 ${isAdding ? 'rotate-45' : ''}`} />
+                </div>
+                <div className="text-left">
+                  <h3 className={`text-2xl font-serif italic transition-all duration-500 ${
+                    isAdding ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+                  }`}>
+                    Nova Ação Entre Amigos
+                  </h3>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">Criar sorteio ou rifa solidária</p>
+                </div>
+              </div>
+            </button>
+
+            <AnimatePresence>
+              {isAdding && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
+                >
+                  <div className="px-12 pb-12">
+                    <form onSubmit={handleCreate} className="space-y-10">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <div className="space-y-8">
+                          <div className="space-y-4">
+                            <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Título da Ação</label>
+                            <input 
+                              type="text" required value={newName}
+                              onChange={(e) => setNewName(e.target.value)}
+                              className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço/Número</label>
+                              <input 
+                                type="text" value={maskBRL(newPrice)}
+                                onChange={(e) => setNewPrice(parseBRL(e.target.value))}
+                                className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
+                              />
+                            </div>
+                            <div className="space-y-4">
+                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Qtd. Números</label>
+                              <input 
+                                type="number" value={newTotal}
+                                onChange={(e) => setNewTotal(parseInt(e.target.value))}
+                                className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner text-xl"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-8">
+                           <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Imagem e Pré-visualização</label>
+                           <div className="aspect-video bg-black rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-2xl group">
+                             <img src={newImageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700" alt="" />
+                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-8">
+                               <OptimizedImageUploader 
+                                 onUploadSuccess={(url) => setNewImageUrl(url)}
+                                 onAlert={onAlert}
+                                 folder="raffles"
+                               />
+                             </div>
+                           </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-8 border-t border-white/5 flex justify-end">
+                        <button 
+                          type="submit" disabled={creating}
+                          className="px-12 py-5 bg-brand-orange text-white font-bold uppercase tracking-[0.3em] text-[10px] hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 shadow-2xl rounded-xl flex items-center gap-4"
+                        >
+                          {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ticket className="w-5 h-5" />}
+                          Lançar Nova Ação
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* List of Raffles as Accordions */}
+          <div className="space-y-4 pt-12">
+            <div className="flex flex-col gap-2 ml-1 mb-6">
+              <h4 className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-bold">Ações Ativas ({campaigns.length})</h4>
+              <div className="h-px w-12 bg-white/5" />
+            </div>
+            
+            {campaigns.map((campaign, index) => (
+              <RaffleAccordion 
+                key={campaign.id} 
+                campaign={campaign} 
+                index={index + 1}
+                onUpdate={updateCampaign} 
+                onDelete={deleteCampaign}
+                onOpenOrders={handleOpenOrders}
+                onAlert={onAlert}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <DancersManager onAlert={onAlert} />
         </div>
       )}
-
-      {/* Accordion for New Campaign */}
-      <div className={`border transition-all duration-500 overflow-hidden rounded-[2.5rem] ${
-        isAdding 
-          ? 'bg-black/30 border-white/10 shadow-2xl' 
-          : 'bg-black/10 border-white/5 hover:border-white/20'
-      }`}>
-        <button 
-          onClick={() => setIsAdding(!isAdding)}
-          className="w-full p-10 flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-6">
-            <div className={`p-4 rounded-2xl border transition-all duration-500 ${
-              isAdding 
-                ? 'bg-brand-orange/20 border-brand-orange/40 text-brand-orange' 
-                : 'bg-white/5 border-white/5 text-white/20 group-hover:text-white/40'
-            }`}>
-              <Plus className={`w-6 h-6 transition-transform duration-500 ${isAdding ? 'rotate-45' : ''}`} />
-            </div>
-            <div className="text-left">
-              <h3 className={`text-2xl font-serif italic transition-all duration-500 ${
-                isAdding ? 'text-white' : 'text-white/40 group-hover:text-white/60'
-              }`}>
-                Nova Ação Entre Amigos
-              </h3>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">Criar sorteio ou rifa solidária</p>
-            </div>
-          </div>
-        </button>
-
-        <AnimatePresence>
-          {isAdding && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
-            >
-              <div className="px-12 pb-12">
-                <form onSubmit={handleCreate} className="space-y-10">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    <div className="space-y-8">
-                      <div className="space-y-4">
-                        <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Título da Ação</label>
-                        <input 
-                          type="text" required value={newName}
-                          onChange={(e) => setNewName(e.target.value)}
-                          className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                          <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Preço/Número</label>
-                          <input 
-                            type="text" value={maskBRL(newPrice)}
-                            onChange={(e) => setNewPrice(parseBRL(e.target.value))}
-                            className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-brand-orange font-bold rounded-2xl shadow-inner text-xl"
-                          />
-                        </div>
-                        <div className="space-y-4">
-                          <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Qtd. Números</label>
-                          <input 
-                            type="number" value={newTotal}
-                            onChange={(e) => setNewTotal(parseInt(e.target.value))}
-                            className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner text-xl"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-8">
-                       <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Imagem e Pré-visualização</label>
-                       <div className="aspect-video bg-black rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-2xl group">
-                         <img src={newImageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700" alt="" />
-                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-8">
-                           <OptimizedImageUploader 
-                             onUploadSuccess={(url) => setNewImageUrl(url)}
-                             onAlert={onAlert}
-                             folder="raffles"
-                           />
-                         </div>
-                       </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-8 border-t border-white/5 flex justify-end">
-                    <button 
-                      type="submit" disabled={creating}
-                      className="px-12 py-5 bg-brand-orange text-white font-bold uppercase tracking-[0.3em] text-[10px] hover:bg-white hover:text-brand-dark transition-all disabled:opacity-50 shadow-2xl rounded-xl flex items-center gap-4"
-                    >
-                      {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ticket className="w-5 h-5" />}
-                      Lançar Nova Ação
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* List of Raffles as Accordions */}
-      <div className="space-y-4 pt-12">
-        <div className="flex flex-col gap-2 ml-1 mb-6">
-          <h4 className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-bold">Ações Ativas ({campaigns.length})</h4>
-          <div className="h-px w-12 bg-white/5" />
-        </div>
-        
-        {campaigns.map((campaign, index) => (
-          <RaffleAccordion 
-            key={campaign.id} 
-            campaign={campaign} 
-            index={index + 1}
-            onUpdate={updateCampaign} 
-            onDelete={deleteCampaign}
-            onOpenOrders={handleOpenOrders}
-            onAlert={onAlert}
-          />
-        ))}
-      </div>
 
       <AnimatePresence>
         {viewingOrdersId && (

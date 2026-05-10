@@ -16,6 +16,7 @@ const ALL_PERMISSIONS = [
   { id: 'sponsorship', label: 'Apoiadores' },
   { id: 'financial', label: 'Financeiro' },
   { id: 'banners', label: 'Banners' },
+  { id: 'dancers', label: 'Bailarinos' },
   { id: 'users', label: 'Administradores' },
 ];
 

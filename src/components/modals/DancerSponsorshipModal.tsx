@@ -1,0 +1,595 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, ChevronLeft, ChevronRight, Ticket, Loader2, Smartphone, Mail, User, RotateCw, Check } from 'lucide-react';
+import { WheelPicker } from '../ui/WheelPicker';
+import { LuckyRoulette } from '../ui/LuckyRoulette';
+import { useDancers, Dancer } from '../../hooks/useDancers';
+import { useRaffles, RaffleCampaign } from '../../hooks/useRaffles';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
+import { supabase } from '../../lib/supabase';
+
+interface DancerSponsorshipModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  campaignId?: string; // If null, we'll try to find an active one
+}
+
+type Step = 'dancer' | 'quantity' | 'roulette' | 'checkout' | 'success';
+
+export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSponsorshipModalProps) {
+  const { dancers, loading: loadingDancers } = useDancers();
+  const { campaigns, loading: loadingCampaigns, fetchTakenTickets, createOrder } = useRaffles();
+  const { settings } = useSiteSettings();
+
+  const [step, setStep] = useState<Step>('dancer');
+  const [selectedDancer, setSelectedDancer] = useState<Dancer | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
+  const [fixedIndices, setFixedIndices] = useState<number[]>([]);
+  const [takenNumbers, setTakenNumbers] = useState<number[]>([]);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [hasSpunOnce, setHasSpunOnce] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [form, setForm] = useState({ name: '', phone: '', email: '' });
+
+  const toggleFixNumber = (index: number) => {
+    if (isSpinning) return;
+    setFixedIndices(prev => 
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
+
+  const activeCampaign = useMemo(() => {
+    if (campaignId) return campaigns.find(c => c.id === campaignId);
+    return campaigns.find(c => c.is_active);
+  }, [campaigns, campaignId]);
+
+  const availableNumbers = useMemo(() => {
+    if (!activeCampaign) return [];
+    const all = Array.from({ length: activeCampaign.total_numbers }, (_, i) => i + 1);
+    return all.filter(n => !takenNumbers.includes(n));
+  }, [activeCampaign, takenNumbers]);
+
+  useEffect(() => {
+    if (isOpen && activeCampaign) {
+      fetchTakenTickets(activeCampaign.id).then(setTakenNumbers);
+    }
+  }, [isOpen, activeCampaign]);
+
+  useEffect(() => {
+    if (dancers.length > 0 && !selectedDancer) {
+      const active = dancers.find(d => d.is_active);
+      if (active) setSelectedDancer(active);
+    }
+  }, [dancers]);
+
+  const handleNext = () => {
+    if (step === 'dancer') setStep('quantity');
+    else if (step === 'quantity') setStep('roulette');
+    else if (step === 'roulette') setStep('checkout');
+  };
+
+  const handleBack = () => {
+    if (step === 'quantity') setStep('dancer');
+    else if (step === 'roulette') {
+      setStep('quantity');
+      setHasSpunOnce(false);
+      setFixedIndices([]);
+    }
+    else if (step === 'checkout') setStep('roulette');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCampaign || selectedNumbers.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      const orderData = {
+        campaign_id: activeCampaign.id,
+        customer_name: form.name,
+        customer_email: form.email,
+        customer_phone: form.phone,
+        selected_numbers: selectedNumbers,
+        total_price: selectedNumbers.length * activeCampaign.price_per_number,
+        dancer_name: selectedDancer?.name || 'Geral'
+      };
+
+      const res = await createOrder(orderData);
+      
+      if (res.success) {
+        // Trigger notification email
+        await supabase.functions.invoke('send-order', {
+          body: {
+            ...orderData,
+            type: 'raffle',
+            pix_key: settings['pix_key_checkout']?.value,
+            pix_receiver: settings['pix_checkout_receiver']?.value,
+            pix_bank: settings['pix_checkout_bank']?.value,
+            pix_type: settings['pix_checkout_type']?.value
+          }
+        });
+        setStep('success');
+      }
+    } catch (error) {
+      console.error('Error submitting order:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-brand-dark/95 backdrop-blur-md"
+        onClick={onClose}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative w-full max-w-4xl bg-white/90 backdrop-blur-2xl rounded-[4rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] overflow-hidden border border-white/40"
+      >
+        {/* Progress Bar */}
+        {step !== 'success' && (
+          <div className="absolute top-0 left-0 w-full h-2 bg-black/5">
+            <motion.div 
+              className="h-full bg-brand-orange shadow-[0_0_15px_rgba(204,0,0,0.4)]"
+              initial={{ width: '0%' }}
+              animate={{ 
+                width: step === 'dancer' ? '25%' : 
+                       step === 'quantity' ? '50%' : 
+                       step === 'roulette' ? '75%' : '100%' 
+              }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            />
+          </div>
+        )}
+
+        {/* Close Button */}
+        <button 
+          onClick={onClose}
+          className="absolute top-10 right-10 z-20 p-5 bg-black/5 hover:bg-black/10 rounded-full text-brand-dark/30 hover:text-brand-dark transition-all transform hover:rotate-90"
+        >
+          <X size={24} />
+        </button>
+
+        <div className="p-6 sm:p-16">
+          {/* Header */}
+          <div className="mb-10 sm:mb-16 text-center">
+            <motion.h2 
+              key={step}
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl sm:text-6xl font-serif italic text-brand-dark leading-tight"
+            >
+              {step === 'dancer' ? 'Escolha seu Talento' : 
+               step === 'quantity' ? 'Quantidade de Números' :
+               step === 'roulette' ? 'Sorteio da Sorte' :
+               step === 'checkout' ? 'Finalizar Apoio' : 'Sonho Realizado!'}
+              <span className="text-brand-orange">.</span>
+            </motion.h2>
+            <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-brand-dark/30 font-black mt-4 sm:mt-6 italic">
+              {step === 'success' ? 'OBRIGADO PELA SUA GENEROSIDADE' : 'INVESTINDO NO FUTURO DA DANÇA'}
+            </p>
+          </div>
+
+          <div className="min-h-[500px] flex flex-col">
+            <AnimatePresence mode="wait">
+              {step === 'dancer' && (
+                <motion.div 
+                  key="step-dancer"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  className="flex-1 flex flex-col gap-12"
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 max-h-[450px] overflow-y-auto pr-4 custom-scrollbar">
+                    {loadingDancers ? (
+                      <div className="col-span-full py-20 flex flex-col items-center gap-6">
+                        <Loader2 className="w-12 h-12 text-brand-orange animate-spin" />
+                        <p className="text-[10px] uppercase tracking-widest font-black text-brand-dark/20">Carregando o Elenco...</p>
+                      </div>
+                    ) : (
+                      dancers.filter(d => d.is_active).map((dancer) => (
+                        <button
+                          key={dancer.id}
+                          onClick={() => setSelectedDancer(dancer)}
+                          className={`group relative aspect-[3/4] rounded-[2.5rem] overflow-hidden transition-all duration-500 border-2 ${
+                            selectedDancer?.id === dancer.id 
+                              ? 'border-brand-orange shadow-2xl scale-[1.02] z-10' 
+                              : 'border-transparent hover:border-black/10'
+                          }`}
+                        >
+                          {dancer.photo_url ? (
+                            <img 
+                              src={dancer.photo_url} 
+                              className={`w-full h-full object-cover transition-all duration-700 ${
+                                selectedDancer?.id === dancer.id ? 'scale-110 grayscale-0' : 'grayscale group-hover:grayscale-0 group-hover:scale-105'
+                              }`} 
+                              alt={dancer.name} 
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-brand-dark/5 flex flex-col items-center justify-center gap-4">
+                              <User className="w-12 h-12 text-brand-dark/10" strokeWidth={1} />
+                              <span className="text-[8px] uppercase tracking-widest font-black text-brand-dark/20">Sem Retrato</span>
+                            </div>
+                          )}
+                          
+                          <div className={`absolute inset-x-0 bottom-0 p-6 pt-12 bg-gradient-to-t transition-opacity duration-500 ${
+                            selectedDancer?.id === dancer.id ? 'from-brand-dark opacity-100' : 'from-black/60 opacity-0 group-hover:opacity-100'
+                          }`}>
+                            <p className="text-white font-serif italic text-lg leading-tight">{dancer.name}</p>
+                            {selectedDancer?.id === dancer.id && (
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: '100%' }}
+                                className="h-0.5 bg-brand-orange mt-2" 
+                              />
+                            )}
+                          </div>
+
+                          {selectedDancer?.id === dancer.id && (
+                            <div className="absolute top-4 right-4 w-10 h-10 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-xl">
+                              <Check size={20} strokeWidth={3} />
+                            </div>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="flex flex-col items-center gap-8 pt-6 border-t border-black/5">
+                    <button 
+                      onClick={handleNext}
+                      disabled={!selectedDancer}
+                      className="px-20 py-7 bg-brand-dark text-white rounded-[2.5rem] text-[12px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] hover:shadow-brand-orange/40 active:scale-95 disabled:opacity-50 flex items-center gap-4"
+                    >
+                      CONTINUAR PARA VALORES <ChevronRight size={18} />
+                    </button>
+                    <button onClick={onClose} className="text-[10px] uppercase tracking-[0.4em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic">Desistir do Apoio</button>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 'quantity' && (
+                <motion.div 
+                  key="step-quantity"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.05 }}
+                  className="flex-1 flex flex-col items-center justify-center gap-12"
+                >
+                  <div className="relative group">
+                    <div className="absolute inset-0 bg-brand-orange/20 rounded-full blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                    <div className="relative w-40 h-40 rounded-[3rem] overflow-hidden border-8 border-white shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rotate-3 group-hover:rotate-0 transition-transform duration-700">
+                      {selectedDancer?.photo_url ? (
+                        <img src={selectedDancer.photo_url} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <div className="w-full h-full bg-brand-dark/5 flex items-center justify-center"><User className="w-12 h-12 text-brand-dark/10" /></div>
+                      )}
+                    </div>
+                    <motion.div 
+                      animate={{ y: [0, -10, 0], rotate: [12, 5, 12] }}
+                      transition={{ duration: 4, repeat: Infinity }}
+                      className="absolute -bottom-4 -right-4 bg-brand-orange text-white p-4 rounded-3xl shadow-2xl z-20"
+                    >
+                      <Ticket size={24} strokeWidth={2.5} />
+                    </motion.div>
+                  </div>
+
+                  <div className="text-center">
+                    <h3 className="text-3xl font-serif italic text-brand-dark">{selectedDancer?.name}</h3>
+                    <p className="text-[11px] uppercase tracking-[0.4em] text-brand-orange font-black mt-3 italic opacity-60">Talento Selecionado</p>
+                  </div>
+                  
+                  <div className="w-full max-w-sm bg-black/[0.03] p-12 rounded-[4rem] border border-black/5 space-y-10 shadow-inner">
+                    <div className="flex items-center justify-between gap-10">
+                      <button 
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-20 h-20 rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-brand-dark hover:bg-brand-dark hover:text-white transition-all text-4xl font-light border border-black/5 active:scale-90"
+                      >
+                        -
+                      </button>
+                      <div className="text-center">
+                        <span className="text-8xl font-serif italic text-brand-dark tabular-nums tracking-tighter">{quantity}</span>
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mt-2">NÚMEROS</p>
+                      </div>
+                      <button 
+                        onClick={() => setQuantity(Math.min(activeCampaign?.numbers_per_order || 20, quantity + 1))}
+                        className="w-20 h-20 rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-brand-dark hover:bg-brand-dark hover:text-white transition-all text-4xl font-light border border-black/5 active:scale-90"
+                      >
+                        +
+                      </button>
+                    </div>
+                    
+                    <div className="pt-10 border-t border-black/5 flex items-center justify-between px-4">
+                      <span className="text-[11px] uppercase tracking-[0.4em] text-brand-dark/40 font-black">Investimento:</span>
+                      <span className="text-3xl font-serif italic text-brand-orange">
+                        R$ {activeCampaign ? (activeCampaign.price_per_number * quantity).toFixed(2) : '0.00'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-full flex flex-col items-center gap-8">
+                    <button 
+                      onClick={handleNext}
+                      className="px-20 py-7 bg-brand-dark text-white rounded-[2.5rem] text-[12px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] flex items-center gap-4 active:scale-95 group"
+                    >
+                      SORTEAR MEUS NÚMEROS <ChevronRight size={18} className="group-hover:translate-x-2 transition-transform" />
+                    </button>
+                    <button onClick={handleBack} className="text-[10px] uppercase tracking-[0.4em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic">Alterar Talentoso</button>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 'roulette' && (
+                <motion.div 
+                  key="step-roulette"
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -50 }}
+                  className="flex-1 flex flex-col items-center gap-12"
+                >
+                  <div className="flex items-center gap-6 bg-white shadow-2xl px-10 py-5 rounded-[2.5rem] border border-black/5">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg border-2 border-white flex-shrink-0">
+                      {selectedDancer?.photo_url ? (
+                        <img src={selectedDancer.photo_url} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <div className="w-full h-full bg-brand-dark/5 flex items-center justify-center"><User className="w-6 h-6 text-brand-dark/20" /></div>
+                      )}
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[9px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">PROJETO DE APOIO</p>
+                      <p className="text-lg font-serif italic text-brand-dark leading-none mt-1">{selectedDancer?.name}</p>
+                    </div>
+                  </div>
+
+                  <LuckyRoulette 
+                    availableNumbers={availableNumbers}
+                    quantityToSelect={quantity}
+                    onNumbersSelected={(nums) => {
+                      setSelectedNumbers(nums);
+                      setHasSpunOnce(true);
+                    }}
+                    isSpinning={isSpinning}
+                    setIsSpinning={setIsSpinning}
+                    fixedIndices={fixedIndices}
+                    onToggleFix={toggleFixNumber}
+                    selectedNumbers={selectedNumbers}
+                    hasSpunOnce={hasSpunOnce}
+                  />
+
+                  <div className="w-full flex flex-col items-center gap-8 pt-8">
+                    {!hasSpunOnce ? (
+                      <button 
+                        onClick={() => setIsSpinning(true)}
+                        disabled={isSpinning}
+                        className="px-24 py-8 bg-brand-orange text-white rounded-[2.5rem] text-[13px] uppercase tracking-[0.5em] font-black hover:bg-brand-dark transition-all shadow-[0_32px_64px_-16px_rgba(204,0,0,0.5)] active:scale-95 disabled:opacity-50 flex items-center gap-4"
+                      >
+                        <RotateCw size={20} className={isSpinning ? 'animate-spin' : ''} />
+                        {isSpinning ? 'SORTEANDO...' : 'GIRAR SORTE'}
+                      </button>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <button 
+                          onClick={() => setIsSpinning(true)}
+                          disabled={isSpinning}
+                          className="px-12 py-6 bg-white border-2 border-brand-orange/20 text-brand-orange rounded-[2rem] text-[11px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange/5 transition-all flex items-center gap-3 active:scale-95"
+                        >
+                          <RotateCw size={16} className={isSpinning ? 'animate-spin' : ''} />
+                          SORTEAR RESTANTES
+                        </button>
+                        <button 
+                          onClick={handleNext}
+                          disabled={isSpinning}
+                          className="px-16 py-6 bg-brand-dark text-white rounded-[2rem] text-[11px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange transition-all shadow-2xl flex items-center gap-3 active:scale-95"
+                        >
+                          CONFIRMAR NÚMEROS <Check size={18} />
+                        </button>
+                      </div>
+                    )}
+                    <button onClick={handleBack} disabled={isSpinning} className="text-[10px] uppercase tracking-[0.4em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic">Refazer Escolha</button>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 'checkout' && (
+                <motion.div 
+                  key="step-checkout"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-12"
+                >
+                  {/* Summary Side */}
+                  <div className="bg-brand-dark text-white p-12 rounded-[4rem] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-110 transition-transform duration-1000" />
+                    
+                    <div className="relative z-10 h-full flex flex-col justify-between gap-12">
+                      <div className="space-y-10">
+                        <div className="flex items-center gap-8">
+                          <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl flex-shrink-0 rotate-3">
+                            {selectedDancer?.photo_url ? (
+                              <img src={selectedDancer.photo_url} className="w-full h-full object-cover" alt="" />
+                            ) : (
+                              <div className="w-full h-full bg-white/5 flex items-center justify-center"><User className="w-10 h-10 text-white/10" /></div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.5em] text-white/30 font-black">BENEFICIÁRIO</p>
+                            <h4 className="text-3xl font-serif italic text-white leading-tight mt-1">{selectedDancer?.name}</h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-6">
+                          <p className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-black">NÚMEROS RESERVADOS:</p>
+                          <div className="flex flex-wrap gap-3 max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
+                            {selectedNumbers.map(n => (
+                              <span key={n} className="px-4 py-2 bg-white/10 text-white rounded-2xl text-[12px] font-black border border-white/5 shadow-lg tabular-nums">#{n}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-12 border-t border-white/10 flex items-center justify-between">
+                        <span className="text-[11px] uppercase tracking-[0.5em] text-white/30 font-black">TOTAL DO APOIO:</span>
+                        <span className="text-5xl font-serif italic text-brand-orange tracking-tighter">
+                          R$ {activeCampaign ? (activeCampaign.price_per_number * quantity).toFixed(2) : '0.00'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form Side */}
+                  <form onSubmit={handleSubmit} className="flex flex-col justify-between py-4">
+                    <div className="space-y-8">
+                      <div className="space-y-2">
+                         <p className="text-[10px] uppercase tracking-[0.5em] text-brand-dark/30 font-black ml-4">SEUS DADOS <span className="text-brand-orange">*</span></p>
+                         <div className="space-y-4">
+                            <div className="relative group">
+                              <input 
+                                type="text" 
+                                required 
+                                placeholder="Nome Completo *"
+                                value={form.name} 
+                                onChange={e => setForm({...form, name: e.target.value})}
+                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20"
+                              />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <input 
+                                type="tel" 
+                                required 
+                                placeholder="WhatsApp *"
+                                value={form.phone} 
+                                onChange={e => setForm({...form, phone: e.target.value})}
+                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20"
+                              />
+                              <input 
+                                type="email" 
+                                required 
+                                placeholder="E-mail *"
+                                value={form.email} 
+                                onChange={e => setForm({...form, email: e.target.value})}
+                                className="w-full bg-black/[0.04] border border-transparent p-6 sm:p-7 rounded-[2rem] sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 focus:shadow-2xl transition-all font-medium placeholder:text-brand-dark/20"
+                              />
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="p-8 bg-brand-orange/5 border border-brand-orange/10 rounded-[2.5rem] flex gap-6">
+                         <div className="w-1 h-auto bg-brand-orange rounded-full shrink-0" />
+                         <p className="text-[10px] text-brand-orange font-black italic leading-relaxed uppercase tracking-[0.2em] opacity-70">
+                            Ao clicar em confirmar, você será direcionado para os detalhes do pagamento via PIX para oficializar sua ajuda.
+                         </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-10 flex flex-col items-center gap-6">
+                      <button 
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-8 bg-brand-orange text-white rounded-[2.5rem] text-[13px] uppercase tracking-[0.5em] font-black hover:bg-brand-dark transition-all shadow-[0_32px_64px_-16px_rgba(204,0,0,0.5)] flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50"
+                      >
+                        {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Check size={24} strokeWidth={3} />}
+                        CONFIRMAR E APOIAR
+                      </button>
+                      <button type="button" onClick={handleBack} className="text-[10px] uppercase tracking-[0.4em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic">Revisar Números</button>
+                    </div>
+                  </form>
+                </motion.div>
+              )}
+
+              {step === 'success' && (
+                <motion.div 
+                  key="step-success"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex-1 flex flex-col items-center justify-center text-center gap-12 py-10"
+                >
+                  <div className="relative">
+                    <motion.div 
+                      initial={{ scale: 0, rotate: -45 }}
+                      animate={{ scale: 1, rotate: 12 }}
+                      transition={{ type: "spring", damping: 15, stiffness: 100, delay: 0.2 }}
+                      className="w-40 h-40 bg-emerald-500 rounded-[4rem] flex items-center justify-center text-white shadow-[0_40px_80px_-20px_rgba(16,185,129,0.5)]"
+                    >
+                      <Check size={72} strokeWidth={4} />
+                    </motion.div>
+                    <motion.div 
+                      initial={{ opacity: 0, x: 30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.6 }}
+                      className="absolute -bottom-6 -right-6 w-24 h-24 rounded-[2.5rem] border-8 border-white overflow-hidden shadow-2xl -rotate-12"
+                    >
+                      {selectedDancer?.photo_url ? (
+                        <img src={selectedDancer.photo_url} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <div className="w-full h-full bg-brand-dark/5 flex items-center justify-center"><User className="w-10 h-10 text-brand-dark/10" /></div>
+                      )}
+                    </motion.div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <h3 className="text-5xl font-serif italic text-brand-dark leading-tight">Pedido Recebido!</h3>
+                    <p className="text-lg text-brand-dark/50 max-w-lg mx-auto leading-relaxed italic">
+                      Sua reserva para apoiar <span className="text-brand-dark font-black underline decoration-brand-orange/40 decoration-4 underline-offset-8">{selectedDancer?.name}</span> foi processada. Agora falta pouco!
+                    </p>
+                  </div>
+
+                  <div className="w-full max-w-xl bg-white p-12 md:p-16 rounded-[5rem] border border-black/5 shadow-[0_64px_128px_-32px_rgba(0,0,0,0.15)] space-y-12">
+                    <div className="space-y-6">
+                      <p className="text-[11px] uppercase tracking-[0.5em] text-brand-dark/30 font-black">CHAVE PIX ({settings['pix_checkout_type']?.value || 'E-mail'})</p>
+                      <div className="bg-black/[0.04] p-10 rounded-[3rem] border border-transparent hover:border-brand-orange/30 transition-all group cursor-copy active:scale-95 shadow-inner" onClick={() => {
+                        navigator.clipboard.writeText(settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com');
+                      }}>
+                        <p className="font-mono text-xl text-brand-dark break-all font-black tracking-tight">{settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com'}</p>
+                        <p className="text-[9px] uppercase tracking-[0.4em] text-brand-orange font-black mt-5 opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA COPIAR CHAVE</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-12 text-left border-t border-black/5 pt-12">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.4em] text-brand-dark/30 font-black mb-2">BANCO</p>
+                        <p className="text-lg font-black text-brand-dark tracking-tight">{settings['pix_checkout_bank']?.value || 'SICOOB'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.4em] text-brand-dark/30 font-black mb-2">RECEBEDOR</p>
+                        <p className="text-lg font-black text-brand-dark tracking-tight">{settings['pix_checkout_receiver']?.value || 'Tatiana Figueiredo'}</p>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        const msg = encodeURIComponent(`Olá! Acabei de apoiar o talento ${selectedDancer?.name} na ação entre amigos. Meus números: ${selectedNumbers.join(', ')}. Aqui está meu comprovante!`);
+                        window.open(`https://wa.me/5532988358215?text=${msg}`);
+                      }}
+                      className="w-full py-8 bg-[#25D366] text-white rounded-[2.5rem] text-[13px] uppercase tracking-[0.4em] font-black hover:shadow-[0_20px_40px_-10px_rgba(37,211,102,0.5)] transition-all shadow-2xl flex items-center justify-center gap-4 active:scale-95"
+                    >
+                      <Smartphone size={22} />
+                      ENVIAR COMPROVANTE AGORA
+                    </button>
+                  </div>
+
+                  <button 
+                    onClick={onClose}
+                    className="px-16 py-6 text-[11px] uppercase tracking-[0.5em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic"
+                  >
+                    CONCLUIR E FECHAR
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

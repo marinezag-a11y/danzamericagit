@@ -16,7 +16,7 @@ interface SponsorshipManagerProps {
 }
 
 export function SponsorshipManager({ onAlert }: SponsorshipManagerProps) {
-  const { tiers, loading, createTier, updateTier, deleteTier } = useSponsorship();
+  const { tiers, loading, addTier, updateTier, deleteTier } = useSponsorship();
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -27,11 +27,12 @@ export function SponsorshipManager({ onAlert }: SponsorshipManagerProps) {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const res = await createTier({
+    const res = await addTier({
       name: newName,
       price: newPrice,
       benefits: newBenefits.split('\n').filter(b => b.trim()),
-      highlight: newHighlight
+      highlight: newHighlight,
+      display_order: tiers.length
     });
     
     if (res.success) {
@@ -338,7 +339,7 @@ const SponsorshipAccordion: React.FC<SponsorshipAccordionProps> = ({ tier, index
       <ConfirmModal 
         isOpen={itemToDelete}
         onConfirm={handleDelete}
-        onCancel={() => setItemToDelete(null)}
+        onCancel={() => setItemToDelete(false)}
         title="Excluir Cota?"
         message="Deseja remover permanentemente esta cota de patrocínio?"
         confirmLabel="Sim, Excluir"

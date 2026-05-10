@@ -8,8 +8,9 @@ export interface RaffleCampaign {
   image_url: string;
   price_per_number: number;
   total_numbers: number;
-  start_date: string;
-  end_date: string;
+  numbers_per_order: number;
+  start_date?: string;
+  end_date?: string;
   is_active: boolean;
   created_at: string;
 }
@@ -22,7 +23,9 @@ export interface RaffleOrder {
   customer_phone: string;
   selected_numbers: number[];
   total_price: number;
+  dancer_name?: string;
   status: 'pending' | 'paid' | 'cancelled';
+  notification_sent?: boolean;
   created_at: string;
 }
 
@@ -60,10 +63,10 @@ export function useRaffles() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as RaffleOrder[];
-    } catch (err) {
+      return { success: true, data: data as RaffleOrder[] };
+    } catch (err: any) {
       console.error('Error fetching raffle orders:', err);
-      return [];
+      return { success: false, error: err.message, data: [] };
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../../../lib/supabase';
 import { 
   ShoppingBag, 
   XCircle, 
@@ -32,6 +33,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const { profiles } = useProfiles();
   const [savingEmails, setSavingEmails] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'sent' | 'cancelled'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'store' | 'raffle'>('all');
   const [isAddingManually, setIsAddingManually] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -41,16 +43,22 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     total: orders?.length || 0,
     cancelled: (orders || []).filter(o => o?.status === 'cancelled').length,
     paid: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').length,
-    pendingValue: (orders || []).filter(o => o?.status === 'pending').reduce((sum, o) => sum + (o?.product_price || 0), 0),
-    totalValue: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => sum + (o?.product_price || 0), 0),
+    pendingValue: (orders || []).filter(o => o?.status === 'pending').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
+    totalValue: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
     totalNetValue: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => {
+      const price = o?.total_price || o?.product_price || 0;
+      if (o.type === 'raffle') return sum + price;
       const items = o?.items || [];
       const totalCost = items.reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
-      return sum + (o?.product_price || 0) - totalCost;
+      return sum + price - totalCost;
     }, 0)
   };
 
-  const filteredOrders = (orders || []).filter(o => filter === 'all' || o?.status === filter);
+  const filteredOrders = (orders || []).filter(o => {
+    const matchesStatus = filter === 'all' || o?.status === filter;
+    const matchesType = typeFilter === 'all' || o?.type === typeFilter;
+    return matchesStatus && matchesType;
+  });
 
   const confirmDelete = async (reason: string) => {
     if (!orderToDelete) return;
@@ -132,21 +140,38 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       </div>
 
       {/* Filter and Actions */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white/5 border border-white/10 p-4 rounded-sm shadow-xl">
-        <div className="flex flex-wrap gap-2">
-          {(['all', 'pending', 'paid', 'sent', 'cancelled'] as const).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm ${filter === f ? 'bg-brand-orange text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
-            >
-              {f === 'all' ? 'Todos' : f === 'pending' ? 'Pendentes' : f === 'paid' ? 'Pagos' : f === 'sent' ? 'Enviados' : 'Cancelados'}
-            </button>
-          ))}
+      <div className="flex flex-col xl:flex-row items-center justify-between gap-6 bg-white/5 border border-white/10 p-6 rounded-sm shadow-xl">
+        <div className="flex flex-col lg:flex-row items-center gap-8">
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'pending', 'paid', 'sent', 'cancelled'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm ${filter === f ? 'bg-brand-orange text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+              >
+                {f === 'all' ? 'Todos Status' : f === 'pending' ? 'Pendentes' : f === 'paid' ? 'Pagos' : f === 'sent' ? 'Enviados' : 'Cancelados'}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-[1px] h-6 bg-white/10 hidden lg:block" />
+
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'store', 'raffle'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm border ${typeFilter === t ? 'bg-white text-brand-dark border-white' : 'bg-transparent text-white/40 border-white/10 hover:border-white/30'}`}
+              >
+                {t === 'all' ? 'Tudo' : t === 'store' ? 'Produtos da Loja' : 'Ações entre Amigos'}
+              </button>
+            ))}
+          </div>
         </div>
+
         <button 
           onClick={() => setIsAddingManually(true)}
-          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-all border border-white/10 rounded-sm shadow-lg"
+          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-8 py-3 text-[10px] uppercase tracking-widest font-bold transition-all border border-white/10 rounded-sm shadow-lg whitespace-nowrap"
         >
           <Plus className="w-3 h-3" /> Incluir Manualmente
         </button>

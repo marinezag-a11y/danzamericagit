@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Ticket, Loader2 } from 'lucide-react';
 import { useRaffles, RaffleCampaign } from '../hooks/useRaffles';
-import { RaffleCheckoutModal } from './modals/RaffleCheckoutModal';
+import { DancerSponsorshipModal } from './modals/DancerSponsorshipModal';
 
 export function RaffleSection() {
   const { campaigns, loading } = useRaffles();
@@ -74,8 +74,9 @@ export function RaffleSection() {
 
       <AnimatePresence>
         {selectedCampaign && (
-          <RaffleCheckoutModal 
-            campaign={selectedCampaign}
+          <DancerSponsorshipModal 
+            campaignId={selectedCampaign.id}
+            isOpen={!!selectedCampaign}
             onClose={() => setSelectedCampaign(null)}
           />
         )}

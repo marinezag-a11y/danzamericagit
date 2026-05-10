@@ -124,7 +124,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-6 py-10 overflow-hidden">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center px-6 py-10 overflow-hidden">
       <motion.div 
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
@@ -138,8 +138,8 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         className="modal-container relative z-10"
       >
-        <button onClick={onClose} className="absolute top-6 right-6 sm:top-8 sm:right-8 text-brand-dark/20 hover:text-brand-orange transition-colors z-20">
-          <X className="w-8 h-8" strokeWidth={1} />
+        <button onClick={onClose} className="absolute top-4 right-4 sm:top-8 sm:right-8 text-brand-dark/20 hover:text-brand-orange transition-colors z-20">
+          <X className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1} />
         </button>
 
         <div className="modal-content">
@@ -336,6 +336,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
             </div>
           </div>
         )}
+        </div>
       </motion.div>
     </div>
   );

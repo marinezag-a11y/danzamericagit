@@ -61,7 +61,7 @@ export function ProposalModal({ tierName, tierPrice, tierBenefits, onClose }: Pr
 
   const modalContent = (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md overflow-hidden">
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-md overflow-hidden">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

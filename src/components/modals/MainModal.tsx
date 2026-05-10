@@ -213,7 +213,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   if (!activeModal) return null;
 
   return (
-    <div key="modal-container" className="fixed inset-0 z-[9999] flex items-center justify-center px-6 py-10 overflow-hidden">
+    <div key="modal-container" className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <motion.div 
         key="modal-backdrop"
         initial={{ opacity: 0 }} 

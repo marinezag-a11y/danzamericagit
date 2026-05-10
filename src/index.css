@@ -70,6 +70,7 @@ input[type=number] {
   flex-direction: column;
   box-shadow: 0 32px 64px -16px rgba(0, 0, 0, 0.4);
   max-height: 92vh;
+  z-index: 10000;
 }
 
 @media (min-width: 640px) {
@@ -96,6 +97,7 @@ input[type=number] {
 
 .modal-content {
   padding: 1.5rem; /* p-6 */
+  padding-top: 3rem; /* Extra padding for mobile header/corners */
   flex: 1;
   overflow-y: auto;
   display: flex;

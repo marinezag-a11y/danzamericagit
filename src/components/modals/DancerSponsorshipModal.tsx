@@ -130,7 +130,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -164,19 +164,19 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-10 right-10 z-20 p-5 bg-black/5 hover:bg-black/10 rounded-full text-brand-dark/30 hover:text-brand-dark transition-all transform hover:rotate-90"
+          className="absolute top-4 right-4 sm:top-10 sm:right-10 z-20 p-3 sm:p-5 bg-black/5 hover:bg-black/10 rounded-full text-brand-dark/30 hover:text-brand-dark transition-all transform hover:rotate-90"
         >
-          <X size={24} />
+          <X className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
         <div className="modal-content relative">
           {/* Header */}
-          <div className="mb-6 sm:mb-16 text-center">
+          <div className="mb-8 sm:mb-16 text-center px-4 pt-4 sm:pt-0">
             <motion.h2 
               key={step}
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-2xl sm:text-4xl font-serif italic text-brand-dark leading-tight"
+              className="text-xl sm:text-4xl font-serif italic text-brand-dark leading-tight pr-8 sm:pr-0"
             >
               {step === 'dancer' ? 'Escolha seu Talento' : 
                step === 'quantity' ? 'Quantidade de Números' :
@@ -184,7 +184,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                step === 'checkout' ? 'Finalizar Apoio' : 'Sonho Realizado!'}
               <span className="text-brand-orange">.</span>
             </motion.h2>
-            <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-brand-dark/30 font-black mt-4 sm:mt-6 italic">
+            <p className="text-[9px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-brand-dark/30 font-black mt-3 sm:mt-6 italic">
               {step === 'success' ? 'OBRIGADO PELA SUA GENEROSIDADE' : 'INVESTINDO NO FUTURO DA DANÇA'}
             </p>
           </div>
@@ -258,7 +258,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     <button 
                       onClick={handleNext}
                       disabled={!selectedDancer}
-                      className="px-20 py-7 bg-brand-dark text-white rounded-[2.5rem] text-[12px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] hover:shadow-brand-orange/40 active:scale-95 disabled:opacity-50 flex items-center gap-4"
+                      className="w-full sm:w-auto px-10 sm:px-20 py-5 sm:py-7 bg-brand-dark text-white rounded-2xl sm:rounded-[2.5rem] text-[10px] sm:text-[12px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange transition-all shadow-xl sm:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] hover:shadow-brand-orange/40 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-4"
                     >
                       CONTINUAR PARA VALORES <ChevronRight size={18} />
                     </button>
@@ -337,7 +337,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   <div className="w-full flex flex-col items-center gap-8">
                     <button 
                       onClick={handleNext}
-                      className="px-20 py-7 bg-brand-dark text-white rounded-[2.5rem] text-[12px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] flex items-center gap-4 active:scale-95 group"
+                      className="w-full sm:w-auto px-12 sm:px-20 py-5 sm:py-7 bg-brand-dark text-white rounded-2xl sm:rounded-[2.5rem] text-[10px] sm:text-[12px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange transition-all shadow-xl sm:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] flex items-center justify-center gap-4 active:scale-95 group"
                     >
                       SORTEAR MEUS NÚMEROS <ChevronRight size={18} className="group-hover:translate-x-2 transition-transform" />
                     </button>

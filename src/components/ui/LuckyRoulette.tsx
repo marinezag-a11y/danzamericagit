@@ -104,8 +104,8 @@ export function LuckyRoulette({
   }, [isSpinning, spin]);
 
   return (
-    <div className="flex flex-col items-center gap-6 sm:gap-12 w-full max-w-2xl mx-auto">
-      <div className="relative w-full max-w-[280px] sm:max-w-[450px] aspect-square flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4 sm:gap-12 w-full max-w-2xl mx-auto px-4">
+      <div className="relative w-full max-w-[250px] sm:max-w-[450px] aspect-square flex items-center justify-center mt-6 sm:mt-8">
         {/* Shadow & Glow Background */}
         <div className={`absolute inset-4 rounded-full transition-all duration-1000 ${isSpinning ? 'bg-brand-orange/20 blur-[60px] sm:blur-[80px]' : 'bg-black/20 blur-[30px] sm:blur-[40px]'}`} />
         
@@ -131,7 +131,7 @@ export function LuckyRoulette({
         </div>
 
         {/* The Wheel Pointer (Golden Teardrop) */}
-        <div className="absolute -top-4 sm:-top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center">
+        <div className="absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center">
           <div className="w-8 h-12 sm:w-10 sm:h-14 bg-gradient-to-b from-[#FFD700] to-[#B8860B] rounded-t-full rounded-b-lg shadow-2xl relative flex items-center justify-center border-t border-white/40">
              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full shadow-[0_0_15px_#fff] animate-pulse" />
              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] sm:border-l-[12px] border-l-transparent border-r-[10px] sm:border-r-[12px] border-r-transparent border-t-[12px] sm:border-t-[16px] border-t-[#B8860B]" />

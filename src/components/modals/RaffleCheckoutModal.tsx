@@ -136,7 +136,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-brand-white w-full max-w-4xl p-8 md:p-12 max-h-[90vh] overflow-y-auto z-10 shadow-2xl rounded-[3rem]"
+        className="relative bg-brand-white w-full max-w-4xl p-6 sm:p-12 max-h-[90vh] overflow-y-auto z-10 shadow-2xl rounded-[3rem]"
       >
         <button onClick={onClose} className="absolute top-8 right-8 text-brand-dark/20 hover:text-brand-orange transition-colors">
           <X className="w-8 h-8" strokeWidth={1} />
@@ -160,7 +160,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     <code className="text-brand-dark font-bold text-sm md:text-base break-all">{pixKey}</code>
                     <button 
                       onClick={handleCopyPix}
-                      className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold text-brand-orange hover:text-brand-dark transition-colors mt-2 mx-auto"
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all mt-3"
                     >
                       {copied ? (
                         <span className="flex items-center gap-2 text-green-600">
@@ -168,7 +168,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                         </span>
                       ) : (
                         <>
-                          <Copy className="w-3 h-3" /> Copiar Chave
+                          <Copy size={12} /> COPIAR CHAVE PIX
                         </>
                       )}
                     </button>

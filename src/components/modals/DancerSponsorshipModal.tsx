@@ -143,7 +143,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative w-full max-w-4xl bg-white/90 backdrop-blur-2xl rounded-[4rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] overflow-hidden border border-white/40 min-h-[90vh] sm:min-h-[600px]"
+        className="relative w-full max-w-4xl bg-white/90 backdrop-blur-2xl rounded-[2.5rem] sm:rounded-[4rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.4)] overflow-hidden border border-white/40 max-h-[92vh] sm:max-h-[85vh] flex flex-col"
       >
         {/* Progress Bar */}
         {step !== 'success' && (
@@ -176,7 +176,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
               key={step}
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-3xl sm:text-4xl font-serif italic text-brand-dark leading-tight"
+              className="text-2xl sm:text-4xl font-serif italic text-brand-dark leading-tight"
             >
               {step === 'dancer' ? 'Escolha seu Talento' : 
                step === 'quantity' ? 'Quantidade de Números' :
@@ -189,7 +189,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
             </p>
           </div>
 
-          <div className="min-h-[500px] flex flex-col">
+          <div className="min-h-[400px] sm:min-h-[500px] flex flex-col">
             <AnimatePresence mode="wait">
               {step === 'dancer' && (
                 <motion.div 
@@ -277,7 +277,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                 >
                   <div className="relative group">
                     <div className="absolute inset-0 bg-brand-orange/20 rounded-full blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-                    <div className="relative w-40 h-40 rounded-[3rem] overflow-hidden border-8 border-white shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rotate-3 group-hover:rotate-0 transition-transform duration-700 bg-white">
+                    <div className="relative w-24 h-24 sm:w-40 sm:h-40 rounded-[2rem] sm:rounded-[3rem] overflow-hidden border-4 sm:border-8 border-white shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] rotate-3 group-hover:rotate-0 transition-transform duration-700 bg-white">
                       {selectedDancer?.photo_url ? (
                         <img 
                           src={selectedDancer.photo_url} 
@@ -285,7 +285,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                           alt="" 
                         />
                       ) : (
-                        <div className="w-full h-full bg-brand-orange/5 flex items-center justify-center"><User className="w-12 h-12 text-brand-orange/10" /></div>
+                        <div className="w-full h-full bg-brand-orange/5 flex items-center justify-center"><User className="w-8 h-8 sm:w-12 sm:h-12 text-brand-orange/10" /></div>
                       )}
                     </div>
                     <motion.div 
@@ -306,13 +306,13 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     <div className="flex items-center justify-between gap-10">
                       <button 
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="w-20 h-20 rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-brand-dark hover:bg-brand-dark hover:text-white transition-all text-4xl font-light border border-black/5 active:scale-90"
+                        className="w-14 h-14 sm:w-20 sm:h-20 rounded-[1.5rem] sm:rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-brand-dark hover:bg-brand-dark hover:text-white transition-all text-2xl sm:text-4xl font-light border border-black/5 active:scale-90"
                       >
                         -
                       </button>
                       <div className="text-center">
-                        <span className="text-8xl font-serif italic text-brand-dark tabular-nums tracking-tighter">{quantity}</span>
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mt-2">NÚMEROS</p>
+                        <span className="text-6xl sm:text-8xl font-serif italic text-brand-dark tabular-nums tracking-tighter">{quantity}</span>
+                        <p className="text-[8px] sm:text-[10px] uppercase tracking-[0.2em] sm:tracking-[0.3em] text-brand-dark/30 font-black mt-1 sm:mt-2">NÚMEROS</p>
                       </div>
                       <button 
                         onClick={() => setQuantity(Math.min(
@@ -320,15 +320,15 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                           availableNumbers.length,
                           quantity + 1
                         ))}
-                        className="w-20 h-20 rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-brand-dark hover:bg-brand-dark hover:text-white transition-all text-4xl font-light border border-black/5 active:scale-90"
+                        className="w-14 h-14 sm:w-20 sm:h-20 rounded-[1.5rem] sm:rounded-[2rem] bg-white shadow-xl flex items-center justify-center text-brand-dark hover:bg-brand-dark hover:text-white transition-all text-2xl sm:text-4xl font-light border border-black/5 active:scale-90"
                       >
                         +
                       </button>
                     </div>
                     
-                    <div className="pt-10 border-t border-black/5 flex items-center justify-between px-4">
-                      <span className="text-[11px] uppercase tracking-[0.4em] text-brand-dark/40 font-black">Investimento:</span>
-                      <span className="text-3xl font-serif italic text-brand-orange">
+                    <div className="pt-6 sm:pt-10 border-t border-black/5 flex items-center justify-between px-2 sm:px-4">
+                      <span className="text-[9px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] text-brand-dark/40 font-black">Investimento:</span>
+                      <span className="text-2xl sm:text-3xl font-serif italic text-brand-orange">
                         R$ {activeCampaign ? (activeCampaign.price_per_number * quantity).toFixed(2) : '0.00'}
                       </span>
                     </div>
@@ -572,11 +572,19 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   <div className="w-full max-w-sm bg-white p-6 rounded-[2rem] border border-black/5 shadow-xl space-y-6">
                     <div className="space-y-4">
                       <p className="text-[9px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">CHAVE PIX ({settings['pix_checkout_type']?.value || 'E-mail'})</p>
-                      <div className="bg-black/[0.04] p-6 rounded-[2rem] border border-transparent hover:border-brand-orange/30 transition-all group cursor-copy active:scale-95 shadow-inner" onClick={() => {
-                        navigator.clipboard.writeText(settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com');
-                      }}>
-                        <p className="font-mono text-sm text-brand-dark break-all font-black tracking-tight">{settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com'}</p>
-                        <p className="text-[8px] uppercase tracking-[0.3em] text-brand-orange font-black mt-3 opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA COPIAR CHAVE</p>
+                      <div className="relative group">
+                        <div className="bg-black/[0.04] p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-transparent hover:border-brand-orange/30 transition-all shadow-inner">
+                          <p className="font-mono text-xs sm:text-sm text-brand-dark break-all font-black tracking-tight">{settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com'}</p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com');
+                            alert('Chave PIX copiada!');
+                          }}
+                          className="mt-3 w-full py-3 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all flex items-center justify-center gap-2"
+                        >
+                          <Copy size={12} /> COPIAR CHAVE PIX
+                        </button>
                       </div>
                     </div>
                     

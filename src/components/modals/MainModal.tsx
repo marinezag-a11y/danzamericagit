@@ -381,10 +381,17 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                       </div>
 
                       <div className="space-y-4">
-                        <div className="bg-black/5 p-4 rounded-2xl border border-transparent hover:border-brand-orange/20 transition-all group cursor-copy" onClick={handleCopyPix}>
-                          <span className="text-[8px] uppercase tracking-[0.2em] text-brand-dark/30 font-black block mb-2">CHAVE PIX ({pixType})</span>
-                          <p className="text-brand-dark font-mono font-black text-sm break-all tracking-tight leading-none">{pixKey}</p>
-                          <p className="text-[7px] uppercase tracking-widest text-brand-orange font-black mt-3 opacity-0 group-hover:opacity-100 transition-opacity">CLIQUE PARA COPIAR CHAVE</p>
+                        <div className="space-y-3">
+                          <div className="bg-black/5 p-5 rounded-2xl border border-transparent shadow-inner">
+                            <span className="text-[8px] uppercase tracking-[0.2em] text-brand-dark/30 font-black block mb-2">CHAVE PIX ({pixType})</span>
+                            <p className="text-brand-dark font-mono font-black text-sm break-all tracking-tight leading-none">{pixKey}</p>
+                          </div>
+                          <button 
+                            onClick={handleCopyPix}
+                            className="w-full py-3 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all flex items-center justify-center gap-2"
+                          >
+                            <Copy size={12} /> COPIAR CHAVE PIX
+                          </button>
                         </div>
 
                         <div className="grid grid-cols-2 gap-6 px-2">

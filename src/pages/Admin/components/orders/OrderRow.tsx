@@ -4,7 +4,8 @@ import {
   Pencil, 
   Trash2, 
   ChevronRight,
-  Mail
+  Mail,
+  MessageSquare
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { maskBRL } from '../../../../lib/utils';
@@ -13,12 +14,13 @@ import { ReasonModal } from '../../../../components/modals/ReasonModal';
 
 interface OrderRowProps {
   order: any;
+  settings: Record<string, any>;
   onUpdate: (id: string, data: any) => Promise<{ success: boolean; error?: any }>;
   onDelete: () => void;
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
 }
 
-export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, onAlert }) => {
+export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, onDelete, onAlert }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [isAskingReason, setIsAskingReason] = useState(false);
@@ -85,6 +87,40 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
     }
     setUpdating(false);
     setPendingStatus(null);
+  };
+
+  const handleWhatsAppNotify = () => {
+    const pixKey = settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com';
+    const pixBank = settings['pix_checkout_bank']?.value || 'SICOOB';
+    const pixReceiver = settings['pix_checkout_receiver']?.value || 'Tatiana Figueiredo';
+    
+    const orderId = order.id.split('-')[0].toUpperCase();
+    const isRaffle = order.type === 'raffle';
+    
+    let itemsText = '';
+    if (isRaffle) {
+      itemsText = `Números Escolhidos: ${(order.selected_numbers || []).join(', ')}\nBailarino: ${order.dancer_name || 'Geral'}`;
+    } else {
+      itemsText = (order.items || []).map((i: any) => `${i.quantity}x ${i.name}`).join('\n');
+    }
+
+    const message = encodeURIComponent(
+      `Olá *${order.customer_name}*! 👋\n\n` +
+      `Recebemos seu pedido *#${orderId}* no sistema do Núcleo de Dança Tatiana Figueiredo.\n\n` +
+      `*DETALHES DO PEDIDO:*\n${itemsText}\n` +
+      `*TOTAL:* ${maskBRL(order.total_price || order.product_price)}\n\n` +
+      `*PAGAMENTO VIA PIX:*\n` +
+      `Chave: \`${pixKey}\`\n` +
+      `Banco: ${pixBank}\n` +
+      `Nome: ${pixReceiver}\n\n` +
+      `_Após realizar o pagamento, por favor, envie o comprovante por aqui._\n` +
+      `Muito obrigado por apoiar nossos talentos! 🇦🇷🩰`
+    );
+
+    const phone = order.customer_phone.replace(/\D/g, '');
+    const finalPhone = phone.startsWith('55') ? phone : `55${phone}`;
+    
+    window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
   };
 
   return (
@@ -205,20 +241,27 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, onUpdate, onDelete, o
           </select>
         </td>
         <td className="py-5 px-6 text-right">
-          <div className="flex items-center justify-end gap-1">
+          <div className="flex items-center justify-end gap-1 sm:gap-2">
+            <button 
+              onClick={handleWhatsAppNotify}
+              className="p-3 sm:p-2 text-white/20 hover:text-[#25D366] hover:bg-[#25D366]/10 transition-all rounded-sm group/btn relative"
+              data-tooltip="Notificar WhatsApp"
+            >
+              <MessageSquare className="w-5 h-5 sm:w-4 sm:h-4 group-hover/btn:scale-110 transition-transform" />
+            </button>
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="p-2 text-white/20 hover:text-brand-orange hover:bg-brand-orange/10 transition-all rounded-sm group/btn"
-              title="Ver detalhes e editar"
+              className="p-3 sm:p-2 text-white/20 hover:text-brand-orange hover:bg-brand-orange/10 transition-all rounded-sm group/btn relative"
+              data-tooltip="Editar Pedido"
             >
-              <Pencil className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+              <Pencil className="w-5 h-5 sm:w-4 sm:h-4 group-hover/btn:scale-110 transition-transform" />
             </button>
             <button 
               onClick={onDelete}
-              className="p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-sm group/btn"
-              title="Excluir pedido"
+              className="p-3 sm:p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-sm group/btn relative"
+              data-tooltip="Excluir Pedido"
             >
-              <Trash2 className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+              <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 group-hover/btn:scale-110 transition-transform" />
             </button>
           </div>
         </td>

@@ -63,20 +63,21 @@ input[type=number] {
   backdrop-filter: blur(8px);
   width: 100%;
   max-width: 56rem; /* max-w-4xl */
-  border-radius: 2.5rem;
+  border-radius: 2rem;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   box-shadow: 0 32px 64px -16px rgba(0, 0, 0, 0.4);
-  max-height: 92vh;
+  max-height: 94vh;
   z-index: 10000;
 }
 
 @media (min-width: 640px) {
   .modal-container {
-    border-radius: 4rem;
-    max-height: 85vh;
+    border-radius: 3rem;
+    max-height: 90vh;
+    max-width: 64rem; /* max-w-5xl */
   }
 }
 
@@ -91,7 +92,7 @@ input[type=number] {
 
 @media (min-width: 640px) {
   .modal-header {
-    padding: 3rem; /* p-12 */
+    padding: 1.5rem 3rem; /* Compact height but wide sides */
   }
 }
 
@@ -106,8 +107,42 @@ input[type=number] {
 
 @media (min-width: 640px) {
   .modal-content {
-    padding: 3rem; /* p-12 */
+    padding: 1.5rem 3rem 3rem 3rem; /* Reduced top padding */
   }
+}
+
+/* Instant Tooltips */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  background: #1A1A1A;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.1s ease-out;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 .modal-footer {
@@ -118,6 +153,6 @@ input[type=number] {
 
 @media (min-width: 640px) {
   .modal-footer {
-    padding: 3rem; /* p-12 */
+    padding: 2rem 3rem; /* More compact footer height */
   }
 }

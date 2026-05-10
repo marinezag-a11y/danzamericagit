@@ -21,6 +21,8 @@ import { ReasonModal } from '../../../../components/modals/ReasonModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { maskBRL, parseBRL } from '../../../../lib/utils';
 import { useHelpItems } from '../../../../hooks/useHelpItems';
+import { useDancers } from '../../../../hooks/useDancers';
+import { useAdminAuth } from '../../../../hooks/useAdminAuth';
 
 interface OrderEditModalProps {
   order: any;
@@ -32,6 +34,11 @@ interface OrderEditModalProps {
 export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, onClose, onSave }) => {
   const [updating, setUpdating] = useState(false);
   const { items: helpItems } = useHelpItems();
+  const { dancers } = useDancers();
+  const { userRole } = useAdminAuth();
+  const isMaster = userRole === 'master';
+  
+  const selectedDancer = dancers.find(d => d.name === order?.dancer_name);
   
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -109,6 +116,41 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
     await performSave('');
   };
 
+  const handleResendEmail = async () => {
+    if (!order) return;
+    setUpdating(true);
+    try {
+      const isRaffle = order.type === 'raffle';
+      const payload: any = {
+        type: isRaffle ? 'raffle_order' : 'new_order',
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_email: customerEmail,
+        total_price: manualPrice,
+        order_id: order.id,
+      };
+
+      if (isRaffle) {
+        payload.campaign_name = order.product_name?.replace('Rifa: ', '');
+        payload.dancer_name = order.dancer_name;
+        payload.selected_numbers = order.selected_numbers;
+      } else {
+        payload.items = orderItems;
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-order', {
+        body: payload
+      });
+
+      if (error) throw error;
+      onAlert('E-mail Enviado', 'A notificação foi reenviada com sucesso.', 'info');
+    } catch (err: any) {
+      onAlert('Erro ao Enviar', 'Falha ao reenviar e-mail: ' + err.message, 'danger');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const performSave = async (reason: string) => {
     setUpdating(true);
     
@@ -144,26 +186,26 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 overflow-hidden">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-6 overflow-hidden">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/95 backdrop-blur-md"
+            className="absolute inset-0 bg-brand-dark/90 backdrop-blur-sm"
           />
           
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 40 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 40 }}
-            className="relative w-full max-w-5xl bg-[#0a0a0a] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden flex flex-col max-h-[92vh]"
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="modal-container relative w-full max-w-6xl"
           >
             {/* Top Accent Bar */}
             <div className="h-1 w-full bg-gradient-to-r from-brand-orange/0 via-brand-orange to-brand-orange/0" />
 
             {/* Header Area */}
-            <div className="px-8 py-6 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 bg-gradient-to-b from-white/5 to-transparent">
+            <div className="modal-header">
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <div className="w-16 h-16 rounded-2xl bg-brand-orange/10 flex items-center justify-center border border-brand-orange/30 rotate-3 group-hover:rotate-0 transition-transform">
@@ -174,13 +216,13 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                   </div>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-serif text-white italic leading-tight">Gestão de Pedido</h2>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mt-1 font-display">Danzamerica Administrative Suite</p>
+                  <h2 className="text-3xl font-serif text-brand-dark italic leading-tight">Gestão de Pedido</h2>
+                  <p className="text-[10px] uppercase tracking-[0.4em] text-brand-orange font-bold mt-1">Administrative Suite</p>
                 </div>
               </div>
 
               {/* Status Stepper */}
-              <div className="flex items-center gap-2 sm:gap-4 bg-white/5 p-2 rounded-full border border-white/5">
+              <div className="flex items-center gap-1 bg-black/5 p-1 rounded-full border border-black/5">
                 {statusSteps.map((step, idx) => {
                   const isActive = idx <= currentStepIdx;
                   const isCurrent = step.id === status;
@@ -188,84 +230,95 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                     <button 
                       key={step.id}
                       onClick={() => setStatus(step.id)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${isCurrent ? 'bg-brand-orange text-white shadow-lg' : isActive ? 'text-white/80 hover:bg-white/10' : 'text-white/20'}`}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all ${isCurrent ? 'bg-brand-orange text-white shadow-lg shadow-brand-orange/20' : isActive ? 'text-brand-dark/60 hover:bg-black/5' : 'text-brand-dark/20'}`}
                     >
                       <step.icon className={`w-4 h-4 ${isCurrent ? 'text-white' : isActive ? step.color : ''}`} />
-                      <span className="text-[10px] uppercase tracking-widest font-bold hidden lg:inline">{step.label}</span>
+                      <span className="text-[10px] uppercase tracking-[0.15em] font-black hidden lg:inline">{step.label}</span>
                     </button>
                   );
                 })}
               </div>
 
-              <button onClick={onClose} className="p-3 hover:bg-white/10 rounded-full transition-all group">
-                <X className="w-6 h-6 text-white/20 group-hover:text-white group-hover:rotate-90 transition-all" />
+              <button onClick={onClose} className="p-3 hover:bg-black/5 rounded-full transition-all group">
+                <X className="w-6 h-6 text-brand-dark/20 group-hover:text-brand-orange group-hover:rotate-90 transition-all" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="modal-content">
               <div className="grid grid-cols-1 lg:grid-cols-12">
                 
                 {/* Panel Switching based on Order Type */}
                 {order?.type === 'raffle' ? (
-                  <div className="lg:col-span-12 p-8 md:p-12 space-y-12">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                  <div className="lg:col-span-12 p-4 sm:p-6 space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Customer Info */}
-                      <div className="space-y-8 bg-white/[0.02] p-8 rounded-3xl border border-white/5">
-                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange flex items-center gap-3">
-                          <User className="w-4 h-4" /> Detalhes do Apoiador
+                      <div className="space-y-4 bg-black/[0.01] p-6 rounded-2xl border border-black/5">
+                        <h3 className="text-[9px] uppercase tracking-widest font-black text-brand-orange flex items-center gap-2">
+                          <User className="w-3.5 h-3.5" /> Detalhes do Apoiador
                         </h3>
                         <div className="space-y-6">
                           <div className="relative group">
-                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">Nome Completo *</label>
+                            <label className="absolute -top-2 left-4 bg-white px-2 text-[7px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">Nome Completo *</label>
                             <input 
                               type="text"
                               required
-                              placeholder="Como devemos te chamar?"
-                              value={form.name} 
-                              onChange={e => setForm({...form, name: e.target.value})} 
-                              className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-white/10" 
+                              placeholder="Nome"
+                              value={customerName} 
+                              onChange={e => setCustomerName(e.target.value)} 
+                              className="w-full bg-white border border-black/10 px-4 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
                             />
                           </div>
                           <div className="relative group">
-                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">WhatsApp *</label>
+                            <label className="absolute -top-2 left-4 bg-white px-2 text-[7px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">WhatsApp *</label>
                             <input 
                               type="tel"
                               required
                               placeholder="(00) 00000-0000"
-                              value={form.phone} 
-                              onChange={e => setForm({...form, phone: e.target.value})} 
-                              className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-white/10" 
+                              value={customerPhone} 
+                              onChange={e => setCustomerPhone(e.target.value)} 
+                              className="w-full bg-white border border-black/10 px-4 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
                             />
                           </div>
                           <div className="relative group">
-                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">E-mail *</label>
+                            <label className="absolute -top-2 left-4 bg-white px-2 text-[7px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">E-mail *</label>
                             <input 
                               type="email"
                               required
                               placeholder="seu@email.com"
-                              value={form.email} 
-                              onChange={e => setForm({...form, email: e.target.value})} 
-                              className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-white/10" 
+                              value={customerEmail} 
+                              onChange={e => setCustomerEmail(e.target.value)} 
+                              className="w-full bg-white border border-black/10 px-4 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Raffle Info */}
-                      <div className="space-y-8 bg-brand-orange/5 p-8 rounded-3xl border border-brand-orange/10">
-                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange flex items-center gap-3">
-                          <Ticket className="w-4 h-4" /> Detalhes da Ação
+                      <div className="space-y-4 bg-brand-orange/5 p-6 rounded-2xl border border-brand-orange/10">
+                        <h3 className="text-[9px] uppercase tracking-widest font-black text-brand-orange flex items-center gap-2">
+                          <Ticket className="w-3.5 h-3.5" /> Detalhes da Ação
                         </h3>
-                        <div className="space-y-6">
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-black/40 rounded-2xl border border-white/5 gap-2">
-                            <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Bailarino Apoiado:</span>
-                            <span className="text-lg text-white font-serif italic">{order.dancer_name || 'Geral'}</span>
+                        <div className="space-y-4">
+                          <div className="flex flex-col sm:flex-row items-center p-4 bg-white border border-brand-orange/5 rounded-xl gap-4 shadow-sm">
+                            {selectedDancer?.photo_url ? (
+                              <div className="w-16 h-16 rounded-lg overflow-hidden border border-black/5 shrink-0">
+                                <img src={selectedDancer.photo_url} alt={selectedDancer.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-16 h-16 rounded-lg bg-black/5 flex items-center justify-center shrink-0">
+                                <User className="w-6 h-6 text-brand-dark/10" />
+                              </div>
+                            )}
+                            <div className="flex-1 text-center sm:text-left">
+                              <span className="text-[8px] text-brand-dark/40 uppercase tracking-[0.2em] font-black block mb-1">Bailarino Apoiado:</span>
+                              <span className="text-xl text-brand-dark font-serif italic">{order.dancer_name || 'Geral'}</span>
+                            </div>
                           </div>
-                          <div className="space-y-3">
-                            <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold block ml-1">Números Reservados:</span>
-                            <div className="flex flex-wrap gap-2">
+                          <div className="space-y-2">
+                            <span className="text-[8px] text-brand-dark/40 uppercase tracking-[0.2em] font-black block ml-1">Números Reservados:</span>
+                            <div className="flex flex-wrap gap-1.5">
                               {(order.selected_numbers || []).map((n: number) => (
-                                <span key={n} className="px-3 py-1 bg-brand-orange text-white rounded-lg text-sm font-mono font-bold shadow-lg">#{n}</span>
+                                <span key={n} className="px-3 py-1.5 bg-brand-orange text-white rounded-lg text-xs font-mono font-bold shadow-sm">#{n}</span>
                               ))}
                             </div>
                           </div>
@@ -276,7 +329,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                 ) : (
                   <>
                     {/* Left Panel: Customer & Tools (4 cols) */}
-                    <div className="lg:col-span-4 p-8 border-r border-white/5 space-y-10 bg-white/[0.02]">
+                    <div className="lg:col-span-4 p-8 border-r border-black/5 space-y-10 bg-black/[0.01]">
                       <section>
                         <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-orange mb-8 flex items-center gap-3">
                           <div className="w-1.5 h-1.5 bg-brand-orange rounded-full animate-pulse" />
@@ -284,38 +337,38 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                         </h3>
                         <div className="space-y-6">
                           <div className="relative group">
-                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">Nome Completo *</label>
+                            <label className="absolute -top-2 left-3 bg-white px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">Nome Completo *</label>
                             <input 
                               type="text"
                               required
                               value={customerName}
                               onChange={e => setCustomerName(e.target.value)}
-                              className="w-full bg-white/5 border border-white/10 px-4 py-4 text-white text-sm outline-none focus:border-brand-orange focus:bg-brand-orange/5 transition-all font-serif italic rounded-xl"
+                              className="w-full bg-black/[0.03] border border-black/5 px-4 py-4 text-brand-dark text-sm outline-none focus:border-brand-orange focus:bg-white transition-all font-serif italic rounded-xl"
                             />
                           </div>
                           <div className="relative group">
-                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">WhatsApp *</label>
+                            <label className="absolute -top-2 left-4 bg-white px-2 text-[8px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">WhatsApp *</label>
                             <div className="flex items-center">
-                               <Phone className="absolute left-4 w-4 h-4 text-white/20 group-focus-within:text-brand-orange transition-colors" />
+                               <Phone className="absolute left-5 w-4 h-4 text-brand-dark/20 group-focus-within:text-brand-orange transition-colors" />
                                <input 
                                  type="tel"
                                  required
                                  value={customerPhone}
                                  onChange={e => setCustomerPhone(e.target.value)}
-                                 className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-xl"
+                                 className="w-full bg-white border border-black/10 pl-14 pr-5 py-5 text-brand-dark text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-2xl shadow-sm focus:shadow-md"
                                />
                             </div>
                           </div>
                           <div className="relative group">
-                            <label className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">E-mail *</label>
+                            <label className="absolute -top-2 left-4 bg-white px-2 text-[8px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">E-mail *</label>
                             <div className="flex items-center">
-                               <Mail className="absolute left-4 w-4 h-4 text-white/20 group-focus-within:text-brand-orange transition-colors" />
+                               <Mail className="absolute left-5 w-4 h-4 text-brand-dark/20 group-focus-within:text-brand-orange transition-colors" />
                                <input 
                                  type="email"
                                  required
                                  value={customerEmail}
                                  onChange={e => setCustomerEmail(e.target.value)}
-                                 className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-4 text-white text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-xl"
+                                 className="w-full bg-white border border-black/10 pl-14 pr-5 py-5 text-brand-dark text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-2xl shadow-sm focus:shadow-md"
                                />
                             </div>
                           </div>
@@ -323,7 +376,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                       </section>
 
                       <section>
-                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-6 flex items-center gap-3">
+                        <h3 className="text-[10px] uppercase tracking-widest font-bold text-brand-dark/40 mb-6 flex items-center gap-3">
                           <Package className="w-4 h-4" /> Catálogo Rápido
                         </h3>
                         <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-3 custom-scrollbar">
@@ -341,11 +394,11 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                                    <img src={item.image_url} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className={`text-[10px] uppercase tracking-widest font-bold truncate ${isSelected ? 'text-brand-orange' : 'text-white/60'}`}>{item.title}</p>
-                                  <p className="text-[10px] text-white/20 font-mono mt-0.5">{maskBRL(item.price)}</p>
+                                  <p className={`text-[10px] uppercase tracking-widest font-bold truncate ${isSelected ? 'text-brand-orange' : 'text-brand-dark/60'}`}>{item.title}</p>
+                                  <p className="text-[10px] text-brand-dark/20 font-mono mt-0.5">{maskBRL(item.price)}</p>
                                 </div>
-                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${isSelected ? 'bg-brand-orange border-brand-orange' : 'border-white/10 group-hover:border-brand-orange/50'}`}>
-                                   <Plus className={`w-3 h-3 ${isSelected ? 'text-white rotate-45' : 'text-white/20 group-hover:text-brand-orange'}`} />
+                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${isSelected ? 'bg-brand-orange border-brand-orange' : 'border-black/10 group-hover:border-brand-orange/50'}`}>
+                                   <Plus className={`w-3 h-3 ${isSelected ? 'text-white rotate-45' : 'text-brand-dark/20 group-hover:text-brand-orange'}`} />
                                 </div>
                               </motion.button>
                             );
@@ -362,7 +415,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                              <div className="w-8 h-[1px] bg-brand-orange/30" />
                              Itens do Carrinho
                           </h3>
-                          <p className="text-[10px] text-white/20 font-mono italic">Total de {orderItems.length} tipos de itens</p>
+                          <p className="text-[10px] text-brand-dark/20 font-mono italic">Total de {orderItems.length} tipos de itens</p>
                         </div>
 
                         <div className="space-y-6">
@@ -396,7 +449,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                                           newItems[idx].name = e.target.value;
                                           setOrderItems(newItems);
                                         }}
-                                        className="bg-transparent border-b border-white/5 py-1 text-sm text-white outline-none focus:border-brand-orange font-serif italic flex-1"
+                                        className="bg-transparent border-b border-black/5 py-1 text-sm text-brand-dark outline-none focus:border-brand-orange font-serif italic flex-1"
                                         placeholder="Nome do Item"
                                       />
                                       <button 
@@ -405,19 +458,19 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                                           setOrderItems(newItems);
                                           syncTotal(newItems);
                                         }}
-                                        className="ml-4 p-2 text-white/10 hover:text-red-500 transition-colors bg-white/5 rounded-lg opacity-100 group-hover:opacity-100 sm:opacity-0"
+                                        className="ml-4 p-2 text-brand-dark/10 hover:text-red-500 transition-colors bg-black/5 rounded-lg opacity-100 group-hover:opacity-100 sm:opacity-0"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
                                     
                                     <div className="flex flex-wrap items-center justify-between gap-6">
-                                      <div className="flex items-center gap-4 bg-black/40 p-1.5 rounded-full border border-white/5 shadow-inner">
-                                        <button onClick={() => updateItemQuantity(item.id, -1)} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-brand-orange/20 hover:text-brand-orange rounded-full transition-all">
+                                      <div className="flex items-center gap-4 bg-black/5 p-1.5 rounded-full border border-black/5 shadow-inner">
+                                        <button onClick={() => updateItemQuantity(item.id, -1)} className="w-8 h-8 flex items-center justify-center bg-white hover:bg-brand-orange/20 hover:text-brand-orange rounded-full transition-all shadow-sm">
                                           <Minus className="w-3 h-3" />
                                         </button>
-                                        <span className="text-sm font-bold text-white min-w-[30px] text-center">{item.quantity || 1}</span>
-                                        <button onClick={() => updateItemQuantity(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-brand-orange/20 hover:text-brand-orange rounded-full transition-all">
+                                        <span className="text-sm font-bold text-brand-dark min-w-[30px] text-center">{item.quantity || 1}</span>
+                                        <button onClick={() => updateItemQuantity(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-white hover:bg-brand-orange/20 hover:text-brand-orange rounded-full transition-all shadow-sm">
                                           <Plus className="w-3 h-3" />
                                         </button>
                                       </div>
@@ -475,64 +528,83 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
               </div>
             </div>
 
-            {/* Premium Footer Summary */}
-            <div className="p-8 md:p-10 bg-[#0c0c0c] border-t border-white/10 flex flex-col lg:flex-row gap-8 items-center justify-between shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
-              
-              <div className="flex flex-col sm:flex-row gap-10 items-center w-full lg:w-auto">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-white/20">
-                     <AlertCircle className="w-3 h-3" />
-                     <span className="text-[8px] uppercase tracking-widest font-bold">Resumo Financeiro Final</span>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-center sm:text-left">
-                       <p className="text-[8px] uppercase tracking-widest text-white/40 mb-1">Cálculo Automático</p>
-                       <p className="text-xl text-white/60 font-mono">{maskBRL(orderItems.reduce((sum, i) => sum + (Number(i.price) * (i.quantity || 1)), 0))}</p>
-                    </div>
-                    <div className="w-8 h-[1px] bg-white/10 hidden sm:block" />
-                    <div className="relative group">
-                      <p className="text-[8px] uppercase tracking-widest text-brand-orange font-bold mb-1 ml-1">Valor do Faturamento</p>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-brand-orange font-bold">R$</span>
-                        <input 
-                          value={maskBRL(manualPrice).replace('R$', '').trim()}
-                          onChange={e => setManualPrice(parseBRL(e.target.value))}
-                          className="bg-brand-orange/10 border border-brand-orange/40 pl-10 pr-6 py-4 text-3xl text-brand-orange font-bold outline-none focus:border-brand-orange transition-all w-56 text-right rounded-2xl shadow-[0_0_40px_rgba(180,48,64,0.1)] group-hover:shadow-[0_0_60px_rgba(180,48,64,0.2)]"
-                        />
-                      </div>
-                    </div>
-                    <div className="w-8 h-[1px] bg-white/10 hidden sm:block" />
-                    <div className="text-center sm:text-left">
-                       <p className="text-[8px] uppercase tracking-widest text-emerald-500 font-bold mb-1">Resultado Líquido</p>
-                       <p className="text-3xl text-emerald-500 font-mono font-bold">
-                         {maskBRL(manualPrice - orderItems.reduce((sum, i) => sum + (Number(i.cost_price || 0) * (i.quantity || 1)), 0))}
-                       </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-4 w-full lg:w-auto">
-                <button 
-                  onClick={onClose}
-                  className="flex-1 lg:flex-none px-10 py-5 text-[10px] uppercase tracking-widest font-bold text-white/40 hover:text-white transition-all border border-white/5 hover:bg-white/5 rounded-2xl"
-                >
-                  Cancelar Edição
-                </button>
-                <button 
-                  onClick={handleSave}
-                  disabled={updating}
-                  className="flex-1 lg:flex-none bg-brand-orange px-6 py-5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-white hover:text-brand-dark transition-all rounded-2xl flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(180,48,64,0.3)] hover:shadow-white/10 hover:-translate-y-1 active:translate-y-0 whitespace-nowrap"
-                >
-                  {updating ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
+            {/* Compact Footer Summary */}
+            <div className="modal-footer !p-4 sm:!p-8">
+              <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
+                
+                {/* Financial Summary */}
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-8">
+                  {isMaster && (
                     <>
-                      <Save className="w-5 h-5 shrink-0" />
-                      Confirmar e Salvar
+                      <div className="flex flex-col items-center sm:items-start">
+                         <p className="text-[7px] uppercase tracking-widest text-brand-dark/40 mb-1">Automático</p>
+                         <p className="text-sm text-brand-dark/60 font-mono">{maskBRL(orderItems.reduce((sum, i) => sum + (Number(i.price) * (i.quantity || 1)), 0))}</p>
+                      </div>
+
+                      <div className="h-6 w-[1px] bg-black/5 hidden sm:block" />
                     </>
                   )}
-                </button>
+
+                  <div className="flex flex-col items-center sm:items-start">
+                    <p className="text-[7px] uppercase tracking-widest text-brand-orange font-black mb-1">Faturamento</p>
+                    <div className="relative group">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-brand-orange font-bold">R$</span>
+                      <input 
+                        value={maskBRL(manualPrice).replace('R$', '').trim()}
+                        onChange={e => setManualPrice(parseBRL(e.target.value))}
+                        className="bg-brand-orange/5 border border-brand-orange/20 pl-8 pr-4 py-2 text-xl text-brand-orange font-bold outline-none focus:border-brand-orange transition-all w-32 text-right rounded-xl shadow-sm focus:shadow-md focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {isMaster && (
+                    <>
+                      <div className="h-6 w-[1px] bg-black/5 hidden sm:block" />
+
+                      <div className="flex flex-col items-center sm:items-start">
+                         <p className="text-[7px] uppercase tracking-widest text-emerald-500 font-black mb-1">Líquido</p>
+                         <p className="text-xl text-emerald-500 font-mono font-bold">
+                           {maskBRL(manualPrice - orderItems.reduce((sum, i) => sum + (Number(i.cost_price || 0) * (i.quantity || 1)), 0))}
+                         </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                  {isMaster && (
+                    <button 
+                      onClick={handleResendEmail}
+                      disabled={updating}
+                      className="flex-1 lg:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-brand-orange hover:bg-brand-orange/10 transition-all border border-brand-orange/20 rounded-xl flex items-center gap-2"
+                      title="Re-enviar e-mail de confirmação"
+                    >
+                      {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                      Re-enviar E-mail
+                    </button>
+                  )}
+                  <button 
+                    onClick={onClose}
+                    className="flex-1 lg:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-brand-dark/40 hover:text-brand-dark transition-all border border-black/5 hover:bg-black/5 rounded-xl whitespace-nowrap"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleSave}
+                    disabled={updating}
+                    className="flex-1 lg:flex-none bg-brand-orange px-8 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-white hover:bg-brand-dark transition-all rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand-orange/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                  >
+                    {updating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Salvar
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>

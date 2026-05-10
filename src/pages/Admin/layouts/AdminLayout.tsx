@@ -53,13 +53,18 @@ export function AdminLayout({
         </div>
       )}
 
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-6 right-6 z-[60]">
+      {/* Toggle Button (Mobile & Desktop) */}
+      <div className="fixed top-6 left-6 z-[60]">
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-3 bg-brand-orange text-white rounded-full shadow-2xl"
+          className={`p-3 transition-all duration-300 shadow-2xl rounded-xl flex items-center justify-center ${
+            isSidebarOpen 
+              ? 'bg-black/20 text-white/20 hover:bg-white/10 hover:text-white lg:opacity-0 lg:pointer-events-none' 
+              : 'bg-brand-orange text-white hover:scale-110 active:scale-95'
+          }`}
+          title={isSidebarOpen ? "Fechar Menu" : "Abrir Menu"}
         >
-          {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 

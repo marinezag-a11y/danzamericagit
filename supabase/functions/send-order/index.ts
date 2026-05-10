@@ -54,10 +54,14 @@ serve(async (req) => {
       items = [], 
       selected_numbers = [], 
       total_price, 
-      new_status, 
+      campaign_name,
+      dancer_name,
       order_id,
       id,
-      reason
+      reason,
+      pix_key,
+      pix_bank,
+      pix_receiver
     } = body
 
     const finalOrderId = order_id || id
@@ -98,26 +102,38 @@ serve(async (req) => {
     const safeTotalPrice = Number(total_price || 0)
     const formattedTotal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safeTotalPrice)
     
-    let safeItems = items
-    if ((!items || items.length === 0) && body.product_name) {
-      safeItems = [{ name: body.product_name, price: Number(body.product_price || 0) }]
+    // Build Items Display
+    let itemsHtml = ''
+    if (items && items.length > 0) {
+      itemsHtml = items.map((item: any) => `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 12px 0; color: #333; font-size: 14px;">
+            <div style="font-weight: bold;">${item.name || 'Item'}</div>
+            ${item.option ? `<div style="font-size: 12px; color: #666; margin-top: 4px;">Opção: ${item.option}</div>` : ''}
+            ${item.description ? `<div style="font-size: 12px; color: #999; margin-top: 2px;">${item.description}</div>` : ''}
+            ${item.quantity && item.quantity > 1 ? `<div style="font-size: 11px; color: #999; margin-top: 2px;">Quantidade: ${item.quantity}</div>` : ''}
+          </td>
+          <td style="padding: 12px 0; text-align: right; color: #FF5A1F; font-weight: bold; font-size: 14px;">R$ ${Number(item.price || 0).toFixed(2)}</td>
+        </tr>
+      `).join('')
+    } else if (selected_numbers && selected_numbers.length > 0) {
+      itemsHtml = `
+        <tr>
+          <td colspan="2" style="padding: 24px; background: #f9f9f9; border-radius: 16px; border: 1px solid #eee;">
+            ${dancer_name ? `<div style="margin-bottom: 12px; color: #FF5A1F; font-weight: 900; text-transform: uppercase; font-size: 11px; letter-spacing: 2px;">Apoio ao Talento: ${dancer_name}</div>` : ''}
+            ${campaign_name ? `<div style="margin-bottom: 16px; font-size: 14px; color: #333;">Campanha: <strong>${campaign_name}</strong></div>` : ''}
+            <div style="font-size: 14px; color: #666; margin-bottom: 12px; border-top: 1px solid #eee; pt-12">
+              <strong style="display: block; margin: 12px 0 8px 0; color: #333;">Números Escolhidos (${selected_numbers.length}):</strong>
+              <div style="font-family: 'Courier New', monospace; font-size: 18px; color: #FF5A1F; font-weight: bold; letter-spacing: 2px; line-height: 1.8; background: white; padding: 15px; border-radius: 8px; border: 1px dashed #FF5A1F44;">
+                ${selected_numbers.sort((a: number, b: number) => a - b).map(n => `#${String(n).padStart(3, '0')}`).join(', ')}
+              </div>
+            </div>
+          </td>
+        </tr>
+      `
+    } else {
+      itemsHtml = `<tr><td colspan="2" style="padding: 12px 0; color: #666; font-style: italic;">Detalhes do pedido não especificados.</td></tr>`
     }
-
-    const itemsHtml = safeItems.length > 0 
-      ? safeItems.map((item: any) => `
-          <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 12px 0; color: #333; font-size: 14px;">
-              <div style="font-weight: bold;">${item.name || item.title || 'Item'}</div>
-              ${item.option ? `<div style="font-size: 12px; color: #666; margin-top: 4px;">Opção: ${item.option}</div>` : ''}
-              ${item.description ? `<div style="font-size: 12px; color: #999; margin-top: 2px;">${item.description}</div>` : ''}
-              ${item.quantity && item.quantity > 1 ? `<div style="font-size: 11px; color: #999; margin-top: 2px;">Quantidade: ${item.quantity}</div>` : ''}
-            </td>
-            <td style="padding: 12px 0; text-align: right; color: #FF5A1F; font-weight: bold; font-size: 14px;">R$ ${Number(item.price || 0).toFixed(2)}</td>
-          </tr>
-        `).join('')
-      : selected_numbers.length > 0 
-        ? `<tr><td colspan="2" style="padding: 12px 0; color: #333; font-size: 14px;">${body.dancer_name ? `<div style="margin-bottom: 8px;"><strong>Apoio ao Talento:</strong> ${body.dancer_name}</div>` : ''} Números Escolhidos: <strong>${selected_numbers.join(', ')}</strong></td></tr>`
-        : `<tr><td colspan="2" style="padding: 12px 0; color: #333; font-size: 14px;">Pedido solidário recebido.</td></tr>`
 
     if (type === 'status_update' || type === 'order_deletion') {
       const statusLabels: Record<string, string> = {
@@ -221,6 +237,11 @@ serve(async (req) => {
             
             <div style="padding: 40px; color: #333;">
               <p style="font-size: 18px; margin-bottom: 25px;">Olá, <strong>${customer_name}</strong>!</p>
+              <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 25px; border: 1px solid #eee; font-size: 12px; color: #666;">
+                <p style="margin: 0 0 5px 0;"><strong>Seus Dados de Contato:</strong></p>
+                <p style="margin: 2px 0;">📞 WhatsApp: ${customer_phone}</p>
+                <p style="margin: 2px 0;">📧 E-mail: ${customer_email}</p>
+              </div>
               <p style="line-height: 1.6; color: #666; margin-bottom: 30px;">
                 Recebemos seu pedido de apoio com sucesso. Sua contribuição é fundamental para realizarmos este sonho em Córdoba, na Argentina!
               </p>
@@ -239,11 +260,11 @@ serve(async (req) => {
               <div style="background-color: #FFF5F2; border: 1px solid #FF5A1F33; border-radius: 12px; padding: 30px; text-align: center;">
                 <h3 style="margin: 0 0 15px 0; color: #FF5A1F; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Pagamento via PIX</h3>
                 <p style="font-family: monospace; font-size: 18px; font-weight: bold; color: #333; margin: 15px 0; background: white; padding: 15px; border-radius: 8px; border: 1px dashed #FF5A1F;">
-                  ${body.pix_key || 'ballettatianafigueiredo@gmail.com'}
+                  ${pix_key || 'ballettatianafigueiredo@gmail.com'}
                 </p>
                 <div style="font-size: 13px; color: #666; margin-top: 15px;">
-                  <p style="margin: 5px 0;"><strong>Banco:</strong> ${body.pix_bank || 'SICOOB'}</p>
-                  <p style="margin: 5px 0;"><strong>Recebedor:</strong> ${body.pix_receiver || 'Tatiana Aparecida Figueiredo'}</p>
+                  <p style="margin: 5px 0;"><strong>Banco:</strong> ${pix_bank || 'SICOOB'}</p>
+                  <p style="margin: 5px 0;"><strong>Recebedor:</strong> ${pix_receiver || 'Tatiana Aparecida Figueiredo'}</p>
                 </div>
               </div>
 

@@ -357,14 +357,14 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
       {/* Edit Modal */}
       <AnimatePresence>
         {editingRecord && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-brand-dark/90 backdrop-blur-sm overflow-hidden">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-2xl bg-brand-dark border border-white/10 rounded-sm shadow-2xl overflow-hidden"
+              className="modal-container relative w-full max-w-2xl"
             >
-              <div className="p-8 border-b border-white/10 flex items-center justify-between bg-white/5">
+              <div className="modal-header">
                 <div>
                   <h4 className="text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold">Editar Registro</h4>
                   <p className="text-white/40 text-xs mt-1">Altere os detalhes do lançamento abaixo</p>
@@ -377,7 +377,7 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
                 </button>
               </div>
 
-              <div className="p-8 space-y-8">
+              <div className="modal-content">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
                     <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Descrição</label>
@@ -434,7 +434,7 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
                   </div>
                 </div>
 
-                <div className="flex gap-4 pt-4">
+                <div className="modal-footer flex gap-4 pt-4">
                   <button 
                     onClick={() => setEditingRecord(null)}
                     className="flex-1 py-4 border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white/40 hover:text-white hover:bg-white/5 transition-all"

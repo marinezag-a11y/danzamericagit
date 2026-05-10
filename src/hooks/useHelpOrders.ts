@@ -55,12 +55,19 @@ export function useHelpOrders() {
 
       const unifiedOrders: HelpOrder[] = [
         ...(storeOrders || []).map(o => ({ ...o, type: 'store' as const })),
-        ...(raffleOrders || []).map(o => ({ 
-          ...o, 
-          type: 'raffle' as const,
-          product_name: `Rifa: ${o.raffle_campaigns?.name || 'Campanha'}`,
-          product_price: o.total_price // Ensure consistency
-        }))
+        ...(raffleOrders || []).map(o => {
+          // Handle both object and array response from Supabase relations
+          const campaignData = Array.isArray(o.raffle_campaigns) 
+            ? o.raffle_campaigns[0] 
+            : o.raffle_campaigns;
+            
+          return { 
+            ...o, 
+            type: 'raffle' as const,
+            product_name: `Rifa: ${campaignData?.name || 'Campanha'}`,
+            product_price: Number(o.total_price || 0)
+          };
+        })
       ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setOrders(unifiedOrders);

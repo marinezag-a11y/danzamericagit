@@ -9,7 +9,8 @@ import {
   Plus, 
   Loader2, 
   Users,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { useHelpOrders } from '../../../hooks/useHelpOrders';
 import { useProfiles } from '../../../hooks/useProfiles';
@@ -28,7 +29,7 @@ interface OrdersManagerProps {
 }
 
 export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
-  const { orders, loading: loadingOrders, error, updateOrder, addOrder, deleteOrder } = useHelpOrders();
+  const { orders, loading: loadingOrders, error, updateOrder, addOrder, deleteOrder, refresh } = useHelpOrders();
   const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
   const { profiles } = useProfiles();
   const [savingEmails, setSavingEmails] = useState(false);
@@ -135,7 +136,17 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mt-12">
         <div>
           <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Gestão Financeira</p>
-          <h2 className="text-4xl font-serif text-white italic">Controle de Pedidos</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-4xl font-serif text-white italic">Controle de Pedidos</h2>
+            <button 
+              onClick={() => refresh()}
+              disabled={loadingOrders}
+              className={`p-2 rounded-full hover:bg-white/5 transition-all ${loadingOrders ? 'opacity-50' : 'active:scale-90'}`}
+              title="Atualizar lista de pedidos"
+            >
+              <RefreshCw className={`w-5 h-5 text-brand-orange ${loadingOrders ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -197,6 +208,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
                 <OrderRow 
                   key={order.id} 
                   order={order} 
+                  settings={settings}
                   onUpdate={updateOrder} 
                   onDelete={() => setOrderToDelete(order.id)} 
                   onAlert={onAlert}

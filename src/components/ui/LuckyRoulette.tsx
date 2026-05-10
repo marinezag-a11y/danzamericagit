@@ -105,7 +105,7 @@ export function LuckyRoulette({
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-12 w-full max-w-2xl mx-auto px-4">
-      <div className="relative w-full max-w-[250px] sm:max-w-[450px] aspect-square flex items-center justify-center mt-6 sm:mt-8">
+      <div className="relative w-full max-w-[250px] sm:max-w-[450px] aspect-square flex items-center justify-center mt-2 sm:mt-8">
         {/* Shadow & Glow Background */}
         <div className={`absolute inset-4 rounded-full transition-all duration-1000 ${isSpinning ? 'bg-brand-orange/20 blur-[60px] sm:blur-[80px]' : 'bg-black/20 blur-[30px] sm:blur-[40px]'}`} />
         
@@ -238,14 +238,14 @@ export function LuckyRoulette({
               </div>
             </div>
 
-            <div className="grid grid-cols-5 sm:grid-cols-10 gap-4 sm:gap-6">
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-6">
               {selectedNumbers.map((num, idx) => {
                 const isFixed = fixedIndices.includes(idx);
                 return (
                   <button
                     key={`${idx}-${num}`}
                     onClick={() => onToggleFix(idx)}
-                    className={`group relative aspect-square rounded-[1.5rem] flex flex-col items-center justify-center transition-all duration-500 border-2 ${
+                    className={`group relative w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-[1.5rem] flex flex-col items-center justify-center transition-all duration-500 border-2 ${
                       isFixed 
                         ? 'bg-gradient-to-br from-[#CC0000] to-[#800000] border-[#FFD700] shadow-[0_15px_30px_-5px_rgba(204,0,0,0.6)] scale-110 z-10' 
                         : 'bg-white border-black/5 hover:border-brand-orange/30 hover:shadow-2xl hover:scale-105'

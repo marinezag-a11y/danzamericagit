@@ -50,7 +50,7 @@ export function ReasonModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-6 bg-brand-dark/90 backdrop-blur-sm overflow-hidden">
+      <div className="fixed inset-0 z-[11000] flex items-center justify-center p-6 bg-brand-dark/95 backdrop-blur-md overflow-hidden">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

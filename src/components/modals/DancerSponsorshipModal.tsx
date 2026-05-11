@@ -108,7 +108,9 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
     setIsSubmitting(true);
     try {
+      const orderId = crypto.randomUUID();
       const orderData = {
+        id: orderId,
         campaign_id: activeCampaign.id,
         customer_name: customerName,
         customer_email: customerEmail,
@@ -128,6 +130,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
           supabase.functions.invoke('send-order', {
             body: {
               ...orderData,
+              order_id: orderId,
               type: 'raffle_order',
               campaign_name: activeCampaign.name,
               dancer_name: selectedDancer?.name || 'Geral',
@@ -141,7 +144,8 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
               pix_key: settings['pix_key_checkout']?.value || settings['pix_key']?.value,
               pix_receiver: settings['pix_checkout_receiver']?.value,
               pix_bank: settings['pix_checkout_bank']?.value,
-              pix_type: settings['pix_checkout_type']?.value
+              pix_type: settings['pix_checkout_type']?.value,
+              contact_whatsapp: settings['contact_whatsapp']?.value
             }
           }).catch(e => console.error('Background email error:', e));
         }
@@ -330,6 +334,18 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   <div className="text-center">
                     <h3 className="text-3xl font-serif italic text-brand-dark">{selectedDancer?.name}</h3>
                     <p className="text-[11px] uppercase tracking-[0.4em] text-brand-orange font-black mt-3 italic opacity-60">Talento Selecionado</p>
+                    
+                    {activeCampaign && (
+                      <div className="mt-8 pt-6 border-t border-black/5 max-w-xs mx-auto">
+                        <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/20 font-black mb-2">Ação em Participação</p>
+                        <p className="text-sm font-serif italic text-brand-dark/70 leading-tight">{activeCampaign.name}</p>
+                        {activeCampaign.description && (
+                          <p className="text-[10px] text-brand-dark/40 font-serif italic mt-2 leading-relaxed whitespace-pre-line">
+                            {activeCampaign.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="w-full max-w-sm bg-black/[0.02] p-8 sm:p-12 rounded-[3rem] sm:rounded-[4rem] border border-black/5 space-y-6 sm:space-y-10 shadow-inner">
@@ -480,6 +496,11 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                           <div>
                             <p className="text-[7px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-white/30 font-black">BENEFICIÁRIO</p>
                             <h4 className="text-base sm:text-3xl font-serif italic text-white leading-tight mt-0.5 sm:mt-1">{selectedDancer?.name}</h4>
+                            {activeCampaign && (
+                              <p className="text-[10px] text-white/40 font-serif italic mt-2 leading-relaxed whitespace-pre-line">
+                                {activeCampaign.description}
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -631,8 +652,9 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
                     <button 
                       onClick={() => {
+                        const whatsapp = settings['contact_whatsapp']?.value || '31992127292';
                         const msg = encodeURIComponent(`Olá! Quero oficializar meu apoio para ${selectedDancer?.name}.`);
-                        window.open(`https://wa.me/5531992127292?text=${msg}`);
+                        window.open(`https://wa.me/55${whatsapp.replace(/\D/g, '')}?text=${msg}`);
                       }}
                       className="w-full py-5 bg-[#25D366] text-white rounded-[1.5rem] text-[11px] uppercase tracking-[0.3em] font-black hover:shadow-[0_15px_30px_-5px_rgba(37,211,102,0.4)] transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
                     >

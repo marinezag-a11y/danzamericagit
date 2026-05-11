@@ -90,7 +90,8 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
       price_per_number: newPrice,
       total_numbers: newTotal,
       image_url: newImageUrl,
-      is_active: true
+      is_active: true,
+      goal_per_dancer: Math.ceil(newTotal / (parseInt(settings['dancers_count']?.value || '19')))
     });
     
     if (res.success) {
@@ -215,6 +216,9 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                                 onChange={(e) => setNewTotal(parseInt(e.target.value))}
                                 className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner text-xl"
                               />
+                              <p className="text-[9px] text-brand-orange mt-3 font-bold uppercase tracking-[0.2em] ml-1">
+                                Meta: {Math.ceil(newTotal / (parseInt(settings['dancers_count']?.value || '19')))} rifas / bailarino
+                              </p>
                             </div>
                           </div>
                           <div className="space-y-4">
@@ -275,6 +279,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                 onDelete={deleteCampaign}
                 onOpenOrders={handleOpenOrders}
                 onAlert={onAlert}
+                settings={settings}
               />
             ))}
           </div>
@@ -298,7 +303,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                 const order = orders.find(o => o.id === id);
                 if (order) {
                   try {
-                    await supabase.functions.invoke('send-order-v2-updated-v2', {
+                    await supabase.functions.invoke('send-order', {
                       body: {
                         type: 'status_update',
                         order_id: id,
@@ -335,9 +340,10 @@ interface RaffleAccordionProps {
   onDelete: (id: string) => Promise<any>;
   onOpenOrders: (id: string) => Promise<void>;
   onAlert: (t: string, m: string, v: any) => void;
+  settings: any;
 }
 
-const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUpdate, onDelete, onOpenOrders, onAlert }) => {
+const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUpdate, onDelete, onOpenOrders, onAlert, settings }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [localName, setLocalName] = useState(campaign.name);
@@ -373,7 +379,8 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
       description: localDescription,
       price_per_number: localPrice,
       total_numbers: localTotal,
-      image_url: localImageUrl
+      image_url: localImageUrl,
+      goal_per_dancer: Math.ceil(localTotal / (parseInt(settings['dancers_count']?.value || '19')))
     });
     setSaving(false);
     if (result.success) {
@@ -451,6 +458,9 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                         className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner text-xl"
                       />
                       <p className="text-[9px] text-white/20 ml-1 italic">* Atenção: Alterar o total de números após o início das vendas pode causar inconsistências se o novo total for menor que o número de bilhetes já vendidos.</p>
+                      <p className="text-[10px] text-brand-orange mt-3 font-bold uppercase tracking-[0.2em] ml-1 bg-brand-orange/5 p-2 rounded-lg border border-brand-orange/10 inline-block">
+                        Meta: {Math.ceil(localTotal / (parseInt(settings['dancers_count']?.value || '19')))} rifas / bailarino
+                      </p>
                     </div>
                   </div>
                   <div className="space-y-4">

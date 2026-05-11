@@ -228,6 +228,26 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
                                 placeholder="https://vakinha.com.br/..."
                               />
                             </div>
+                            <div className="space-y-4">
+                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Contato do Checkout</label>
+                              <input 
+                                type="text" 
+                                className="w-full bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/50 outline-none transition-all text-white/80 rounded-xl"
+                                value={localValues['contact_whatsapp'] || ''}
+                                onChange={(e) => setLocalValues(prev => ({ ...prev, contact_whatsapp: e.target.value }))}
+                                placeholder="Ex: 31992127292"
+                              />
+                            </div>
+                            <div className="space-y-4">
+                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Número de Bailarinos (Meta)</label>
+                              <input 
+                                type="number" 
+                                className="w-full bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/50 outline-none transition-all text-brand-orange font-bold rounded-xl"
+                                value={localValues['dancers_count'] || ''}
+                                onChange={(e) => setLocalValues(prev => ({ ...prev, dancers_count: e.target.value }))}
+                                placeholder="19"
+                              />
+                            </div>
                           </div>
 
                           {/* Detailed Checkout Pix Card */}
@@ -311,7 +331,7 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
                           </div>
                           <div className="flex justify-end mt-8 pl-4">
                             <button 
-                              onClick={() => handleSaveSection('Links de Doação', ['pix_key', 'pix_key_checkout', 'vakinha_url', 'pix_checkout_type', 'pix_checkout_receiver', 'pix_checkout_bank'])}
+                              onClick={() => handleSaveSection('Links de Doação', ['pix_key', 'pix_key_checkout', 'vakinha_url', 'pix_checkout_type', 'pix_checkout_receiver', 'pix_checkout_bank', 'contact_whatsapp', 'dancers_count'])}
                               disabled={saving === 'Links de Doação'}
                               className="px-10 py-4 bg-brand-orange text-white font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-white hover:text-brand-dark transition-all flex items-center gap-3 shadow-xl disabled:opacity-50"
                             >

@@ -26,6 +26,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
   const [isAskingReason, setIsAskingReason] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [status, setStatus] = useState(order?.status || 'pending');
+  const [resending, setResending] = useState(false);
 
   const statusColors = {
     pending: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
@@ -39,7 +40,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     if (result.success) {
       if (data.status !== order.status) {
         try {
-          await supabase.functions.invoke('send-order-v2-updated-v2', {
+          await supabase.functions.invoke('send-order', {
             body: {
               type: 'status_update',
               order_id: order.id,
@@ -70,7 +71,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     const result = await onUpdate(order.id, { status: pendingStatus });
     if (result.success) {
       try {
-        await supabase.functions.invoke('send-order-v2-updated-v2', {
+        await supabase.functions.invoke('send-order', {
           body: {
             type: 'status_update',
             order_id: order.id,
@@ -87,6 +88,43 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     }
     setUpdating(false);
     setPendingStatus(null);
+  };
+
+  const handleResendEmail = async () => {
+    if (!order) return;
+    setResending(true);
+    try {
+      const isRaffle = order.type === 'raffle';
+      const payload: any = {
+        type: isRaffle ? 'raffle_order' : 'new_order',
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        customer_email: order.customer_email,
+        total_price: order.total_price || order.product_price,
+        order_id: order.id,
+      };
+
+      if (isRaffle) {
+        payload.campaign_name = order.product_name?.replace('Rifa: ', '');
+        payload.campaign_id = order.campaign_id;
+        payload.dancer_name = order.dancer_name;
+        payload.selected_numbers = order.selected_numbers;
+      } else {
+        payload.items = order.items || [];
+      }
+
+      const { error } = await supabase.functions.invoke('send-order', {
+        body: payload
+      });
+
+      if (error) throw error;
+      onAlert('E-mail Enviado', 'A notificação foi reenviada com sucesso.', 'info');
+      onUpdate(order.id, { notification_sent: true });
+    } catch (err: any) {
+      onAlert('Erro ao Enviar', 'Falha ao reenviar e-mail: ' + err.message, 'danger');
+    } finally {
+      setResending(false);
+    }
   };
 
   const handleWhatsAppNotify = () => {
@@ -125,7 +163,10 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
 
   return (
     <>
-      <tr className="group hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+      <tr 
+        onClick={() => setIsModalOpen(true)}
+        className="group hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 cursor-pointer"
+      >
         <td className="py-5 px-6">
           <div className="flex flex-col">
             <span className="text-sm text-white font-medium">{new Date(order.created_at).toLocaleDateString('pt-BR')}</span>
@@ -140,15 +181,38 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
             <div className="flex items-center gap-3 mt-1">
               <span className="text-[10px] text-white/40 font-mono tracking-wider">{order.customer_phone}</span>
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-brand-orange/40 font-mono tracking-wider">{order.customer_email}</span>
-                {order.notification_sent ? (
-                  <Mail className="w-3 h-3 text-emerald-500" title="Notificação enviada" />
-                ) : (
-                  <div className="flex items-center gap-1 text-red-500" title="E-mail não enviado">
-                    <Mail className="w-3 h-3" />
-                    <span className="text-[8px] font-bold">!</span>
-                  </div>
+                <span className={`text-[10px] font-mono tracking-wider ${order.notification_sent ? 'text-white/40' : 'text-red-500 font-bold'}`}>
+                  {order.customer_email}
+                </span>
+                {order.reason && !order.notification_sent && (
+                  <span className="text-[8px] text-red-500/60 italic ml-2 truncate max-w-[150px]" title={order.reason}>
+                    ({order.reason})
+                  </span>
                 )}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleResendEmail();
+                  }}
+                  disabled={resending}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all shadow-sm disabled:opacity-50 ${
+                    order.notification_sent 
+                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white' 
+                      : 'bg-red-500 text-white border border-red-600 hover:bg-red-600'
+                  }`}
+                  title={order.notification_sent ? "E-mail já enviado. Clique para reenviar se desejar." : "E-mail não enviado. Clique para reenviar agora."}
+                >
+                  {resending ? (
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  ) : (
+                    <>
+                      <Mail className="w-2.5 h-2.5" />
+                      <span className="text-[7px] font-black uppercase tracking-tighter">
+                        {order.notification_sent ? 'Enviado' : 'Reenviar'}
+                      </span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
@@ -202,6 +266,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
         <td className="py-5 px-6">
           <select 
             value={status}
+            onClick={(e) => e.stopPropagation()}
             onChange={async (e) => {
               const newStatus = e.target.value;
               if (newStatus === 'cancelled') {
@@ -215,7 +280,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
               const result = await onUpdate(order.id, { status: newStatus });
               if (result.success) {
                 try {
-                  await supabase.functions.invoke('send-order-v2-updated-v2', {
+                  await supabase.functions.invoke('send-order', {
                     body: {
                       type: 'status_update',
                       order_id: order.id,
@@ -243,21 +308,30 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
         <td className="py-5 px-6 text-right">
           <div className="flex items-center justify-end gap-1 sm:gap-2">
             <button 
-              onClick={handleWhatsAppNotify}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleWhatsAppNotify();
+              }}
               className="p-3 sm:p-2 text-white/20 hover:text-[#25D366] hover:bg-[#25D366]/10 transition-all rounded-sm group/btn relative"
               data-tooltip="Notificar WhatsApp"
             >
               <MessageSquare className="w-5 h-5 sm:w-4 sm:h-4 group-hover/btn:scale-110 transition-transform" />
             </button>
             <button 
-              onClick={() => setIsModalOpen(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsModalOpen(true);
+              }}
               className="p-3 sm:p-2 text-white/20 hover:text-brand-orange hover:bg-brand-orange/10 transition-all rounded-sm group/btn relative"
               data-tooltip="Editar Pedido"
             >
               <Pencil className="w-5 h-5 sm:w-4 sm:h-4 group-hover/btn:scale-110 transition-transform" />
             </button>
             <button 
-              onClick={onDelete}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
               className="p-3 sm:p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-sm group/btn relative"
               data-tooltip="Excluir Pedido"
             >

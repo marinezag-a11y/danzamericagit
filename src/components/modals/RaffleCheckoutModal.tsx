@@ -110,7 +110,8 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
               pix_key: pixKey,
               pix_type: pixType,
               pix_receiver: pixReceiver,
-              pix_bank: pixBank
+              pix_bank: pixBank,
+              contact_whatsapp: settings?.contact_whatsapp?.value
             }
           }).catch(e => console.error('Background email error:', e));
         }
@@ -191,9 +192,18 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                   </div>
                 </div>
             </div>
-            <button onClick={onClose} className="px-12 py-4 bg-brand-dark text-white font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all">
-              Fechar Janela
-            </button>
+            <div className="space-y-4 max-w-sm mx-auto">
+              <a 
+                href={`https://wa.me/55${(settings?.contact_whatsapp?.value || '31992127292').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Realizei uma participação na rifa ${campaign.name} e gostaria de enviar o comprovante. Nome: ${customerName}`)}`}
+                target="_blank"
+                className="w-full py-5 bg-[#25D366] text-white rounded-[1.5rem] text-[11px] uppercase tracking-[0.3em] font-black hover:shadow-[#25D366]/40 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
+              >
+                ENVIAR COMPROVANTE AGORA
+              </a>
+              <button onClick={onClose} className="w-full px-12 py-4 bg-brand-dark text-white font-bold uppercase tracking-widest text-[10px] hover:bg-brand-orange transition-all rounded-xl">
+                Fechar Janela
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">

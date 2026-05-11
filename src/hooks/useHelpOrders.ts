@@ -32,10 +32,14 @@ export function useHelpOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [isFetching, setIsFetching] = useState(false);
+
   const fetchOrders = async () => {
-    if (!supabase) return;
+    if (!supabase || isFetching) return;
     try {
+      setIsFetching(true);
       setLoading(true);
+      setError(null);
       
       // Fetch Store Orders
       const { data: storeOrders, error: storeError } = await supabase
@@ -72,9 +76,15 @@ export function useHelpOrders() {
 
       setOrders(unifiedOrders);
     } catch (err: any) {
+      // Ignore AbortError / Lock broken as it's a transient browser issue
+      if (err.name === 'AbortError' || err.message?.includes('Lock broken')) {
+        console.warn('Silent recovery from transient lock error:', err.message);
+        return;
+      }
       setError(err.message);
     } finally {
       setLoading(false);
+      setIsFetching(false);
     }
   };
 
@@ -83,21 +93,37 @@ export function useHelpOrders() {
       setLoading(false);
       return;
     }
+    
     fetchOrders();
 
-    const helpChannel = supabase
-      .channel('help_orders_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'help_orders' }, () => fetchOrders())
-      .subscribe();
-
-    const raffleChannel = supabase
-      .channel('raffle_orders_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'raffle_orders' }, () => fetchOrders())
-      .subscribe();
+    // Unified channel for all order updates
+    const ordersChannel = supabase
+      .channel('admin_orders_realtime')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'help_orders' }, 
+        (payload) => {
+          console.log('Realtime update (Help):', payload);
+          fetchOrders();
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'raffle_orders' }, 
+        (payload) => {
+          console.log('Realtime update (Raffle):', payload);
+          fetchOrders();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime Subscription Status:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime connection failed. Check if Realtime is enabled for these tables.');
+        }
+      });
 
     return () => {
-      supabase.removeChannel(helpChannel);
-      supabase.removeChannel(raffleChannel);
+      supabase.removeChannel(ordersChannel);
     };
   }, []);
 

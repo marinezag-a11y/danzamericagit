@@ -53,7 +53,7 @@ export const RaffleCard: React.FC<RaffleCardProps> = ({ campaign, onEdit, onDele
       <div className="p-10 flex-1 flex flex-col space-y-8">
         <div className="space-y-3">
           <h4 className="text-2xl font-serif italic text-white/90 group-hover:text-brand-orange transition-colors duration-500 leading-tight">{campaign.name}</h4>
-          <p className="text-sm text-white/40 font-sans leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all duration-500">{campaign.description}</p>
+          <p className="text-sm text-white/40 font-sans leading-relaxed whitespace-pre-line">{campaign.description}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-8 pt-4">

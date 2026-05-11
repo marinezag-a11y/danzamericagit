@@ -1,11 +1,14 @@
-import React from 'react';
 import { MapPin, Globe, Phone, Instagram, Mail } from 'lucide-react';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
 
 interface FooterProps {
   onAdminClick?: () => void;
 }
 
 export function Footer({ onAdminClick }: FooterProps) {
+  const { settings } = useSiteSettings();
+  const whatsapp = settings?.contact_whatsapp?.value || '31992127292';
+
   return (
     <footer className="bg-brand-white pt-32 pb-12 px-6 lg:px-12 border-t border-brand-dark/5">
       <div className="max-w-7xl mx-auto">
@@ -46,9 +49,9 @@ export function Footer({ onAdminClick }: FooterProps) {
                 </a>
               </li>
               <li>
-                <a href="https://wa.me/5531992127292" target="_blank" rel="noopener noreferrer" className="flex gap-3 hover:text-brand-orange transition-colors group">
+                <a href={`https://wa.me/55${whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex gap-3 hover:text-brand-orange transition-colors group">
                   <Phone className="w-5 h-5 text-brand-orange shrink-0" />
-                  <span className="font-serif italic">(31) 99212-7292</span>
+                  <span className="font-serif italic">({whatsapp.substring(0, 2)}) {whatsapp.substring(2, 7)}-{whatsapp.substring(7)}</span>
                 </a>
               </li>
               <li>

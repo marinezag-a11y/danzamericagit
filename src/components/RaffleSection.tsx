@@ -4,6 +4,7 @@ import { ChevronRight, Ticket, Loader2, Share2 } from 'lucide-react';
 import { useRaffles, RaffleCampaign } from '../hooks/useRaffles';
 import { DancerSponsorshipModal } from './modals/DancerSponsorshipModal';
 import { Toast } from './ui/Toast';
+import { RaffleRanking } from './RaffleRanking';
 
 export function RaffleSection() {
   const { campaigns, loading, fetchTakenTickets } = useRaffles();
@@ -33,14 +34,12 @@ export function RaffleSection() {
     if (activeCampaigns.length > 0) {
       loadProgress();
       
-      // Auto-open campaign from URL parameter ?rifa=ID
       const params = new URLSearchParams(window.location.search);
       const raffleId = params.get('rifa');
       if (raffleId) {
         const campaign = activeCampaigns.find(c => c.id === raffleId);
         if (campaign) {
           setSelectedCampaign(campaign);
-          // Scroll to section
           document.getElementById('rifas')?.scrollIntoView({ behavior: 'smooth' });
         }
       }
@@ -51,103 +50,116 @@ export function RaffleSection() {
   if (activeCampaigns.length === 0) return null;
 
   return (
-    <section id="rifas" className="py-24 bg-brand-white px-6 lg:px-12 border-t border-black/5">
+    <section id="rifas" className="py-24 bg-brand-white px-6 lg:px-12 border-t border-black/5 relative overflow-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
           <div className="max-w-xl">
             <p className="text-brand-orange text-xs uppercase tracking-[0.3em] font-display mb-6">Ações entre Amigos</p>
-            <h2 className="text-5xl md:text-7xl text-brand-dark mb-8 leading-tight font-serif">
-              Garanta seu <br /><span className="italic">Número da Sorte</span>
+            <h2 className="text-5xl md:text-7xl text-brand-dark mb-0 leading-tight font-serif">
+              Apoie nossos <br /><span className="italic">Talentos</span>
             </h2>
           </div>
-          <p className="text-brand-dark/40 text-sm font-serif max-w-xs mb-4 italic">
-            Participe de nossas ações premiadas e ajude a financiar a nossa viagem para a Argentina.
+          <p className="text-brand-dark/40 text-sm font-serif max-w-xs mb-4 italic text-right">
+            Participe de nossas ações premiadas e ajude a financiar a nossa jornada internacional.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {activeCampaigns.map((campaign, idx) => (
-            <motion.div 
-              key={campaign.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="bg-brand-grey group flex flex-col overflow-hidden hover:shadow-[0_64px_128px_-16px_rgba(0,0,0,0.15)] transition-all duration-700 cursor-pointer rounded-[3rem] border border-black/5"
-              onClick={() => setSelectedCampaign(campaign)}
-            >
-              <div className="w-full aspect-video relative overflow-hidden bg-white">
-                <img 
-                  src={campaign.image_url || 'https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?q=80&w=1200&auto=format&fit=crop'} 
-                  alt={campaign.name}
-                  className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-700" />
-              </div>
-              <div className="p-8 sm:p-12 flex flex-col justify-between bg-white">
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Ticket className="w-4 h-4 text-brand-orange" />
-                    <span className="text-[10px] uppercase tracking-widest font-bold text-brand-orange">Sorteio Ativo</span>
-                  </div>
-                  <h3 className="text-3xl font-serif italic text-brand-dark mb-4 leading-tight group-hover:text-brand-orange transition-colors">
-                    {campaign.name}
-                  </h3>
-                  <p className="text-sm text-brand-dark/60 font-serif leading-relaxed mb-6">
-                    {campaign.description}
-                  </p>
-                  <div className="space-y-6 mb-8">
-                    <div className="flex justify-between items-end gap-4">
-                      <div className="space-y-1">
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-brand-dark/20">Valor por número</p>
-                        <p className="text-3xl font-display text-brand-dark leading-none">R$ {Number(campaign.price_per_number).toFixed(2)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-brand-dark/20 mb-1">Status da Meta</p>
-                        <p className="text-sm font-serif italic text-brand-orange font-bold leading-none">
-                          {soldCounts[campaign.id] || 0} de {campaign.total_numbers} vendidos
-                        </p>
-                      </div>
+        <div className="flex flex-col lg:flex-row gap-16">
+          {/* Main Content: Campaigns */}
+          <div className="flex-1 space-y-12 order-2 lg:order-1">
+            {activeCampaigns.map((campaign, idx) => (
+              <motion.div 
+                key={campaign.id}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="bg-brand-grey group flex flex-col md:flex-row overflow-hidden hover:shadow-[0_64px_128px_-16px_rgba(0,0,0,0.15)] transition-all duration-700 cursor-pointer rounded-[3rem] border border-black/5"
+                onClick={() => setSelectedCampaign(campaign)}
+              >
+                <div className="w-full md:w-2/5 aspect-video md:aspect-auto relative overflow-hidden bg-white">
+                  <img 
+                    src={campaign.image_url || 'https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?q=80&w=1200&auto=format&fit=crop'} 
+                    alt={campaign.name}
+                    className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-700" />
+                </div>
+                <div className="p-8 sm:p-12 flex-1 flex flex-col justify-between bg-white">
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <Ticket className="w-4 h-4 text-brand-orange" />
+                      <span className="text-[10px] uppercase tracking-widest font-bold text-brand-orange">Ação Ativa</span>
                     </div>
+                    <h3 className="text-3xl font-serif italic text-brand-dark mb-4 leading-tight group-hover:text-brand-orange transition-colors">
+                      {campaign.name}
+                    </h3>
+
+                    {campaign.description && (
+                      <p className="text-brand-dark/60 text-sm font-serif mb-8 italic leading-relaxed whitespace-pre-line">
+                        {campaign.description}
+                      </p>
+                    )}
                     
-                    <div className="space-y-2">
-                      <div className="w-full h-2 bg-black/5 rounded-full overflow-hidden relative">
+                    <div className="space-y-6 mb-8">
+                      <div className="flex justify-between items-end gap-4">
+                        <div className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-widest font-bold text-brand-dark/20">Investimento</p>
+                          <p className="text-3xl font-display text-brand-dark leading-none">R$ {Number(campaign.price_per_number).toFixed(2)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-serif italic text-brand-orange font-bold leading-none">
+                            {soldCounts[campaign.id] || 0} / {campaign.total_numbers}
+                          </p>
+                          <p className="text-[9px] uppercase tracking-widest font-bold text-brand-dark/20 mt-1">Vendidos</p>
+                        </div>
+                      </div>
+                      
+                      <div className="w-full h-1.5 bg-black/5 rounded-full overflow-hidden relative">
                         <motion.div 
                           initial={{ width: 0 }}
                           whileInView={{ width: `${Math.min(100, ((soldCounts[campaign.id] || 0) / campaign.total_numbers) * 100)}%` }}
                           viewport={{ once: true }}
                           transition={{ duration: 1.5, ease: "easeOut" }}
-                          className="h-full bg-gradient-to-r from-brand-orange to-[#ff6b6b] shadow-[0_0_15px_rgba(204,0,0,0.4)]"
+                          className="h-full bg-brand-orange"
                         />
-                      </div>
-                      <div className="flex justify-between text-[8px] uppercase tracking-widest font-bold text-brand-dark/20">
-                        <span>Início</span>
-                        <span className="text-brand-orange/40">{Math.round(((soldCounts[campaign.id] || 0) / campaign.total_numbers) * 100)}% Concluído</span>
-                        <span>Meta</span>
                       </div>
                     </div>
                   </div>
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <button className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] font-bold text-brand-orange hover:gap-4 transition-all">
+                      Escolher Números <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const url = `${window.location.origin}${window.location.pathname}?rifa=${campaign.id}`;
+                        navigator.clipboard.writeText(url);
+                        showToast('Link copiado!', 'success');
+                      }}
+                      className="p-3 bg-brand-orange/5 hover:bg-brand-orange text-brand-orange hover:text-white transition-all rounded-full border border-brand-orange/10"
+                      title="Copiar link"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-4 mt-auto">
-                  <button className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] font-bold text-brand-orange hover:gap-4 transition-all">
-                    Escolher Números <ChevronRight className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const url = `${window.location.origin}${window.location.pathname}?rifa=${campaign.id}`;
-                      navigator.clipboard.writeText(url);
-                      showToast('Link da campanha copiado!', 'success');
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-brand-orange/10 hover:bg-brand-orange text-brand-orange hover:text-white transition-all rounded-full group/share border border-brand-orange/20"
-                    title="Copiar link desta campanha"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span className="text-[9px] uppercase tracking-widest font-black">Copiar Link</span>
-                  </button>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Sidebar: Ranking */}
+          <aside className="w-full lg:w-[400px] order-1 lg:order-2">
+            <div className="sticky top-32">
+              <RaffleRanking />
+              
+              <div className="mt-8 p-6 bg-brand-orange/5 border border-brand-orange/10 rounded-[2rem] text-center">
+                <p className="text-xs text-brand-dark/40 font-serif italic mb-4">"Cada número adquirido é um passo a mais <br />na realização de um sonho coletivo."</p>
+                <div className="flex justify-center gap-1">
+                  {[1,2,3,4,5].map(i => <div key={i} className="w-1 h-1 rounded-full bg-brand-orange/20" />)}
                 </div>
               </div>
-            </motion.div>
-          ))}
+            </div>
+          </aside>
         </div>
       </div>
 

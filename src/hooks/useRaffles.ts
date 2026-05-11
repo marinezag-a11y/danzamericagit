@@ -12,6 +12,7 @@ export interface RaffleCampaign {
   start_date?: string;
   end_date?: string;
   is_active: boolean;
+  goal_per_dancer: number;
   created_at: string;
 }
 
@@ -169,7 +170,7 @@ export function useRaffles() {
     }
   };
 
-  const createOrder = async (order: Omit<RaffleOrder, 'id' | 'created_at' | 'status'>) => {
+  const createOrder = async (order: Omit<RaffleOrder, 'created_at' | 'status'>) => {
     try {
       // Inserir sem .select() para evitar erro de RLS em usuários anônimos
       const { error } = await supabase

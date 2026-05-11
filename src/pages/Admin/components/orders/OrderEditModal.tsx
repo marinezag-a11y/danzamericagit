@@ -23,6 +23,7 @@ import { maskBRL, parseBRL } from '../../../../lib/utils';
 import { useHelpItems } from '../../../../hooks/useHelpItems';
 import { useDancers } from '../../../../hooks/useDancers';
 import { useAdminAuth } from '../../../../hooks/useAdminAuth';
+import { supabase } from '../../../../lib/supabase';
 
 interface OrderEditModalProps {
   order: any;
@@ -132,6 +133,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
 
       if (isRaffle) {
         payload.campaign_name = order.product_name?.replace('Rifa: ', '');
+        payload.campaign_id = order.campaign_id;
         payload.dancer_name = order.dancer_name;
         payload.selected_numbers = order.selected_numbers;
       } else {
@@ -573,17 +575,15 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
 
                 {/* Actions */}
                 <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                  {isMaster && (
-                    <button 
-                      onClick={handleResendEmail}
-                      disabled={updating}
-                      className="flex-1 lg:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-brand-orange hover:bg-brand-orange/10 transition-all border border-brand-orange/20 rounded-xl flex items-center gap-2"
-                      title="Re-enviar e-mail de confirmação"
-                    >
-                      {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
-                      Re-enviar E-mail
-                    </button>
-                  )}
+                  <button 
+                    onClick={handleResendEmail}
+                    disabled={updating}
+                    className="flex-1 lg:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black bg-red-600 text-white hover:bg-red-700 transition-all border border-red-700 rounded-xl flex items-center gap-2 shadow-lg shadow-red-600/20"
+                    title="Re-enviar e-mail de confirmação agora"
+                  >
+                    {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                    Re-enviar E-mail
+                  </button>
                   <button 
                     onClick={onClose}
                     className="flex-1 lg:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-brand-dark/40 hover:text-brand-dark transition-all border border-black/5 hover:bg-black/5 rounded-xl whitespace-nowrap"

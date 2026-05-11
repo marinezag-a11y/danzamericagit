@@ -188,14 +188,15 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
         // Dispara o e-mail em segundo plano (background)
         if (supabase) {
-          supabase.functions.invoke('send-order-v2-updated-v2', {
+          supabase.functions.invoke('send-order', {
             body: { 
               ...orderData, 
               order_id: newOrderId,
               pix_key: pixKey,
               pix_type: pixType,
               pix_receiver: pixReceiver,
-              pix_bank: pixBank
+              pix_bank: pixBank,
+              contact_whatsapp: settings?.contact_whatsapp?.value
             }
           }).catch(e => console.error('Background email error:', e));
         }
@@ -407,7 +408,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                       </div>
 
                       <a 
-                        href={`https://wa.me/5531992127292?text=${encodeURIComponent(`Olá! Realizei um pedido de apoio e gostaria de enviar o comprovante. Nome: ${customerName}`)}`}
+                        href={`https://wa.me/55${(settings?.contact_whatsapp?.value || '31992127292').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Realizei um pedido de apoio e gostaria de enviar o comprovante. Nome: ${customerName}`)}`}
                         target="_blank"
                         className="w-full py-4 bg-[#25D366] text-white rounded-[1.5rem] text-[10px] uppercase tracking-[0.3em] font-black hover:shadow-[#25D366]/40 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
                       >
@@ -535,7 +536,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
             <div className="max-w-5xl mx-auto space-y-16">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {[
-                  { icon: Phone, label: 'WhatsApp', value: '(31) 99212-7292', href: 'https://wa.me/5531992127292', color: '#25D366' },
+                  { icon: Phone, label: 'Contato Checkout', value: settings?.contact_whatsapp?.value ? maskPhone(settings.contact_whatsapp.value) : '(31) 99212-7292', href: `https://wa.me/55${(settings?.contact_whatsapp?.value || '31992127292').replace(/\D/g, '')}`, color: '#25D366' },
                   { icon: Instagram, label: 'Instagram', value: '@nucleodedanca', href: 'https://instagram.com/nucleodedanca', color: '#E1306C' },
                   { icon: Mail, label: 'E-mail', value: 'nucleodedanca@yahoo.com.br', href: 'mailto:nucleodedanca@yahoo.com.br', color: '#EA4335' },
                   { icon: MapPin, label: 'Endereço', value: 'Av. Abílio Machado, 3997 – BH', href: 'https://www.google.com/maps/search/?api=1&query=Av.+Abílio+Machado,+3997+–+Belo+Horizonte,+MG', color: '#4285F4' }

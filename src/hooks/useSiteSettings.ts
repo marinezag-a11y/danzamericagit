@@ -32,6 +32,9 @@ export function useSiteSettings() {
 
       setSettings(settingsMap);
     } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('Lock broken')) {
+        return;
+      }
       setError(err.message);
     } finally {
       setLoading(false);

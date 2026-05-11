@@ -10,7 +10,9 @@ import {
   Loader2, 
   Users,
   Check,
-  RefreshCw
+  RefreshCw,
+  Mail,
+  AlertCircle
 } from 'lucide-react';
 import { useHelpOrders } from '../../../hooks/useHelpOrders';
 import { useProfiles } from '../../../hooks/useProfiles';
@@ -39,6 +41,61 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [isAskingReason, setIsAskingReason] = useState(false);
+  const [resendingAll, setResendingAll] = useState(false);
+
+  const failedNotifications = (orders || []).filter(o => !o.notification_sent && o.status !== 'cancelled');
+
+  const handleResendAllFailed = async () => {
+    if (failedNotifications.length === 0) return;
+    
+    setResendingAll(true);
+    onAlert('Iniciando Reenvio', `Tentando reenviar ${failedNotifications.length} e-mails...`, 'info');
+    
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const order of failedNotifications) {
+      try {
+        const isRaffle = order.type === 'raffle';
+        const payload: any = {
+          type: isRaffle ? 'raffle_order' : 'new_order',
+          customer_name: order.customer_name,
+          customer_phone: order.customer_phone,
+          customer_email: order.customer_email,
+          total_price: order.total_price || order.product_price,
+          order_id: order.id,
+        };
+
+        if (isRaffle) {
+          payload.campaign_name = order.product_name?.replace('Rifa: ', '');
+          payload.campaign_id = order.campaign_id;
+          payload.dancer_name = order.dancer_name;
+          payload.selected_numbers = order.selected_numbers;
+        } else {
+          payload.items = order.items || [];
+        }
+
+        const { error: invokeError } = await supabase.functions.invoke('send-order', {
+          body: payload
+        });
+
+        if (invokeError) throw invokeError;
+        successCount++;
+      } catch (err) {
+        console.error(`Falha ao reenviar e-mail para pedido ${order.id}:`, err);
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      onAlert('Reenvio Concluído', `${successCount} e-mails reenviados com sucesso.${failCount > 0 ? ` (${failCount} falhas)` : ''}`, 'info');
+      refresh();
+    } else if (failCount > 0) {
+      onAlert('Falha no Reenvio', `Não foi possível reenviar os ${failCount} e-mails.`, 'danger');
+    }
+    
+    setResendingAll(false);
+  };
 
   const stats = {
     total: orders?.length || 0,
@@ -69,7 +126,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     
     if (order) {
       try {
-        await supabase.functions.invoke('send-order-v2-updated-v2', {
+        await supabase.functions.invoke('send-order', {
           body: {
             type: 'order_deletion',
             order_id: order.id,
@@ -138,6 +195,26 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
           <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Gestão Financeira</p>
           <div className="flex items-center gap-4">
             <h2 className="text-4xl font-serif text-white italic">Controle de Pedidos</h2>
+            <button 
+              onClick={handleResendAllFailed}
+              disabled={resendingAll}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all border ${
+                failedNotifications.length > 0 
+                  ? 'bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/20 animate-pulse hover:animate-none' 
+                  : 'bg-white/10 text-white/60 border-white/10 hover:bg-white/20'
+              } ${resendingAll ? 'opacity-50' : ''}`}
+              title="Verificar e reenviar e-mails pendentes"
+            >
+              {resendingAll ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Mail className={`w-3 h-3 ${failedNotifications.length > 0 ? 'text-white' : 'text-white'}`} />
+              )}
+              <span className="text-[9px] uppercase tracking-widest font-black">
+                {resendingAll ? 'Processando...' : failedNotifications.length > 0 ? `Reenviar ${failedNotifications.length} Falhas` : 'Reenviar E-mails'}
+              </span>
+            </button>
+
             <button 
               onClick={() => refresh()}
               disabled={loadingOrders}

@@ -16,6 +16,7 @@ import { useHeroBanners } from '../hooks/useHeroBanners';
 import { useTicker } from '../hooks/useTicker';
 import { useJourney } from '../hooks/useJourney';
 import { useHelpItems } from '../hooks/useHelpItems';
+import { useFinancial } from '../hooks/useFinancial';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useEventTracking } from '../hooks/useEventTracking';
 import { Header } from '../components/layout/Header';
@@ -118,6 +119,7 @@ export default function Home() {
   const { phrases, loading: phrasesLoading } = useTicker();
   const { items: journeyItems, loading: journeyLoading } = useJourney();
   const { items: helpItems, loading: helpLoading } = useHelpItems();
+  const { totals, loading: financialLoading } = useFinancial();
 
   // Analytics: track page view
   usePageTracking();
@@ -162,13 +164,12 @@ export default function Home() {
     image_url: '/hero-bg.jpg' 
   };
 
-  const goalTotalValue = parseFloat(settings?.target_amount?.value || '0');
-  const currentRaisedValue = parseFloat(settings?.current_amount?.value || '0');
-
-  const goalTotal = !isNaN(goalTotalValue) && settings?.target_amount?.value ? goalTotalValue : 136712;
-  const currentRaised = !isNaN(currentRaisedValue) && settings?.current_amount?.value ? currentRaisedValue : 88862;
+  // Valores dinâmicos vindos do financeiro
+  const goalTotalValue = parseFloat(settings?.target_amount?.value || '166551');
+  const currentRaised = totals.income || 0;
   
-  const safeGoal = goalTotal > 0 ? goalTotal : 136712;
+  const goalTotal = !isNaN(goalTotalValue) ? goalTotalValue : 166551;
+  const safeGoal = goalTotal > 0 ? goalTotal : 166551;
   const percentage = Math.min((currentRaised / safeGoal) * 100, 100) || 0;
 
   // Calculate remaining days
@@ -179,7 +180,7 @@ export default function Home() {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const remainingDays = diffDays > 0 ? diffDays : 0;
 
-  const supportersCount = settings?.supporters_count?.value ?? '412';
+  const supportersCount = settings?.supporters_count?.value ?? '0';
   const dancersCount = settings?.dancers_count?.value ?? '22';
 
   const [isScrolled, setIsScrolled] = useState(false);
@@ -336,8 +337,8 @@ export default function Home() {
         id="essencia" 
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8 }}
+        viewport={{ once: true, margin: "-20px" }}
+        transition={{ duration: 0.6 }}
         className="py-32 bg-brand-grey px-6 lg:px-12 overflow-hidden"
       >
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
@@ -375,8 +376,8 @@ export default function Home() {
         id="jornada" 
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8 }}
+        viewport={{ once: true, margin: "-20px" }}
+        transition={{ duration: 0.6 }}
         className="py-32 bg-white px-6 lg:px-12"
       >
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
@@ -513,22 +514,39 @@ export default function Home() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
-                <div>
-                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Arrecadado</p>
-                  <p className="text-white text-2xl font-display font-medium">R$ {currentRaised.toLocaleString()}</p>
+              <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-12 border-y border-white/5 py-12 mb-16">
+                <div className="min-w-[200px]">
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-4 font-display">Arrecadado</p>
+                  <p className="text-white text-3xl font-display font-light">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentRaised)}
+                  </p>
                 </div>
-                <div>
-                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Meta Final</p>
-                  <p className="text-white text-2xl font-display font-medium">R$ {goalTotal.toLocaleString()}</p>
+
+                <div className="hidden lg:block h-12 w-px bg-white/10"></div>
+
+                <div className="min-w-[200px]">
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-4 font-display">Meta Final</p>
+                  <p className="text-white text-3xl font-display font-light">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(goalTotal)}
+                  </p>
                 </div>
+
+                <div className="hidden lg:block h-12 w-px bg-white/10"></div>
+
                 <div>
-                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Apoiadores</p>
-                  <p className="text-white text-2xl font-display font-medium">{Number(supportersCount).toLocaleString()}</p>
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-4 font-display">Apoiadores</p>
+                  <p className="text-white text-3xl font-display font-light">
+                    {Number(supportersCount).toLocaleString()}
+                  </p>
                 </div>
+
+                <div className="hidden lg:block h-12 w-px bg-white/10"></div>
+
                 <div>
-                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-2 font-display">Dias Restantes</p>
-                  <p className="text-white text-2xl font-display font-medium">{remainingDays}</p>
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest mb-4 font-display">Dias Restantes</p>
+                  <p className="text-white text-3xl font-display font-light">
+                    {remainingDays}
+                  </p>
                 </div>
               </div>
             </motion.div>

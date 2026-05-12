@@ -132,6 +132,7 @@ export default function Dashboard() {
                     {item.id === 'sponsorship' && <SponsorshipManager onAlert={onAlert} />}
                     {item.id === 'financial' && <FinancialManager onAlert={onAlert} userRole={userRole} />}
                     {item.id === 'banners' && <BannerManager onAlert={onAlert} />}
+                    {item.id === 'dancers' && <DancersManager onAlert={onAlert} />}
                     {item.id === 'users' && <UserManager onAlert={onAlert} userRole={userRole} />}
                   </>
                 ) : null}

@@ -13,6 +13,7 @@ export interface RaffleCampaign {
   end_date?: string;
   is_active: boolean;
   goal_per_dancer: number;
+  cost: number;
   created_at: string;
 }
 

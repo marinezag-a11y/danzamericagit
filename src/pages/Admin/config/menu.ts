@@ -22,6 +22,7 @@ export const ADMIN_MENU_ITEMS = [
   { id: 'gallery', label: 'Galeria de Fotos', icon: Images },
   { id: 'sponsorship', label: 'Apoiadores', icon: Star },
   { id: 'financial', label: 'Financeiro', icon: DollarSign },
+  { id: 'dancers', label: 'Bailarinos', icon: Users },
   { id: 'banners', label: 'Banners Iniciais', icon: ImageIcon },
   { id: 'users', label: 'Administradores', icon: Settings },
 ];

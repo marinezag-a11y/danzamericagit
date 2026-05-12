@@ -22,6 +22,7 @@ import { NotificationSettings } from './ui/NotificationSettings';
 import { RaffleOrdersModal } from './raffles/RaffleOrdersModal';
 import { OptimizedImageUploader } from './OptimizedImageUploader';
 import { DancersManager } from './DancersManager';
+import { RaffleAnalytics } from './raffles/RaffleAnalytics';
 
 interface RaffleManagerProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
@@ -42,7 +43,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
   const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
   const { profiles } = useProfiles();
   
-  const [view, setView] = useState<'campaigns' | 'dancers'>('campaigns');
+  const [view, setView] = useState<'campaigns' | 'dancers' | 'stats'>('campaigns');
   const [isAdding, setIsAdding] = useState(false);
   const [viewingOrdersId, setViewingOrdersId] = useState<string | null>(null);
   const [orders, setOrders] = useState<RaffleOrder[]>([]);
@@ -53,6 +54,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
   const [newPrice, setNewPrice] = useState(0);
   const [newTotal, setNewTotal] = useState(100);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [newCost, setNewCost] = useState(0);
   const [creating, setCreating] = useState(false);
 
   const handleOpenOrders = async (campaignId: string) => {
@@ -90,6 +92,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
       price_per_number: newPrice,
       total_numbers: newTotal,
       image_url: newImageUrl,
+      cost: newCost,
       is_active: true,
       goal_per_dancer: Math.ceil(newTotal / (parseInt(settings['dancers_count']?.value || '19')))
     });
@@ -101,6 +104,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
       setNewDescription('');
       setNewPrice(0);
       setNewImageUrl('');
+      setNewCost(0);
     } else {
       onAlert('Erro', res.error || 'Erro ao criar campanha', 'danger');
     }
@@ -134,6 +138,16 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
           }`}
         >
           Bailarinos Participantes
+        </button>
+        <button 
+          onClick={() => setView('stats')}
+          className={`px-8 py-4 text-[10px] uppercase tracking-[0.3em] font-bold rounded-xl transition-all border ${
+            view === 'stats' 
+              ? 'bg-brand-orange border-brand-orange text-white shadow-2xl' 
+              : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/20'
+          }`}
+        >
+          Desempenho e Vendas
         </button>
       </div>
 
@@ -210,12 +224,23 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                               />
                             </div>
                             <div className="space-y-4">
-                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Qtd. Números</label>
+                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Total de Números</label>
                               <input 
                                 type="number" value={newTotal}
-                                onChange={(e) => setNewTotal(parseInt(e.target.value))}
-                                className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner text-xl"
+                                onChange={(e) => setNewTotal(parseInt(e.target.value) || 0)}
+                                className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white font-bold rounded-2xl shadow-inner text-xl"
                               />
+                            </div>
+
+                            <div className="space-y-4">
+                              <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Custo da Ação (Débito)</label>
+                              <input 
+                                type="text" value={maskBRL(newCost)}
+                                onChange={(e) => setNewCost(parseBRL(e.target.value))}
+                                className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-red-500 font-bold rounded-2xl shadow-inner text-xl"
+                              />
+                            </div>
+                            <div className="space-y-4">
                               <p className="text-[9px] text-brand-orange mt-3 font-bold uppercase tracking-[0.2em] ml-1">
                                 Meta: {Math.ceil(newTotal / (parseInt(settings['dancers_count']?.value || '19')))} rifas / bailarino
                               </p>
@@ -284,10 +309,12 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
             ))}
           </div>
         </div>
-      ) : (
+      ) : view === 'dancers' ? (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <DancersManager onAlert={onAlert} />
         </div>
+      ) : (
+        <RaffleAnalytics onAlert={onAlert} />
       )}
 
       <AnimatePresence>
@@ -351,6 +378,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
   const [localPrice, setLocalPrice] = useState(campaign.price_per_number);
   const [localTotal, setLocalTotal] = useState(campaign.total_numbers);
   const [localImageUrl, setLocalImageUrl] = useState(campaign.image_url);
+  const [localCost, setLocalCost] = useState(campaign.cost || 0);
   const [itemToDelete, setItemToDelete] = useState<boolean>(false);
 
   useEffect(() => {
@@ -360,6 +388,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
       setLocalPrice(campaign.price_per_number);
       setLocalTotal(campaign.total_numbers);
       setLocalImageUrl(campaign.image_url);
+      setLocalCost(campaign.cost || 0);
     }
   }, [campaign, isOpen]);
 
@@ -380,6 +409,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
       price_per_number: localPrice,
       total_numbers: localTotal,
       image_url: localImageUrl,
+      cost: localCost,
       goal_per_dancer: Math.ceil(localTotal / (parseInt(settings['dancers_count']?.value || '19')))
     });
     setSaving(false);
@@ -454,10 +484,21 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                       <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Total de Números</label>
                       <input 
                         type="number" value={localTotal}
-                        onChange={(e) => setLocalTotal(parseInt(e.target.value))}
-                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner text-xl"
+                        onChange={(e) => setLocalTotal(parseInt(e.target.value) || 0)}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white font-bold rounded-2xl shadow-inner text-xl"
                       />
-                      <p className="text-[9px] text-white/20 ml-1 italic">* Atenção: Alterar o total de números após o início das vendas pode causar inconsistências se o novo total for menor que o número de bilhetes já vendidos.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Custo da Ação (Débito)</label>
+                      <input 
+                        type="text" value={maskBRL(localCost)}
+                        onChange={(e) => setLocalCost(parseBRL(e.target.value))}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-red-500 font-bold rounded-2xl shadow-inner text-xl"
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <p className="text-[9px] text-white/20 italic ml-1">* Atenção: Alterar o total de números após o início das vendas pode causar inconsistências se o novo total for menor que o número de bilhetes já vendidos.</p>
                       <p className="text-[10px] text-brand-orange mt-3 font-bold uppercase tracking-[0.2em] ml-1 bg-brand-orange/5 p-2 rounded-lg border border-brand-orange/10 inline-block">
                         Meta: {Math.ceil(localTotal / (parseInt(settings['dancers_count']?.value || '19')))} rifas / bailarino
                       </p>

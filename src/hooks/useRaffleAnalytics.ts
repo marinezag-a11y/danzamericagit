@@ -14,7 +14,9 @@ export interface CampaignProgress {
   name: string;
   totalArrecadado: number;
   ticketsVendidos: number;
-  metaTickets: number; // Supondo 1000 por padrão se não houver no banco
+  metaTickets: number;
+  pricePerNumber: number;
+  cost: number;
 }
 
 export interface RaffleStats {
@@ -23,6 +25,7 @@ export interface RaffleStats {
   avgTicketPrice: number;
   topDancers: DancerPerformance[];
   campaignsProgress: CampaignProgress[];
+  allOrders: any[]; // Adicionado para permitir filtros customizados no componente
 }
 
 export function useRaffleAnalytics() {
@@ -32,6 +35,7 @@ export function useRaffleAnalytics() {
     avgTicketPrice: 0,
     topDancers: [],
     campaignsProgress: [],
+    allOrders: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +46,10 @@ export function useRaffleAnalytics() {
     setError(null);
 
     try {
-      // 1. Fetch all paid raffle orders
+      // 1. Fetch all raffle orders (excluding cancelled)
       const { data: orders, error: ordersError } = await supabase
         .from('raffle_orders')
-        .select('*, raffle_campaigns(id, name, total_numbers, goal_per_dancer)')
+        .select('*, raffle_campaigns(id, name, total_numbers, goal_per_dancer, price_per_number, cost)')
         .neq('status', 'cancelled');
 
       if (ordersError) throw ordersError;
@@ -57,16 +61,19 @@ export function useRaffleAnalytics() {
       let totalTickets = 0;
 
       (orders || []).forEach(order => {
+        const isSold = order.status === 'paid' || order.status === 'sent';
         const price = Number(order.total_price || 0);
         const tickets = (order.selected_numbers || []).length;
         const dancer = order.dancer_name || 'Geral';
         const campaignId = order.campaign_id;
         const campaignName = order.raffle_campaigns?.name || 'Campanha s/ Nome';
 
-        totalRevenue += price;
-        totalTickets += tickets;
+        if (isSold) {
+          totalRevenue += price;
+          totalTickets += tickets;
+        }
 
-        // Dancer Stats
+        // Dancer Stats (Aggregated for now, we'll filter in the component)
         if (!dancerMap[dancer]) {
           dancerMap[dancer] = { 
             name: dancer, 
@@ -76,9 +83,12 @@ export function useRaffleAnalytics() {
             goal: order.raffle_campaigns?.goal_per_dancer || 53
           };
         }
-        dancerMap[dancer].totalSales += price;
-        dancerMap[dancer].orderCount += 1;
-        dancerMap[dancer].ticketCount += tickets;
+        
+        if (isSold) {
+          dancerMap[dancer].totalSales += price;
+          dancerMap[dancer].orderCount += 1;
+          dancerMap[dancer].ticketCount += tickets;
+        }
 
         // Campaign Stats
         if (campaignId) {
@@ -88,11 +98,15 @@ export function useRaffleAnalytics() {
               name: campaignName, 
               totalArrecadado: 0, 
               ticketsVendidos: 0, 
-              metaTickets: order.raffle_campaigns?.total_numbers || 1000
+              metaTickets: order.raffle_campaigns?.total_numbers || 1000,
+              pricePerNumber: order.raffle_campaigns?.price_per_number || 0,
+              cost: order.raffle_campaigns?.cost || 0
             };
           }
-          campaignMap[campaignId].totalArrecadado += price;
-          campaignMap[campaignId].ticketsVendidos += tickets;
+          if (isSold) {
+            campaignMap[campaignId].totalArrecadado += price;
+            campaignMap[campaignId].ticketsVendidos += tickets;
+          }
         }
       });
 
@@ -107,6 +121,7 @@ export function useRaffleAnalytics() {
         avgTicketPrice: totalTickets > 0 ? totalRevenue / totalTickets : 0,
         topDancers,
         campaignsProgress,
+        allOrders: orders || [],
       });
 
     } catch (err: any) {
@@ -119,6 +134,27 @@ export function useRaffleAnalytics() {
 
   useEffect(() => {
     fetchRaffleAnalytics();
+
+    if (!supabase) return;
+
+    // Sincronização em tempo real para estatísticas
+    const channel = supabase
+      .channel('raffle_analytics_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'raffle_orders' },
+        () => fetchRaffleAnalytics()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'raffle_campaigns' },
+        () => fetchRaffleAnalytics()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchRaffleAnalytics]);
 
   return { stats, loading, error, refresh: fetchRaffleAnalytics };

@@ -118,26 +118,10 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     setResendingAll(false);
   };
 
-  const stats = {
-    total: orders?.length || 0,
-    cancelled: (orders || []).filter(o => o?.status === 'cancelled').length,
-    paid: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').length,
-    pendingValue: (orders || []).filter(o => o?.status === 'pending').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
-    totalValue: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
-    totalNetValue: (orders || []).filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => {
-      const price = o?.total_price || o?.product_price || 0;
-      if (o.type === 'raffle') return sum + price;
-      const items = o?.items || [];
-      const totalCost = items.reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
-      return sum + price - totalCost;
-    }, 0)
-  };
-
   const filteredOrders = (orders || []).filter(o => {
     const matchesStatus = filter === 'all' || o?.status === filter;
     const matchesType = typeFilter === 'all' || o?.type === typeFilter;
     
-    // Search filter (Name, ID, Product, Phone, or Email)
     const matchesSearch = !searchTerm || 
       o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -145,10 +129,8 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       o.customer_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Dancer filter (only for raffles)
     const matchesDancer = dancerFilter === 'all' || o.dancer_name === dancerFilter;
 
-    // Date range filter
     const orderDate = new Date(o.created_at).toISOString().split('T')[0];
     const matchesStartDate = !startDate || orderDate >= startDate;
     const matchesEndDate = !endDate || orderDate <= endDate;
@@ -158,12 +140,10 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     let valA: any = a[sortBy as keyof typeof a];
     let valB: any = b[sortBy as keyof typeof b];
 
-    // Specialized sorting for specific columns
     if (sortBy === 'total_price') {
       valA = a.total_price || a.product_price || 0;
       valB = b.total_price || b.product_price || 0;
     } else if (sortBy === 'net_margin') {
-      // Calculate net margin for sorting
       const getNet = (o: any) => {
         const price = o.total_price || o.product_price || 0;
         if (o.type === 'raffle') return price;
@@ -185,6 +165,109 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
 
     return sortOrder === 'asc' ? valA - valB : valB - valA;
   });
+
+  const stats = {
+    total: filteredOrders.length,
+    cancelled: filteredOrders.filter(o => o?.status === 'cancelled').length,
+    paid: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').length,
+    pendingValue: filteredOrders.filter(o => o?.status === 'pending').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
+    totalValue: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
+    totalNetValue: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => {
+      const price = o?.total_price || o?.product_price || 0;
+      if (o.type === 'raffle') return sum + price;
+      const items = o?.items || [];
+      const totalCost = items.reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
+      return sum + price - totalCost;
+    }, 0)
+  };
+
+  const handlePrintReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const reportDate = new Date().toLocaleString('pt-BR');
+    const filterInfo = `Filtros: Status [${filter}] | Tipo [${typeFilter}] | Bailarino [${dancerFilter}] | Período [${startDate || 'Início'} - ${endDate || 'Hoje'}]`;
+
+    const html = `
+      <html>
+        <head>
+          <title>Relatório de Pedidos - Danzamerica</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1a1a1a; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+            .meta { font-size: 10px; color: #666; text-align: right; }
+            .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+            .kpi-card { background: #f8f8f8; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
+            .kpi-label { font-size: 9px; text-transform: uppercase; font-weight: 700; color: #999; margin-bottom: 8px; }
+            .kpi-value { font-size: 20px; font-weight: 700; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { text-align: left; font-size: 10px; text-transform: uppercase; color: #999; padding: 12px; border-bottom: 2px solid #f0f0f0; }
+            td { padding: 12px; font-size: 12px; border-bottom: 1px solid #f0f0f0; }
+            .status { font-weight: 700; text-transform: uppercase; font-size: 9px; }
+            .footer { margin-top: 50px; font-size: 9px; color: #ccc; text-align: center; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">DANZAMERICA</div>
+            <div class="meta">
+              <p>Gerado em: ${reportDate}</p>
+              <p>${filterInfo}</p>
+            </div>
+          </div>
+          
+          <h2 style="font-size: 16px; margin-bottom: 20px;">Relatório Consolidado de Pedidos</h2>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <p class="kpi-label">Pedidos Filtrados</p>
+              <p class="kpi-value">${stats.total}</p>
+            </div>
+            <div class="kpi-card">
+              <p class="kpi-label">Total Bruto</p>
+              <p class="kpi-value">${maskBRL(stats.totalValue)}</p>
+            </div>
+            <div class="kpi-card">
+              <p class="kpi-label">Total Líquido</p>
+              <p class="kpi-value" style="color: #c9510c">${maskBRL(stats.totalNetValue)}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Produto / Ação</th>
+                <th>Valor</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredOrders.map(o => `
+                <tr>
+                  <td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
+                  <td>${o.customer_name}</td>
+                  <td>${o.product_name}</td>
+                  <td>${maskBRL(o.total_price || o.product_price || 0)}</td>
+                  <td class="status">${o.status}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="footer">Danzamerica - Sistema de Gestão Interna</div>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   const handleSort = (key: string) => {
     if (sortBy === key) {
@@ -262,41 +345,13 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
         />
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6">
-        <StatCard icon={<ShoppingBag className="w-5 h-5 text-white/40" />} label="Total de Pedidos" value={stats.total} />
-        <StatCard icon={<XCircle className="w-5 h-5 text-red-500" />} label="Cancelados" value={stats.cancelled} valueClass="text-red-500" />
-        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} label="Pedidos Pagos" value={stats.paid} />
-        <StatCard icon={<Clock className="w-5 h-5 text-yellow-500" />} label="Valor Pendente" value={maskBRL(stats.pendingValue)} valueClass="text-yellow-500" />
-        <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Bruto" value={maskBRL(stats.totalValue)} bgClass="bg-white/5 border-white/10" labelClass="text-white/40" />
-        <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Líquido" value={maskBRL(stats.totalNetValue)} bgClass="bg-brand-orange border-brand-orange" labelClass="text-white/80" />
-      </div>
-
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mt-12">
+      {/* Header and Controls */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
           <p className="text-brand-orange text-[10px] uppercase tracking-[0.4em] font-bold mb-4">Gestão Financeira</p>
           <div className="flex items-center gap-4">
             <h2 className="text-4xl font-serif text-white italic">Controle de Pedidos</h2>
-            <button 
-              onClick={handleResendAllFailed}
-              disabled={resendingAll}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all border ${
-                failedNotifications.length > 0 
-                  ? 'bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/20 animate-pulse hover:animate-none' 
-                  : 'bg-white/10 text-white/60 border-white/10 hover:bg-white/20'
-              } ${resendingAll ? 'opacity-50' : ''}`}
-              title="Verificar e reenviar e-mails pendentes"
-            >
-              {resendingAll ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Mail className={`w-3 h-3 ${failedNotifications.length > 0 ? 'text-white' : 'text-white'}`} />
-              )}
-              <span className="text-[9px] uppercase tracking-widest font-black">
-                {resendingAll ? 'Processando...' : failedNotifications.length > 0 ? `Reenviar ${failedNotifications.length} Falhas` : 'Reenviar E-mails'}
-              </span>
-            </button>
-
+            
             <button 
               onClick={() => refresh()}
               disabled={loadingOrders}
@@ -307,9 +362,33 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
             </button>
           </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <button 
+            onClick={handlePrintReport}
+            className="flex items-center gap-2 bg-white text-brand-dark px-6 py-3 text-[10px] uppercase tracking-widest font-black transition-all hover:bg-brand-orange hover:text-white rounded-sm shadow-xl"
+          >
+            <TrendingUp className="w-3 h-3" /> Emitir Relatório
+          </button>
+          
+          <button 
+            onClick={handleResendAllFailed}
+            disabled={resendingAll}
+            className={`flex items-center gap-2 px-6 py-3 rounded-sm transition-all border ${
+              failedNotifications.length > 0 
+                ? 'bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/20 animate-pulse hover:animate-none' 
+                : 'bg-white/10 text-white/60 border-white/10 hover:bg-white/20'
+            } ${resendingAll ? 'opacity-50' : ''}`}
+          >
+            <Mail className="w-3 h-3" />
+            <span className="text-[9px] uppercase tracking-widest font-black">
+              {resendingAll ? 'Processando...' : failedNotifications.length > 0 ? `Reenviar ${failedNotifications.length} Falhas` : 'Reenviar E-mails'}
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* Filter and Actions */}
+      {/* Filter and Actions (TOPO) */}
       <div className="space-y-4">
         <div className="flex flex-col xl:flex-row items-center justify-between gap-6 bg-white/5 border border-white/10 p-6 rounded-sm shadow-xl">
           <div className="flex flex-col lg:flex-row items-center gap-8">
@@ -350,7 +429,6 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
 
         {/* Advanced Filters */}
         <div className="bg-white/5 border border-white/10 p-6 rounded-sm space-y-6">
-          {/* Row 1: Search Bar */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange/50" />
             <input 
@@ -370,7 +448,6 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
             )}
           </div>
 
-          {/* Row 2: Secondary Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative h-11">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
@@ -408,7 +485,6 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
             </div>
           </div>
 
-          {/* Row 3: Actions & Metrics */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-white/5">
             <button 
               onClick={() => {
@@ -434,12 +510,27 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
               <div className="flex flex-col items-center">
                 <span className="text-[7px] uppercase tracking-[0.3em] text-white/20 font-bold mb-1">Nº Vendidos</span>
                 <span className="text-lg font-mono text-brand-orange font-bold leading-none">
-                  {filteredOrders.reduce((sum, o) => sum + (o.selected_numbers?.length || 0), 0)}
+                  {filteredOrders.reduce((sum, o) => {
+                    if (o.status !== 'paid' && o.status !== 'sent') return sum;
+                    if (o.type === 'raffle') return sum + Math.max(o.selected_numbers?.length || 0, 1);
+                    const itemsQty = (o.items || []).reduce((s, item) => s + (item.quantity || 0), 0);
+                    return sum + Math.max(itemsQty, 1);
+                  }, 0)}
                 </span>
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Stats Cards (AGORA ABAIXO DOS FILTROS E DINÂMICOS) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6">
+        <StatCard icon={<ShoppingBag className="w-5 h-5 text-white/40" />} label="Pedidos Filtrados" value={stats.total} />
+        <StatCard icon={<XCircle className="w-5 h-5 text-red-500" />} label="Cancelados" value={stats.cancelled} valueClass="text-red-500" />
+        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} label="Pagos / Enviados" value={stats.paid} />
+        <StatCard icon={<Clock className="w-5 h-5 text-yellow-500" />} label="Valor Pendente" value={maskBRL(stats.pendingValue)} valueClass="text-yellow-500" />
+        <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Bruto" value={maskBRL(stats.totalValue)} bgClass="bg-white/5 border-white/10" labelClass="text-white/40" />
+        <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Líquido" value={maskBRL(stats.totalNetValue)} bgClass="bg-brand-orange border-brand-orange" labelClass="text-white/80" />
       </div>
 
       {/* Orders Table */}

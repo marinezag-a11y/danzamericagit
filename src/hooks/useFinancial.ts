@@ -19,7 +19,12 @@ export function useFinancial() {
 
   const fetchRecords = useCallback(async () => {
     try {
-      setLoading(true);
+      // Só mostra o loading na PRIMEIRA vez que carrega
+      setRecords(prev => {
+        if (prev.length === 0) setLoading(true);
+        return prev;
+      });
+      
       if (!supabase) return;
       
       const [recordsRes, ordersRes, rafflesRes] = await Promise.all([
@@ -34,7 +39,7 @@ export function useFinancial() {
         supabase
           .from('raffle_orders')
           .select('total_price')
-          .eq('status', 'paid')
+          .in('status', ['paid', 'sent'])
       ]);
 
       if (recordsRes.error) throw recordsRes.error;
@@ -103,6 +108,32 @@ export function useFinancial() {
 
   useEffect(() => {
     fetchRecords();
+
+    if (!supabase) return;
+
+    // Sincronização em tempo real para o financeiro
+    const channel = supabase
+      .channel('financial_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'financial_records' },
+        () => fetchRecords()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'help_orders' },
+        () => fetchRecords()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'raffle_orders' },
+        () => fetchRecords()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchRecords]);
 
   const totals = useMemo(() => {

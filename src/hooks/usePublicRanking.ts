@@ -20,7 +20,8 @@ export function usePublicRanking() {
         const { data, error } = await supabase
           .from('raffle_ranking')
           .select('*')
-          .order('ticket_count', { ascending: false });
+          .order('ticket_count', { ascending: false })
+          .order('order_count', { ascending: false });
 
         if (error) throw error;
         setRanking(data || []);

@@ -46,6 +46,16 @@
   animation: scroll-text 20s linear infinite;
 }
 
+@keyframes pan-image {
+  0% { object-position: left center; }
+  50% { object-position: right center; }
+  100% { object-position: left center; }
+}
+
+.animate-pan {
+  animation: pan-image 20s ease-in-out infinite;
+}
+
 /* Hide spin-buttons for Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {

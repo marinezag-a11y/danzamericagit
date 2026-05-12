@@ -480,8 +480,8 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
                   <h4 className="text-xs font-bold uppercase tracking-wider text-white italic font-serif">Hall de Talentos (Top Apoios)</h4>
                 </div>
               </div>
-              <div className="space-y-6">
-                {raffleStats.topDancers.slice(0, 10).map((dancer, idx) => {
+              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                {raffleStats.topDancers.map((dancer, idx) => {
                   const maxSales = Math.max(...raffleStats.topDancers.map(d => d.totalSales), 1);
                   const progress = (dancer.totalSales / maxSales) * 100;
                   return (
@@ -751,7 +751,7 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {raffleStats.topDancers.slice(0, 15).map((d, idx) => (
+                      {raffleStats.topDancers.map((d, idx) => (
                         <tr key={idx}>
                           <td>{idx + 1}</td>
                           <td>{d.name}</td>

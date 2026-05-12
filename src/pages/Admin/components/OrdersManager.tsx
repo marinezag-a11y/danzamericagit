@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { 
   ShoppingBag, 
-  XCircle, 
   CheckCircle2, 
   Clock, 
   TrendingUp, 
@@ -12,10 +11,20 @@ import {
   Check,
   RefreshCw,
   Mail,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Calendar,
+  Filter,
+  User,
+  Trash2,
+  ChevronDown,
+  XCircle,
+  ArrowUpDown,
+  ChevronUp
 } from 'lucide-react';
 import { useHelpOrders } from '../../../hooks/useHelpOrders';
 import { useProfiles } from '../../../hooks/useProfiles';
+import { useDancers } from '../../../hooks/useDancers';
 import { useSiteSettings } from '../../../hooks/useSiteSettings';
 import { NotificationSettings } from './ui/NotificationSettings';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
@@ -34,9 +43,21 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const { orders, loading: loadingOrders, error, updateOrder, addOrder, deleteOrder, refresh } = useHelpOrders();
   const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
   const { profiles } = useProfiles();
+  const { dancers } = useDancers();
   const [savingEmails, setSavingEmails] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'sent' | 'cancelled'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'store' | 'raffle'>('all');
+  
+  // New Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dancerFilter, setDancerFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  
+  // Sorting State
+  const [sortBy, setSortBy] = useState<string>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
   const [isAddingManually, setIsAddingManually] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -115,8 +136,69 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const filteredOrders = (orders || []).filter(o => {
     const matchesStatus = filter === 'all' || o?.status === filter;
     const matchesType = typeFilter === 'all' || o?.type === typeFilter;
-    return matchesStatus && matchesType;
+    
+    // Search filter (Name, ID, Product, Phone, or Email)
+    const matchesSearch = !searchTerm || 
+      o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.customer_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Dancer filter (only for raffles)
+    const matchesDancer = dancerFilter === 'all' || o.dancer_name === dancerFilter;
+
+    // Date range filter
+    const orderDate = new Date(o.created_at).toISOString().split('T')[0];
+    const matchesStartDate = !startDate || orderDate >= startDate;
+    const matchesEndDate = !endDate || orderDate <= endDate;
+
+    return matchesStatus && matchesType && matchesSearch && matchesDancer && matchesStartDate && matchesEndDate;
+  }).sort((a, b) => {
+    let valA: any = a[sortBy as keyof typeof a];
+    let valB: any = b[sortBy as keyof typeof b];
+
+    // Specialized sorting for specific columns
+    if (sortBy === 'total_price') {
+      valA = a.total_price || a.product_price || 0;
+      valB = b.total_price || b.product_price || 0;
+    } else if (sortBy === 'net_margin') {
+      // Calculate net margin for sorting
+      const getNet = (o: any) => {
+        const price = o.total_price || o.product_price || 0;
+        if (o.type === 'raffle') return price;
+        const totalCost = (o.items || []).reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
+        return price - totalCost;
+      };
+      valA = getNet(a);
+      valB = getNet(b);
+    }
+
+    if (valA === undefined || valA === null) return 1;
+    if (valB === undefined || valB === null) return -1;
+
+    if (typeof valA === 'string') {
+      return sortOrder === 'asc' 
+        ? valA.localeCompare(valB) 
+        : valB.localeCompare(valA);
+    }
+
+    return sortOrder === 'asc' ? valA - valB : valB - valA;
   });
+
+  const handleSort = (key: string) => {
+    if (sortBy === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(key);
+      setSortOrder('asc');
+    }
+  };
+
+  const SortIndicator = ({ column }: { column: string }) => {
+    if (sortBy !== column) return <ArrowUpDown className="w-3 h-3 opacity-20" />;
+    return sortOrder === 'asc' ? <ChevronUp className="w-3 h-3 text-brand-orange" /> : <ChevronDown className="w-3 h-3 text-brand-orange" />;
+  };
 
   const confirmDelete = async (reason: string) => {
     if (!orderToDelete) return;
@@ -181,7 +263,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6">
         <StatCard icon={<ShoppingBag className="w-5 h-5 text-white/40" />} label="Total de Pedidos" value={stats.total} />
         <StatCard icon={<XCircle className="w-5 h-5 text-red-500" />} label="Cancelados" value={stats.cancelled} valueClass="text-red-500" />
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} label="Pedidos Pagos" value={stats.paid} />
@@ -228,41 +310,136 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       </div>
 
       {/* Filter and Actions */}
-      <div className="flex flex-col xl:flex-row items-center justify-between gap-6 bg-white/5 border border-white/10 p-6 rounded-sm shadow-xl">
-        <div className="flex flex-col lg:flex-row items-center gap-8">
-          <div className="flex flex-wrap gap-2">
-            {(['all', 'pending', 'paid', 'sent', 'cancelled'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm ${filter === f ? 'bg-brand-orange text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
-              >
-                {f === 'all' ? 'Todos Status' : f === 'pending' ? 'Pendentes' : f === 'paid' ? 'Pagos' : f === 'sent' ? 'Enviados' : 'Cancelados'}
-              </button>
-            ))}
+      <div className="space-y-4">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-6 bg-white/5 border border-white/10 p-6 rounded-sm shadow-xl">
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'pending', 'paid', 'sent', 'cancelled'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm ${filter === f ? 'bg-brand-orange text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                >
+                  {f === 'all' ? 'Todos Status' : f === 'pending' ? 'Pendentes' : f === 'paid' ? 'Pagos' : f === 'sent' ? 'Enviados' : 'Cancelados'}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-[1px] h-6 bg-white/10 hidden lg:block" />
+
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'store', 'raffle'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm border ${typeFilter === t ? 'bg-white text-brand-dark border-white' : 'bg-transparent text-white/40 border-white/10 hover:border-white/30'}`}
+                >
+                  {t === 'all' ? 'Tudo' : t === 'store' ? 'Produtos da Loja' : 'Ações entre Amigos'}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="w-[1px] h-6 bg-white/10 hidden lg:block" />
-
-          <div className="flex flex-wrap gap-2">
-            {(['all', 'store', 'raffle'] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm border ${typeFilter === t ? 'bg-white text-brand-dark border-white' : 'bg-transparent text-white/40 border-white/10 hover:border-white/30'}`}
-              >
-                {t === 'all' ? 'Tudo' : t === 'store' ? 'Produtos da Loja' : 'Ações entre Amigos'}
-              </button>
-            ))}
-          </div>
+          <button 
+            onClick={() => setIsAddingManually(true)}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-8 py-3 text-[10px] uppercase tracking-widest font-bold transition-all border border-white/10 rounded-sm shadow-lg whitespace-nowrap"
+          >
+            <Plus className="w-3 h-3" /> Incluir Manualmente
+          </button>
         </div>
 
-        <button 
-          onClick={() => setIsAddingManually(true)}
-          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-8 py-3 text-[10px] uppercase tracking-widest font-bold transition-all border border-white/10 rounded-sm shadow-lg whitespace-nowrap"
-        >
-          <Plus className="w-3 h-3" /> Incluir Manualmente
-        </button>
+        {/* Advanced Filters */}
+        <div className="bg-white/5 border border-white/10 p-6 rounded-sm space-y-6">
+          {/* Row 1: Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-orange/50" />
+            <input 
+              type="text"
+              placeholder="Pesquisar por nome do cliente, ID do pedido ou nome do produto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-12 bg-black/40 border border-white/10 pl-12 pr-12 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm placeholder:text-white/20"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-all"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Row 2: Secondary Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative h-11">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+              <select
+                value={dancerFilter}
+                onChange={(e) => setDancerFilter(e.target.value)}
+                className="w-full h-full bg-black/40 border border-white/10 pl-12 pr-10 text-xs outline-none focus:border-brand-orange transition-all text-white rounded-sm appearance-none cursor-pointer"
+              >
+                <option value="all">Filtrar por Bailarino: Todos</option>
+                {dancers.map(d => (
+                  <option key={d.id} value={d.name}>{d.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20 pointer-events-none" />
+            </div>
+
+            <div className="relative h-11">
+              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+              <input 
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full h-full bg-black/40 border border-white/10 pl-12 pr-4 text-[10px] outline-none focus:border-brand-orange transition-all text-white rounded-sm"
+              />
+            </div>
+
+            <div className="relative h-11">
+              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+              <input 
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full h-full bg-black/40 border border-white/10 pl-12 pr-4 text-[10px] outline-none focus:border-brand-orange transition-all text-white rounded-sm"
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Actions & Metrics */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-white/5">
+            <button 
+              onClick={() => {
+                setSearchTerm('');
+                setDancerFilter('all');
+                setStartDate('');
+                setEndDate('');
+                setFilter('all');
+                setTypeFilter('all');
+              }}
+              className="group flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-red-500/10 text-white/40 hover:text-red-500 transition-all text-[10px] uppercase tracking-[0.2em] font-bold rounded-sm border border-white/10"
+            >
+              <XCircle className="w-3.5 h-3.5 transition-transform group-hover:rotate-90" />
+              Limpar Filtros
+            </button>
+
+            <div className="flex items-center gap-8 px-8 py-3 bg-black/40 border border-white/10 rounded-full shadow-2xl">
+              <div className="flex flex-col items-center">
+                <span className="text-[7px] uppercase tracking-[0.3em] text-white/20 font-bold mb-1">Resultados</span>
+                <span className="text-lg font-mono text-white font-bold leading-none">{filteredOrders.length}</span>
+              </div>
+              <div className="w-px h-6 bg-white/10" />
+              <div className="flex flex-col items-center">
+                <span className="text-[7px] uppercase tracking-[0.3em] text-white/20 font-bold mb-1">Nº Vendidos</span>
+                <span className="text-lg font-mono text-brand-orange font-bold leading-none">
+                  {filteredOrders.reduce((sum, o) => sum + (o.selected_numbers?.length || 0), 0)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -270,12 +447,42 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-white/10 text-left bg-white/5">
-              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Data</th>
-              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Cliente</th>
-              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Produto</th>
-              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor</th>
-              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold text-emerald-500">Margem Líquida</th>
-              <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Status</th>
+              <th 
+                className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold cursor-pointer hover:bg-white/5 transition-all"
+                onClick={() => handleSort('created_at')}
+              >
+                <div className="flex items-center gap-2">Data <SortIndicator column="created_at" /></div>
+              </th>
+              <th 
+                className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold cursor-pointer hover:bg-white/5 transition-all"
+                onClick={() => handleSort('customer_name')}
+              >
+                <div className="flex items-center gap-2">Cliente <SortIndicator column="customer_name" /></div>
+              </th>
+              <th 
+                className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold cursor-pointer hover:bg-white/5 transition-all"
+                onClick={() => handleSort('product_name')}
+              >
+                <div className="flex items-center gap-2">Produto <SortIndicator column="product_name" /></div>
+              </th>
+              <th 
+                className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold cursor-pointer hover:bg-white/5 transition-all"
+                onClick={() => handleSort('total_price')}
+              >
+                <div className="flex items-center gap-2">Valor <SortIndicator column="total_price" /></div>
+              </th>
+              <th 
+                className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold text-emerald-500 cursor-pointer hover:bg-white/5 transition-all"
+                onClick={() => handleSort('net_margin')}
+              >
+                <div className="flex items-center gap-2">Margem Líquida <SortIndicator column="net_margin" /></div>
+              </th>
+              <th 
+                className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold cursor-pointer hover:bg-white/5 transition-all"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center gap-2">Status <SortIndicator column="status" /></div>
+              </th>
               <th className="py-4 px-6 text-[10px] uppercase tracking-widest text-white/40 font-bold text-right">Ações</th>
             </tr>
           </thead>

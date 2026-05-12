@@ -90,9 +90,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       const result = await createOrder(orderData);
 
       if (result.success) {
-        setSuccess(true); // Sucesso imediato
-
-        // Notificação em segundo plano
+        setSuccess(true);
         if (supabase) {
           supabase.functions.invoke('send-order', {
             body: {
@@ -115,9 +113,21 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
             }
           }).catch(e => console.error('Background email error:', e));
         }
+      } else {
+        // Se houver erro de redundância ou outro erro
+        if (result.error?.includes('redundancy') || result.error?.includes('vendidos')) {
+          alert('Ops! Um ou mais números selecionados acabaram de ser reservados por outra pessoa. Por favor, escolha outros números.');
+          // Atualizar lista de números ocupados
+          const taken = await fetchTakenTickets(campaign.id);
+          setTakenTickets(taken);
+          setSelectedNumbers([]);
+        } else {
+          alert('Ocorreu um erro ao processar seu pedido. Por favor, tente novamente.');
+        }
       }
     } catch (err) {
       console.error('Order error:', err);
+      alert('Ocorreu um erro inesperado. Por favor, tente novamente.');
     } finally {
       setSubmitting(false);
     }

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Rocket, Trophy, Loader2, Check, Copy } from 'lucide-react';
 import { usePublicRanking } from '../hooks/usePublicRanking';
@@ -7,8 +7,15 @@ import { toPng } from 'html-to-image';
 export function RaffleRanking() {
   const { ranking, loading } = usePublicRanking();
   const rankingRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Only need the ref for CSS animation control or manual interaction if needed
+  useEffect(() => {
+    // We'll use CSS for the animation as it's smoother and handles the seamless loop better
+  }, []);
 
   const handleCopyRanking = async () => {
     if (!rankingRef.current) return;
@@ -76,8 +83,14 @@ export function RaffleRanking() {
 
   if (ranking.length === 0) return null;
 
-  const top3 = ranking.slice(0, 3);
-  const rest = ranking.slice(3, 8);
+  // Ensure strict sorting by sales (tickets then orders)
+  const sortedRanking = [...ranking].sort((a, b) => {
+    if (b.ticket_count !== a.ticket_count) return b.ticket_count - a.ticket_count;
+    return b.order_count - a.order_count;
+  });
+
+  const top3 = sortedRanking.slice(0, 3);
+  const rest = sortedRanking.slice(3);
 
   return (
     <div className="relative group max-w-[420px] mx-auto lg:mx-0">
@@ -154,26 +167,78 @@ export function RaffleRanking() {
           })}
         </div>
 
-        <div className="space-y-3 border-t border-black/5 mt-8 pt-8">
-          {rest.map((item, idx) => (
-            <div key={item.dancer_name} className="flex items-center justify-between px-4 py-2 hover:bg-black/[0.02] rounded-2xl transition-all group/list">
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-bold text-brand-dark/10 w-4">{idx + 4}º</span>
-                <div className="w-10 h-10 rounded-xl overflow-hidden border border-black/10 bg-white">
-                  <img 
-                    src={item.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.dancer_name)}&background=ffffff&color=ccc`} 
-                    alt={item.dancer_name}
-                    crossOrigin="anonymous"
-                    className="w-full h-full object-cover scale-[1.5] opacity-60 group-hover/list:opacity-100 transition-all"
-                  />
+        {/* Auto-scrolling List (Infinite Seamless Loop) */}
+        <div className="relative mt-8 border-t border-black/5 pt-8 overflow-hidden group/marquee">
+          <div 
+            ref={scrollRef}
+            onPointerDown={() => setIsPaused(true)}
+            onPointerUp={() => setIsPaused(false)}
+            onPointerEnter={() => setIsPaused(true)}
+            onPointerLeave={() => setIsPaused(false)}
+            className="flex flex-col gap-3 pr-2"
+            style={{
+              maxHeight: '320px',
+              animation: isPaused ? 'none' : `marquee-vertical ${rest.length * 1.5}s linear infinite`,
+              maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)'
+            }}
+          >
+            {/* First Set */}
+            {rest.map((item, idx) => (
+              <div key={`${item.dancer_name}-1`} className="flex items-center justify-between px-4 py-3 hover:bg-black/[0.02] rounded-2xl transition-all group/list flex-shrink-0">
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] font-bold text-brand-dark/10 w-4">{idx + 4}º</span>
+                  <div className="w-10 h-10 rounded-xl overflow-hidden border border-black/10 bg-white">
+                    <img 
+                      src={item.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.dancer_name)}&background=ffffff&color=ccc`} 
+                      alt={item.dancer_name}
+                      crossOrigin="anonymous"
+                      className="w-full h-full object-cover scale-[1.5] opacity-60 group-hover/list:opacity-100 transition-all"
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-brand-dark/60 group-hover/list:text-brand-dark transition-colors">
+                    {item.dancer_name}
+                  </span>
                 </div>
-                <span className="text-sm font-medium text-brand-dark/60 group-hover/list:text-brand-dark transition-colors">
-                  {item.dancer_name}
-                </span>
+                <span className="text-xs font-mono text-brand-dark/30">{item.ticket_count} / {item.goal || 50}</span>
               </div>
-              <span className="text-xs font-mono text-brand-dark/30">{item.ticket_count} / {item.goal || 50}</span>
+            ))}
+
+            {/* Loop Separator */}
+            <div className="flex items-center justify-center py-4 opacity-20">
+              <div className="h-px flex-1 bg-black/10" />
+              <span className="px-4 text-[8px] font-black uppercase tracking-[0.3em]">Reiniciar Ranking</span>
+              <div className="h-px flex-1 bg-black/10" />
             </div>
-          ))}
+
+            {/* Second Set (for seamless loop) */}
+            {rest.map((item, idx) => (
+              <div key={`${item.dancer_name}-2`} className="flex items-center justify-between px-4 py-3 hover:bg-black/[0.02] rounded-2xl transition-all group/list flex-shrink-0">
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] font-bold text-brand-dark/10 w-4">{idx + 4}º</span>
+                  <div className="w-10 h-10 rounded-xl overflow-hidden border border-black/10 bg-white">
+                    <img 
+                      src={item.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.dancer_name)}&background=ffffff&color=ccc`} 
+                      alt={item.dancer_name}
+                      crossOrigin="anonymous"
+                      className="w-full h-full object-cover scale-[1.5] opacity-60 group-hover/list:opacity-100 transition-all"
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-brand-dark/60 group-hover/list:text-brand-dark transition-colors">
+                    {item.dancer_name}
+                  </span>
+                </div>
+                <span className="text-xs font-mono text-brand-dark/30">{item.ticket_count} / {item.goal || 50}</span>
+              </div>
+            ))}
+          </div>
+
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes marquee-vertical {
+              0% { transform: translateY(0); }
+              100% { transform: translateY(calc(-50% - 24px)); } /* Adjust for separator height */
+            }
+          `}} />
         </div>
       </div>
 

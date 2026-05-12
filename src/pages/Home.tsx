@@ -361,7 +361,7 @@ export default function Home() {
                 <img 
                   src={settings.essencia_image?.value || "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=2669&auto=format&fit=crop"} 
                   alt="Nossa Essência" 
-                  className="w-full h-full object-cover brightness-90 contrast-110"
+                  className="w-full h-full object-cover brightness-90 contrast-110 animate-pan"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </motion.div>
@@ -389,7 +389,7 @@ export default function Home() {
                 <img 
                   src={settings.jornada_image?.value || "https://images.unsplash.com/photo-1518834107812-67b0b7c58434?q=80&w=2670&auto=format&fit=crop"} 
                   alt="Nucleo Performance" 
-                  className="w-full h-full object-cover grayscale contrast-125"
+                  className="w-full h-full object-cover grayscale contrast-125 animate-pan"
                 />
               </motion.div>
               <div className="absolute -top-20 -right-20 w-64 h-64 hidden md:flex items-center justify-center z-20 pointer-events-none">
@@ -542,7 +542,7 @@ export default function Home() {
               <img 
                 src={settings.desafio_image?.value || "https://images.unsplash.com/photo-1535525153412-5a42439a210d?q=80&w=2670&auto=format&fit=crop"} 
                 alt="Ensaio Bailarinos" 
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 contrast-110"
+                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 contrast-110 animate-pan"
               />
               <div className="absolute inset-0 ring-1 ring-white/20 ring-inset pointer-events-none"></div>
               <div className="absolute bottom-8 left-8 bg-brand-orange p-8 md:p-10 max-w-[200px] text-white shadow-2xl">

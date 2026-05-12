@@ -28,7 +28,7 @@ export function StatCard({
         </div>
         <p className={`text-[9px] uppercase tracking-widest ${labelClass} font-bold leading-tight`}>{label}</p>
       </div>
-      <p className={`text-xl md:text-2xl font-display ${valueClass} mt-4 whitespace-nowrap overflow-hidden`}>
+      <p className={`text-xl md:text-2xl font-display ${valueClass} mt-4`}>
         {displayValue}
       </p>
     </div>

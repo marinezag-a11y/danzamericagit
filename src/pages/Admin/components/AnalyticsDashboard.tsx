@@ -315,12 +315,22 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
               const chartMax = Math.max(maxDailyViews * 1.1, 5); 
               const barHeight = (day.count / chartMax) * 100;
               return (
-                <div key={idx} className="flex-1 flex flex-col items-center justify-end group">
-                  <div className="w-full bg-white/5 rounded-t-sm relative h-32 flex items-end overflow-hidden">
+                <div key={idx} className="flex-1 flex flex-col items-center justify-end group relative pt-6">
+                  <div className="w-full bg-white/5 rounded-t-sm relative h-32 flex items-end">
+                    {day.count > 0 && (
+                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-brand-orange opacity-0 group-hover:opacity-100 transition-all">
+                        {day.count}
+                      </span>
+                    )}
+                    {day.count > 0 && (
+                      <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white/40 group-hover:hidden transition-all">
+                        {day.count}
+                      </span>
+                    )}
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(barHeight, day.count > 0 ? 5 : 0)}%` }}
-                      className="w-full bg-brand-orange/40 group-hover:bg-brand-orange transition-all"
+                      className="w-full bg-brand-orange/40 group-hover:bg-brand-orange transition-all rounded-t-sm"
                     />
                   </div>
                   <span className="text-[8px] text-white/30 font-bold mt-2">{new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
@@ -379,12 +389,17 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
               const maxPeak = Math.max(...data.peakHours.map(h => h.count), 1);
               const barHeight = (hourData.count / maxPeak) * 100;
               return (
-                <div key={idx} className="flex-1 flex flex-col items-center justify-end group">
+                <div key={idx} className="flex-1 flex flex-col items-center justify-end group relative pt-4">
                   <div className="w-full bg-white/5 rounded-t-sm relative h-28 flex items-end">
+                    {hourData.count > 0 && (
+                      <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[7px] font-bold text-brand-orange opacity-0 group-hover:opacity-100 transition-all">
+                        {hourData.count}
+                      </span>
+                    )}
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(barHeight, hourData.count > 0 ? 5 : 0)}%` }}
-                      className="w-full bg-brand-orange/40 group-hover:bg-brand-orange transition-all"
+                      className="w-full bg-brand-orange/40 group-hover:bg-brand-orange transition-all rounded-t-sm"
                     />
                   </div>
                   <span className="text-[7px] text-white/30 font-bold mt-1">{hourData.hour}h</span>

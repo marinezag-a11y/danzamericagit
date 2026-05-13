@@ -116,9 +116,9 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
           .eq('session_id', sessionId);
       }
 
-      // Criar nova reserva válida por 10 minutos
+      // Criar nova reserva válida por 1 minuto
       const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+      expiresAt.setMinutes(expiresAt.getMinutes() + 1);
 
       const { error } = await supabase
         .from('raffle_reservations')

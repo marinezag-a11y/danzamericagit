@@ -206,6 +206,7 @@ serve(async (req) => {
 
     console.log(`[Flow] Attempting Resend...`)
     let result = await sendResendEmail(emailPayload)
+    let mailersendError = null
 
     // Failover if Resend fails (especially 429 - too many requests or 403/400 quota)
     if (!result.ok) {
@@ -216,19 +217,21 @@ serve(async (req) => {
         result = { ok: true, data: 'sent_via_mailersend' }
       } else {
         console.error(`[Flow] Both email providers failed.`)
+        mailersendError = mailerSendResult.error
       }
     } else {
       console.log(`[Flow] Resend success!`)
     }
 
     const finalSuccess = result.ok
+    const errorDetail = !finalSuccess ? `Resend: ${JSON.stringify(result.error || 'Timeout')}. MailerSend: ${JSON.stringify(mailersendError || 'Unknown')}` : null
 
     // --- DATABASE UPDATE ---
     if (finalOrderId) {
       const table = isRaffle ? 'raffle_orders' : 'help_orders'
       await supabase.from(table).update({ 
         notification_sent: finalSuccess,
-        reason: finalSuccess ? null : `Erro crítico nos dois provedores de e-mail.`
+        reason: finalSuccess ? null : `Erro no envio: ${errorDetail}`
       }).eq('id', finalOrderId)
     }
 

@@ -105,16 +105,17 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     try {
       const isRaffle = order.type === 'raffle';
       const payload: any = {
-        type: isRaffle ? 'raffle_order' : 'new_order',
-        customer_name: order.customer_name,
-        customer_phone: order.customer_phone,
-        customer_email: order.customer_email,
-        total_price: order.total_price || order.product_price,
         order_id: order.id,
+        customer_name: order.customer_name,
+        customer_email: order.customer_email,
+        customer_phone: order.customer_phone,
+        total_price: order.total_price || order.product_price,
+        pix_key: order.pix_key,
+        pix_bank: order.pix_bank,
+        pix_receiver: order.pix_receiver
       };
 
       if (isRaffle) {
-        payload.campaign_name = order.product_name?.replace('Rifa: ', '');
         payload.campaign_id = order.campaign_id;
         payload.dancer_name = order.dancer_name;
         payload.selected_numbers = order.selected_numbers;
@@ -122,15 +123,22 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
         payload.items = order.items || [];
       }
 
-      const { error } = await supabase.functions.invoke('send-order', {
+      const { data, error: invokeError } = await supabase.functions.invoke('send-order', {
         body: payload
       });
 
-      if (error) throw error;
+      if (invokeError || !data?.success) throw invokeError || new Error(data?.error || 'Erro desconhecido');
+      
       onAlert('E-mail Enviado', 'A notificação foi reenviada com sucesso.', 'info');
-      onUpdate(order.id, { notification_sent: true });
+      onUpdate(order.id, { notification_sent: true, reason: null });
     } catch (err: any) {
-      onAlert('Erro ao Enviar', 'Falha ao reenviar e-mail: ' + err.message, 'danger');
+      console.error('Erro no reenvio:', err);
+      const msg = err.message || '';
+      if (msg.includes('non-2xx status code') || msg.includes('limit') || msg.includes('429')) {
+        onAlert('Limite Atingido', 'Não foi possível enviar o e-mail agora. O limite diário (teto) do servidor pode ter sido atingido. Tente novamente mais tarde ou avise via WhatsApp.', 'warning');
+      } else {
+        onAlert('Erro ao Enviar', 'Falha ao reenviar e-mail: Verifique os dados ou a conexão.', 'danger');
+      }
     } finally {
       setResending(false);
     }

@@ -139,7 +139,7 @@ export function AdminLayout({
 
       {/* Main Content */}
       <main className={`transition-all duration-500 min-h-screen ${isSidebarOpen ? 'lg:pl-72' : 'pl-0'} ${isSupport ? 'pt-12' : ''}`}>
-        <div className="max-w-7xl mx-auto px-6 py-12 lg:px-16 lg:py-20">
+        <div className="w-full px-6 py-12 lg:px-16 lg:py-20">
           {children}
         </div>
       </main>

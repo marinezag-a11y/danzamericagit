@@ -58,7 +58,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
       setManualPrice(order.product_price || 0);
       setStatus(order.status || 'pending');
     }
-  }, [order, isOpen]);
+  }, [isOpen]); // Depend only on isOpen so background data refreshes don't wipe user input
 
   const updateItemQuantity = (id: string, delta: number) => {
     const newItems = orderItems.map(item => {
@@ -147,7 +147,12 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
       if (error) throw error;
       onAlert('E-mail Enviado', 'A notificação foi reenviada com sucesso.', 'info');
     } catch (err: any) {
-      onAlert('Erro ao Enviar', 'Falha ao reenviar e-mail: ' + err.message, 'danger');
+      const msg = err.message || '';
+      if (msg.includes('non-2xx status code') || msg.includes('limit') || msg.includes('429')) {
+        onAlert('Limite Atingido', 'Não foi possível enviar o e-mail agora. O limite diário (teto) do servidor pode ter sido atingido. Tente novamente mais tarde ou avise via WhatsApp.', 'warning');
+      } else {
+        onAlert('Erro ao Enviar', 'Falha ao reenviar e-mail: Verifique os dados ou a conexão.', 'danger');
+      }
     } finally {
       setUpdating(false);
     }

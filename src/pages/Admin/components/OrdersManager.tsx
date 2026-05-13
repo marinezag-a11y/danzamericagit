@@ -91,16 +91,17 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       try {
         const isRaffle = order.type === 'raffle';
         const payload: any = {
-          type: isRaffle ? 'raffle_order' : 'new_order',
+          order_id: order.id,
           customer_name: order.customer_name,
           customer_phone: order.customer_phone,
           customer_email: order.customer_email,
           total_price: order.total_price || order.product_price,
-          order_id: order.id,
+          pix_key: order.pix_key,
+          pix_bank: order.pix_bank,
+          pix_receiver: order.pix_receiver
         };
 
         if (isRaffle) {
-          payload.campaign_name = order.product_name?.replace('Rifa: ', '');
           payload.campaign_id = order.campaign_id;
           payload.dancer_name = order.dancer_name;
           payload.selected_numbers = order.selected_numbers;
@@ -108,11 +109,11 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
           payload.items = order.items || [];
         }
 
-        const { error: invokeError } = await supabase.functions.invoke('send-order', {
+        const { data, error: invokeError } = await supabase.functions.invoke('send-order', {
           body: payload
         });
 
-        if (invokeError) throw invokeError;
+        if (invokeError || !data?.success) throw invokeError || new Error(data?.error || 'Erro desconhecido');
         successCount++;
       } catch (err) {
         console.error(`Falha ao reenviar e-mail para pedido ${order.id}:`, err);
@@ -124,7 +125,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       onAlert('Reenvio Concluído', `${successCount} e-mails reenviados com sucesso.${failCount > 0 ? ` (${failCount} falhas)` : ''}`, 'info');
       refresh();
     } else if (failCount > 0) {
-      onAlert('Falha no Reenvio', `Não foi possível reenviar os ${failCount} e-mails.`, 'danger');
+      onAlert('Falha no Reenvio', `Não foi possível reenviar os ${failCount} e-mails. Verifique se os endereços estão corretos ou se o limite diário (teto) de envios foi atingido.`, 'danger');
     }
     
     setResendingAll(false);
@@ -547,7 +548,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
 
       {/* Orders Table */}
       <div className="overflow-x-auto bg-white/5 border border-white/10 rounded-sm shadow-2xl">
-        <table className="w-full border-collapse">
+        <table className="w-full min-w-[1000px] border-collapse">
           <thead>
             <tr className="border-b border-white/10 text-left bg-white/5">
               <th 

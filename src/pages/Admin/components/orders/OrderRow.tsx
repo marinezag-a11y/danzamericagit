@@ -28,6 +28,13 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
   const [status, setStatus] = useState(order?.status || 'pending');
   const [resending, setResending] = useState(false);
 
+  // Sincronizar o estado local com o prop caso ele mude externamente
+  React.useEffect(() => {
+    if (order?.status) {
+      setStatus(order.status);
+    }
+  }, [order?.status]);
+
   const statusColors = {
     pending: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
     paid: 'text-green-500 bg-green-500/10 border-green-500/20',

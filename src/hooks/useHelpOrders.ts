@@ -148,10 +148,19 @@ export function useHelpOrders() {
     
     const table = order.type === 'raffle' ? 'raffle_orders' : 'help_orders';
     
+    // Remover campos virtuais que não existem no banco de dados para evitar erro de gravação
+    const { 
+      type: _type, 
+      product_name: _name, 
+      product_price: _price, 
+      raffle_campaigns: _campaigns,
+      ...cleanUpdates 
+    } = updates as any;
+
     try {
       const { data, error: updateError } = await supabase
         .from(table)
-        .update(updates)
+        .update(cleanUpdates)
         .eq('id', id)
         .select();
 

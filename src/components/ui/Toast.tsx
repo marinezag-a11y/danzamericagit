@@ -24,10 +24,10 @@ export function Toast({ show, message, variant = 'success', onClose, duration = 
     <AnimatePresence>
       {show && (
         <motion.div
-          initial={{ opacity: 0, y: -50, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.9, transition: { duration: 0.2 } }}
-          className="fixed top-8 left-1/2 -translate-x-1/2 z-[10001] w-[calc(100%-2rem)] max-w-sm"
+          initial={{ opacity: 0, y: -100, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: -100, x: '-50%', transition: { duration: 0.2 } }}
+          className="fixed top-12 sm:top-8 left-1/2 z-[200000] w-[calc(100%-3rem)] max-w-sm"
         >
           <div className={`p-4 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] flex items-center gap-4 backdrop-blur-md border border-white/20 ${
             variant === 'success' ? 'bg-emerald-500 text-white' :

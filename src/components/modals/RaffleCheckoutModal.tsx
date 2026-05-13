@@ -4,6 +4,7 @@ import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy, RotateCw, Check, Sma
 import { RaffleCampaign, useRaffles } from '../../hooks/useRaffles';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { supabase } from '../../lib/supabase';
+import { Toast } from '../ui/Toast';
 import { LuckyRoulette } from '../ui/LuckyRoulette';
 
 interface RaffleCheckoutModalProps {
@@ -35,7 +36,16 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
   const pixType = settings?.pix_checkout_type?.value || "E-mail";
   const pixReceiver = settings?.pix_checkout_receiver?.value || "Tatiana Figueiredo";
-  const pixBank = settings?.pix_checkout_bank?.value || "NuBank";
+  const [pixBank, setPixBank] = useState(settings?.pix_checkout_bank?.value || "NuBank");
+  const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
+    show: false,
+    message: '',
+    variant: 'success'
+  });
+
+  const showToast = (message: string, variant: 'success' | 'danger' | 'warning' | 'info' = 'success') => {
+    setToast({ show: true, message, variant });
+  };
 
   const availableNumbers = useMemo(() => {
     const all = Array.from({ length: campaign.total_numbers }, (_, i) => i + 1);
@@ -151,16 +161,22 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
           }).catch(e => console.error('Background email error:', e));
         }
       } else {
-        alert(result.error || 'Ocorreu um erro ao processar seu pedido.');
-        if (result.error?.includes('reservados')) {
+        // Se houver erro de redundância ou outro erro
+        if (result.error?.includes('redundancy') || result.error?.includes('vendidos') || result.error?.includes('RESERVADOS')) {
+          showToast('Ops! Um ou mais números selecionados acabaram de ser reservados por outra pessoa. Por favor, escolha outros números.', 'danger');
+          // Atualizar lista de números ocupados
           const taken = await fetchTakenTickets(campaign.id);
           setTakenTickets(taken);
+          setSelectedNumbers([]);
           setStep('roulette');
           setHasSpunOnce(false);
+        } else {
+          showToast(result.error || 'Ocorreu um erro ao processar seu pedido. Por favor, tente novamente.', 'danger');
         }
       }
     } catch (err) {
       console.error('Order error:', err);
+      showToast('Ocorreu um erro inesperado. Por favor, tente novamente.', 'danger');
     } finally {
       setSubmitting(false);
     }
@@ -434,6 +450,12 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
           </AnimatePresence>
         </div>
       </motion.div>
+      <Toast 
+        show={toast.show} 
+        message={toast.message} 
+        variant={toast.variant} 
+        onClose={() => setToast(prev => ({ ...prev, show: false }))} 
+      />
     </div>
   );
 }

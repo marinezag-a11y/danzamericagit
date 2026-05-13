@@ -392,7 +392,12 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
                 <div key={idx} className="flex-1 flex flex-col items-center justify-end group relative pt-4">
                   <div className="w-full bg-white/5 rounded-t-sm relative h-28 flex items-end">
                     {hourData.count > 0 && (
-                      <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[7px] font-bold text-brand-orange opacity-0 group-hover:opacity-100 transition-all">
+                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[8px] font-bold text-brand-orange opacity-0 group-hover:opacity-100 transition-all">
+                        {hourData.count}
+                      </span>
+                    )}
+                    {hourData.count > 0 && (
+                      <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[7px] font-bold text-white/40 group-hover:hidden transition-all">
                         {hourData.count}
                       </span>
                     )}

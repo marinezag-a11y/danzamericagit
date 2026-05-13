@@ -638,16 +638,16 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
                   <div className="w-full max-w-sm bg-white p-6 rounded-[2rem] border border-black/5 shadow-xl space-y-6">
                     <div className="space-y-4">
-                      <p className="text-[9px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">CHAVE PIX ({settings['pix_checkout_type']?.value || 'E-mail'})</p>
+                      <p className="text-[9px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">CHAVE PIX ({settings?.pix_checkout_type?.value || 'E-mail'})</p>
                       <div className="relative group">
                         <div className="bg-black/[0.04] p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-transparent hover:border-brand-orange/30 transition-all shadow-inner">
                           <p className="font-mono text-xs sm:text-sm text-brand-dark break-all font-black tracking-tight">
-                            {settings['pix_key_checkout']?.value || settings['pix_key']?.value || 'ballettatianafigueiredo@gmail.com'}
+                            {settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com'}
                           </p>
                         </div>
                         <button 
                           onClick={() => {
-                            const key = settings['pix_key_checkout']?.value || settings['pix_key']?.value || 'ballettatianafigueiredo@gmail.com';
+                            const key = settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com';
                             navigator.clipboard.writeText(key);
                             showToast('Chave PIX copiada!', 'success');
                           }}
@@ -661,11 +661,11 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     <div className="grid grid-cols-2 gap-6 text-left border-t border-black/5 pt-8">
                       <div>
                         <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">BANCO</p>
-                        <p className="text-sm font-black text-brand-dark tracking-tight">{settings['pix_checkout_bank']?.value || 'SICOOB'}</p>
+                        <p className="text-sm font-black text-brand-dark tracking-tight">{settings?.pix_checkout_bank?.value || 'SICOOB'}</p>
                       </div>
                       <div>
                         <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">RECEBEDOR</p>
-                        <p className="text-sm font-black text-brand-dark tracking-tight">{settings['pix_checkout_receiver']?.value || 'Tatiana Figueiredo'}</p>
+                        <p className="text-sm font-black text-brand-dark tracking-tight">{settings?.pix_checkout_receiver?.value || 'Tatiana Aparecida Figueiredo'}</p>
                       </div>
                     </div>
 

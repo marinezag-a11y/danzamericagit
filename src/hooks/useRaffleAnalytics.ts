@@ -61,14 +61,14 @@ export function useRaffleAnalytics() {
       let totalTickets = 0;
 
       (orders || []).forEach(order => {
-        const isSold = order.status === 'paid' || order.status === 'sent';
+        const isCounted = order.status !== 'cancelled';
         const price = Number(order.total_price || 0);
         const tickets = (order.selected_numbers || []).length;
         const dancer = order.dancer_name || 'Geral';
         const campaignId = order.campaign_id;
         const campaignName = order.raffle_campaigns?.name || 'Campanha s/ Nome';
 
-        if (isSold) {
+        if (isCounted) {
           totalRevenue += price;
           totalTickets += tickets;
         }
@@ -84,7 +84,7 @@ export function useRaffleAnalytics() {
           };
         }
         
-        if (isSold) {
+        if (isCounted) {
           dancerMap[dancer].totalSales += price;
           dancerMap[dancer].orderCount += 1;
           dancerMap[dancer].ticketCount += tickets;
@@ -103,7 +103,7 @@ export function useRaffleAnalytics() {
               cost: order.raffle_campaigns?.cost || 0
             };
           }
-          if (isSold) {
+          if (isCounted) {
             campaignMap[campaignId].totalArrecadado += price;
             campaignMap[campaignId].ticketsVendidos += tickets;
           }

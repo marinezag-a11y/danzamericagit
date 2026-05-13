@@ -163,7 +163,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
         let tks = 0;
 
         filteredOrders.forEach(o => {
-          if (o.status !== 'paid' && o.status !== 'sent') return;
+          if (o.status === 'cancelled') return;
           
           const price = Number(o.total_price || 0);
           const tickets = (o.selected_numbers || []).length;

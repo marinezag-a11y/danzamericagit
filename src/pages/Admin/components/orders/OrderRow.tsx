@@ -5,7 +5,8 @@ import {
   Trash2, 
   ChevronRight,
   Mail,
-  MessageSquare
+  MessageSquare,
+  AlertCircle
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { maskBRL } from '../../../../lib/utils';
@@ -18,9 +19,10 @@ interface OrderRowProps {
   onUpdate: (id: string, data: any) => Promise<{ success: boolean; error?: any }>;
   onDelete: () => void;
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
+  hasConflict?: boolean;
 }
 
-export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, onDelete, onAlert }) => {
+export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, onDelete, onAlert, hasConflict }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [isAskingReason, setIsAskingReason] = useState(false);
@@ -238,6 +240,12 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
                   {(order.selected_numbers || []).map((n: number) => (
                     <span key={n} className="text-[9px] bg-white/5 border border-white/10 text-white/40 px-1 rounded-sm tabular-nums">#{n}</span>
                   ))}
+                  {hasConflict && (
+                    <div className="flex items-center gap-1 ml-2 animate-pulse" title="CONFLITO: Este número está duplicado em outro pedido ativo!">
+                      <AlertCircle className="w-3 h-3 text-red-500" />
+                      <span className="text-[8px] text-red-500 font-black uppercase">Duplicado</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

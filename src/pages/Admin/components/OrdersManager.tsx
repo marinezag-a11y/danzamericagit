@@ -47,6 +47,18 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const [savingEmails, setSavingEmails] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'sent' | 'cancelled'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'store' | 'raffle'>('all');
+
+  const duplicateNumbers = React.useMemo(() => {
+    const counts: Record<number, number> = {};
+    (orders || []).forEach(o => {
+      if (o.status !== 'cancelled' && o.type === 'raffle') {
+        (o.selected_numbers || []).forEach((n: number) => {
+          counts[n] = (counts[n] || 0) + 1;
+        });
+      }
+    });
+    return Object.keys(counts).filter(n => counts[Number(n)] > 1).map(Number);
+  }, [orders]);
   
   // New Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -587,6 +599,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
                   onUpdate={updateOrder} 
                   onDelete={() => setOrderToDelete(order.id)} 
                   onAlert={onAlert}
+                  hasConflict={order.type === 'raffle' && (order.selected_numbers || []).some((n: number) => duplicateNumbers.includes(n))}
                 />
               ))
             ) : (

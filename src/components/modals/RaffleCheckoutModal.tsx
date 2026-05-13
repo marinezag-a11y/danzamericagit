@@ -58,6 +58,27 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       setTakenTickets(taken);
     };
     loadTaken();
+
+    // Inscrição em tempo real para atualizações de disponibilidade
+    const channel = supabase
+      .channel('public:raffle_availability')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'raffle_orders',
+        filter: `campaign_id=eq.${campaign.id}`
+      }, () => loadTaken())
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'raffle_reservations',
+        filter: `campaign_id=eq.${campaign.id}`
+      }, () => loadTaken())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [campaign.id]);
 
   const handleReserve = async (nums: number[]) => {

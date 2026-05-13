@@ -148,7 +148,11 @@ export function useHelpOrders() {
     
     const table = order.type === 'raffle' ? 'raffle_orders' : 'help_orders';
     
-    // Remover campos virtuais que não existem no banco de dados para evitar erro de gravação
+    // Optimistic Update: Update local state immediately
+    const previousOrders = [...orders];
+    setOrders(current => current.map(o => o.id === id ? { ...o, ...updates } : o));
+
+    // Remove virtual fields for database update
     const { 
       type: _type, 
       product_name: _name, 
@@ -165,9 +169,13 @@ export function useHelpOrders() {
         .select();
 
       if (updateError) throw updateError;
+      
+      // Still fetch orders to ensure everything is perfectly in sync with server (e.g. updated_at)
       await fetchOrders();
       return { success: true, data };
     } catch (err: any) {
+      // Rollback on error
+      setOrders(previousOrders);
       return { success: false, error: err.message };
     }
   };

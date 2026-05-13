@@ -282,8 +282,10 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
                 return;
               }
               
+              const previousStatus = status;
               setStatus(newStatus);
               setUpdating(true);
+              
               const result = await onUpdate(order.id, { status: newStatus });
               if (result.success) {
                 try {
@@ -300,6 +302,10 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
                   console.error('Erro ao enviar e-mail de status:', err);
                 }
                 onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
+              } else {
+                // Se der erro, volta para o status anterior
+                setStatus(previousStatus);
+                onAlert('Erro ao Atualizar', result.error || 'Não foi possível salvar o status.', 'danger');
               }
               setUpdating(false);
             }}

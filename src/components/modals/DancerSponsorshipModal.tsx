@@ -45,6 +45,8 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [sessionId] = useState(() => Math.random().toString(36).substring(2, 15));
+  const [lastReservedNumbers, setLastReservedNumbers] = useState<number[]>([]);
   const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
     show: false,
     message: '',
@@ -102,6 +104,54 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
     else if (step === 'checkout') setStep('roulette');
   };
 
+  const handleReserve = async (nums: number[]) => {
+    if (!activeCampaign || nums.length === 0) return;
+
+    try {
+      // Remover reserva anterior se existir
+      if (lastReservedNumbers.length > 0) {
+        await supabase
+          .from('raffle_reservations')
+          .delete()
+          .eq('session_id', sessionId);
+      }
+
+      // Criar nova reserva válida por 10 minutos
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+      const { error } = await supabase
+        .from('raffle_reservations')
+        .insert([{
+          campaign_id: activeCampaign.id,
+          selected_numbers: nums,
+          session_id: sessionId,
+          expires_at: expiresAt.toISOString()
+        }]);
+
+      if (error) throw error;
+      setLastReservedNumbers(nums);
+      
+      // Atualizar lista de números tomados localmente para refletir a reserva
+      fetchTakenTickets(activeCampaign.id).then(setTakenNumbers);
+    } catch (err) {
+      console.error('Error reserving numbers:', err);
+    }
+  };
+
+  // Limpar reserva ao fechar o modal
+  useEffect(() => {
+    return () => {
+      if (sessionId && activeCampaign) {
+        supabase
+          .from('raffle_reservations')
+          .delete()
+          .eq('session_id', sessionId)
+          .then(() => {});
+      }
+    };
+  }, [isOpen]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -130,12 +180,19 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         customer_phone: customerPhone,
         selected_numbers: selectedNumbers,
         total_price: selectedNumbers.length * activeCampaign.price_per_number,
-        dancer_name: selectedDancer?.name || 'Geral'
+        dancer_name: selectedDancer?.name || 'Geral',
+        session_id: sessionId
       };
 
       const res = await createOrder(orderData);
       
       if (res && res.success) {
+        // Limpar reserva imediatamente ao ter sucesso no pedido
+        await supabase
+          .from('raffle_reservations')
+          .delete()
+          .eq('session_id', sessionId);
+
         setStep('success');
         
         // Background notification
@@ -443,6 +500,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     onNumbersSelected={(nums) => {
                       setSelectedNumbers(nums);
                       setHasSpunOnce(true);
+                      handleReserve(nums);
                     }}
                     isSpinning={isSpinning}
                     setIsSpinning={setIsSpinning}

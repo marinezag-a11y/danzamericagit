@@ -22,6 +22,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [sessionId] = useState(() => Math.random().toString(36).substring(2, 15));
   const { settings } = useSiteSettings();
   const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
   const pixType = settings?.pix_checkout_type?.value || "E-mail";
@@ -48,13 +49,66 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
     loadTaken();
   }, [campaign.id]);
 
+  const handleReserve = async (nums: number[]) => {
+    if (!campaign || nums.length === 0) {
+      // Se não houver números, remover qualquer reserva existente
+      await supabase
+        .from('raffle_reservations')
+        .delete()
+        .eq('session_id', sessionId);
+      return;
+    }
+
+    try {
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+      // Usar UPSERT ou DELETE+INSERT
+      await supabase
+        .from('raffle_reservations')
+        .delete()
+        .eq('session_id', sessionId);
+
+      const { error } = await supabase
+        .from('raffle_reservations')
+        .insert([{
+          campaign_id: campaign.id,
+          selected_numbers: nums,
+          session_id: sessionId,
+          expires_at: expiresAt.toISOString()
+        }]);
+
+      if (error) throw error;
+      
+      // Atualizar lista de ocupados para ver se houve conflito
+      const taken = await fetchTakenTickets(campaign.id);
+      setTakenTickets(taken);
+    } catch (err) {
+      console.error('Error reserving numbers:', err);
+    }
+  };
+
+  // Limpar reserva ao fechar
+  useEffect(() => {
+    return () => {
+      if (sessionId && campaign) {
+        supabase
+          .from('raffle_reservations')
+          .delete()
+          .eq('session_id', sessionId)
+          .then(() => {});
+      }
+    };
+  }, [sessionId]);
+
   const toggleNumber = (num: number) => {
     if (takenTickets.includes(num)) return;
-    setSelectedNumbers(prev => 
-      prev.includes(num) 
-        ? prev.filter(n => n !== num)
-        : [...prev, num]
-    );
+    const newSelection = selectedNumbers.includes(num) 
+      ? selectedNumbers.filter(n => n !== num)
+      : [...selectedNumbers, num];
+    
+    setSelectedNumbers(newSelection);
+    handleReserve(newSelection);
   };
 
   const totalPrice = selectedNumbers.length * campaign.price_per_number;
@@ -84,12 +138,19 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         customer_email: customerEmail,
         customer_phone: customerPhone,
         selected_numbers: selectedNumbers,
-        total_price: totalPrice
+        total_price: totalPrice,
+        session_id: sessionId
       };
 
       const result = await createOrder(orderData);
 
       if (result.success) {
+        // Limpar reserva imediatamente
+        await supabase
+          .from('raffle_reservations')
+          .delete()
+          .eq('session_id', sessionId);
+
         setSuccess(true);
         if (supabase) {
           supabase.functions.invoke('send-order', {

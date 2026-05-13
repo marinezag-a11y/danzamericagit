@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+const MAILERSEND_API_KEY = Deno.env.get('MAILERSEND_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
@@ -26,11 +27,48 @@ async function sendResendEmail(payload: any) {
     const data = await res.json()
     if (!res.ok) {
       console.error(`[Resend Error]`, JSON.stringify(data))
-      return { ok: false, error: data }
+      return { ok: false, status: res.status, error: data }
     }
     return { ok: true, data }
   } catch (err) {
     console.error(`[Resend Exception]`, err)
+    return { ok: false, error: err }
+  }
+}
+
+async function sendMailerSendEmail(payload: any) {
+  if (!MAILERSEND_API_KEY) return { ok: false, error: 'No MailerSend API Key' }
+  
+  try {
+    // Adapt payload to MailerSend format
+    const mailerSendPayload = {
+      from: {
+        email: payload.from.match(/<(.+)>/)?.[1] || payload.from,
+        name: payload.from.match(/^(.+?)\s*</)?.[1] || 'Danzamerica'
+      },
+      to: payload.to.map((email: string) => ({ email })),
+      subject: payload.subject,
+      html: payload.html
+    }
+
+    const res = await fetch('https://api.mailersend.com/v1/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${MAILERSEND_API_KEY}`,
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify(mailerSendPayload),
+    })
+    
+    if (!res.ok) {
+      const errorData = await res.text()
+      console.error(`[MailerSend Error]`, errorData)
+      return { ok: false, status: res.status, error: errorData }
+    }
+    return { ok: true }
+  } catch (err) {
+    console.error(`[MailerSend Exception]`, err)
     return { ok: false, error: err }
   }
 }
@@ -158,27 +196,45 @@ serve(async (req) => {
       </div>
     `
 
-    // --- ONLY SEND TO CUSTOMER ---
-    console.log(`[Flow] Sending immediate confirmation to customer: ${customer_email}`)
-    const customerResult = await sendResendEmail({
+    // --- EMAIL SENDING FLOW (RESEND WITH MAILERSEND FAILOVER) ---
+    const emailPayload = {
       from: 'Danzamerica 2026 <pedidos@nucleotatianafigueiredo.com.br>',
       to: [customer_email],
       subject: `Confirmamos seu pedido! - Danzamerica 2026`,
       html: customerEmailHtml,
-    })
+    }
+
+    console.log(`[Flow] Attempting Resend...`)
+    let result = await sendResendEmail(emailPayload)
+
+    // Failover if Resend fails (especially 429 - too many requests or 403/400 quota)
+    if (!result.ok) {
+      console.warn(`[Flow] Resend failed, trying MailerSend fallback...`)
+      const mailerSendResult = await sendMailerSendEmail(emailPayload)
+      if (mailerSendResult.ok) {
+        console.log(`[Flow] MailerSend success!`)
+        result = { ok: true, data: 'sent_via_mailersend' }
+      } else {
+        console.error(`[Flow] Both email providers failed.`)
+      }
+    } else {
+      console.log(`[Flow] Resend success!`)
+    }
+
+    const finalSuccess = result.ok
 
     // --- DATABASE UPDATE ---
     if (finalOrderId) {
       const table = isRaffle ? 'raffle_orders' : 'help_orders'
       await supabase.from(table).update({ 
-        notification_sent: customerResult.ok,
-        reason: customerResult.ok ? null : `Erro no envio: ${JSON.stringify(customerResult.error)}`
+        notification_sent: finalSuccess,
+        reason: finalSuccess ? null : `Erro crítico nos dois provedores de e-mail.`
       }).eq('id', finalOrderId)
     }
 
-    return new Response(JSON.stringify({ success: customerResult.ok }), { 
+    return new Response(JSON.stringify({ success: finalSuccess }), { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: customerResult.ok ? 200 : 500
+      status: finalSuccess ? 200 : 500
     })
 
   } catch (error: any) {

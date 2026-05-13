@@ -362,9 +362,9 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="modal-container relative w-full max-w-2xl"
+              className="bg-brand-dark border border-white/10 w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl relative"
             >
-              <div className="modal-header">
+              <div className="flex items-center justify-between p-8 border-b border-white/5 bg-white/[0.02]">
                 <div>
                   <h4 className="text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold">Editar Registro</h4>
                   <p className="text-white/40 text-xs mt-1">Altere os detalhes do lançamento abaixo</p>
@@ -377,7 +377,7 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
                 </button>
               </div>
 
-              <div className="modal-content">
+              <div className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
                     <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Descrição</label>
@@ -434,7 +434,7 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
                   </div>
                 </div>
 
-                <div className="modal-footer flex gap-4 pt-4">
+                <div className="flex gap-4 pt-8 border-t border-white/5 mt-8">
                   <button 
                     onClick={() => setEditingRecord(null)}
                     className="flex-1 py-4 border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white/40 hover:text-white hover:bg-white/5 transition-all"

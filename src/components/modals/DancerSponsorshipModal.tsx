@@ -104,11 +104,24 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeCampaign || selectedNumbers.length === 0) return;
+    
+    if (!activeCampaign) {
+      showToast('Nenhuma campanha ativa encontrada. Por favor, tente novamente mais tarde.', 'danger');
+      return;
+    }
+
+    if (selectedNumbers.length === 0) {
+      showToast('Por favor, sorteie seus números antes de confirmar.', 'warning');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const orderId = crypto.randomUUID();
+      // Fallback para UUID caso crypto.randomUUID não esteja disponível
+      const orderId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+        ? crypto.randomUUID() 
+        : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
       const orderData = {
         id: orderId,
         campaign_id: activeCampaign.id,
@@ -127,6 +140,12 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         
         // Background notification
         if (supabase) {
+          const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com';
+          const pixReceiver = settings?.pix_checkout_receiver?.value || 'Tatiana Aparecida Figueiredo';
+          const pixBank = settings?.pix_checkout_bank?.value || 'SICOOB';
+          const pixType = settings?.pix_checkout_type?.value || 'E-mail';
+          const contactWhatsapp = settings?.contact_whatsapp?.value || '31992127292';
+
           supabase.functions.invoke('send-order', {
             body: {
               ...orderData,
@@ -141,21 +160,21 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
                 }
               ],
-              pix_key: settings['pix_key_checkout']?.value || settings['pix_key']?.value,
-              pix_receiver: settings['pix_checkout_receiver']?.value,
-              pix_bank: settings['pix_checkout_bank']?.value,
-              pix_type: settings['pix_checkout_type']?.value,
-              contact_whatsapp: settings['contact_whatsapp']?.value
+              pix_key: pixKey,
+              pix_receiver: pixReceiver,
+              pix_bank: pixBank,
+              pix_type: pixType,
+              contact_whatsapp: contactWhatsapp
             }
           }).catch(e => console.error('Background email error:', e));
         }
       } else {
         console.error('Order creation failed:', res?.error);
-        showToast('Erro ao criar pedido. Por favor, tente novamente.', 'danger');
+        showToast(res?.error || 'Erro ao criar pedido. Por favor, tente novamente.', 'danger');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting order:', error);
-      showToast('Ocorreu um erro inesperado.', 'danger');
+      showToast(error.message || 'Ocorreu um erro inesperado.', 'danger');
     } finally {
       setIsSubmitting(false);
     }

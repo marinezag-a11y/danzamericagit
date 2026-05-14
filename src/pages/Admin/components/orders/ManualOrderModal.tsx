@@ -11,6 +11,7 @@ import {
 import { supabase } from '../../../../lib/supabase';
 import { useHelpItems } from '../../../../hooks/useHelpItems';
 import { maskBRL } from '../../../../lib/utils';
+import { useSiteSettings } from '../../../../hooks/useSiteSettings';
 
 interface ManualOrderModalProps {
   onClose: () => void;
@@ -20,6 +21,7 @@ interface ManualOrderModalProps {
 
 export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalProps) {
   const { items: helpItems } = useHelpItems();
+  const { settings } = useSiteSettings();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -79,7 +81,12 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
     if (result.success) {
       try {
         await supabase.functions.invoke('send-order', {
-          body: orderData
+          body: {
+            ...orderData,
+            pix_key: settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com',
+            pix_bank: settings?.pix_checkout_bank?.value || 'SICOOB',
+            pix_receiver: settings?.pix_checkout_receiver?.value || 'Tatiana Figueiredo'
+          }
         });
       } catch (err) {
         console.error('Erro ao enviar e-mail do pedido manual:', err);
@@ -100,9 +107,9 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="modal-container relative"
+        className="w-full max-w-4xl bg-brand-dark rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 relative flex flex-col max-h-[94vh] sm:max-h-[90vh]"
       >
-        <div className="modal-header">
+        <div className="p-6 sm:px-12 sm:py-8 border-b border-white/10 bg-white/[0.02] flex justify-between items-center">
           <div>
             <p className="text-brand-orange text-[9px] uppercase tracking-[0.5em] font-black mb-3">ADMINISTRAÇÃO DE VENDAS</p>
             <h3 className="text-3xl font-serif italic text-white leading-tight">Incluir Pedido Manual</h3>
@@ -116,7 +123,7 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
         </div>
         
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="modal-content">
+          <div className="p-6 sm:p-12 flex-1 overflow-y-auto custom-scrollbar">
             <div className="space-y-4">
               <p className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-black ml-2">DADOS DO CLIENTE</p>
               <div className="space-y-4">
@@ -196,7 +203,7 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
             )}
           </div>
           
-          <div className="modal-footer">
+          <div className="p-6 sm:px-12 sm:py-8 border-t border-white/10 bg-white/[0.02]">
             <button 
               type="submit"
               disabled={saving || showSuccess}

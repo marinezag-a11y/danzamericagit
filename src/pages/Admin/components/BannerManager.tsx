@@ -8,7 +8,9 @@ import {
   Trash2, 
   Save,
   ChevronDown,
-  Layout
+  Layout,
+  Pause,
+  Play
 } from 'lucide-react';
 import { useHeroBanners, HeroBanner } from '../../../hooks/useHeroBanners';
 import { OptimizedImageUploader } from './OptimizedImageUploader';
@@ -28,7 +30,10 @@ export function BannerManager({ onAlert }: BannerManagerProps) {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle) return;
+    if (!newUrl) {
+      onAlert('Atenção', 'É necessário subir uma imagem para o banner.', 'warning');
+      return;
+    }
     setSaving(true);
     const result = await addBanner({ 
       title: newTitle, 
@@ -53,7 +58,7 @@ export function BannerManager({ onAlert }: BannerManagerProps) {
   return (
     <div className="space-y-6 pb-20">
       {/* Accordion for New Banner */}
-      {banners.length < 6 && (
+      {banners.length < 12 && (
         <div className={`border transition-all duration-500 overflow-hidden rounded-[2.5rem] ${
           isAdding 
             ? 'bg-black/30 border-white/10 shadow-2xl' 
@@ -78,7 +83,7 @@ export function BannerManager({ onAlert }: BannerManagerProps) {
                   Adicionar Novo Slide ao Topo
                 </h3>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">
-                  Crie uma nova vitrine de impacto para a página inicial ({banners.length}/6)
+                  Crie uma nova vitrine de impacto para a página inicial ({banners.length}/12)
                 </p>
               </div>
             </div>
@@ -99,7 +104,7 @@ export function BannerManager({ onAlert }: BannerManagerProps) {
                         <div className="space-y-4">
                           <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Título do Banner</label>
                           <input 
-                            type="text" required value={newTitle}
+                            type="text" value={newTitle}
                             onChange={(e) => setNewTitle(e.target.value)}
                             className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
                             placeholder="Ex: Danzamerica 2026"
@@ -128,8 +133,8 @@ export function BannerManager({ onAlert }: BannerManagerProps) {
                         <div className="aspect-video bg-black rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-2xl group">
                           <img src={newUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700" alt="Preview" />
                           <div className="absolute inset-0 flex flex-col justify-center px-12 space-y-2">
-                             <p className="text-white/40 text-xs uppercase tracking-[0.3em] font-serif">{newSubtitle || 'Subtítulo do Banner'}</p>
-                             <h4 className="text-3xl font-serif italic text-white leading-tight">{newTitle || 'Título de Impacto'}</h4>
+                             {newSubtitle && <p className="text-white/40 text-xs uppercase tracking-[0.3em] font-serif">{newSubtitle}</p>}
+                             {newTitle && <h4 className="text-3xl font-serif italic text-white leading-tight">{newTitle}</h4>}
                           </div>
                         </div>
                       </div>
@@ -239,17 +244,45 @@ const BannerAccordion: React.FC<BannerAccordionProps> = ({ banner, index, onUpda
             {index.toString().padStart(2, '0')}
           </div>
           <div className="text-left">
-            <h3 className={`text-xl font-serif italic transition-all duration-500 ${
-              isOpen ? 'text-white' : 'text-white/40 group-hover:text-white/60'
-            }`}>
-              {banner.title}
-            </h3>
+            <div className="flex items-center gap-3">
+              <h3 className={`text-xl font-serif italic transition-all duration-500 ${
+                isOpen ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+              } ${!banner.is_active ? 'line-through opacity-50' : ''}`}>
+                {banner.title}
+              </h3>
+              {!banner.is_active && (
+                <span className="bg-red-500/10 text-red-500 text-[8px] uppercase tracking-widest font-black px-2 py-1 rounded-full border border-red-500/20">
+                  Pausado
+                </span>
+              )}
+            </div>
             <p className="text-[9px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">
               Slide #{banner.order_index + 1} • {banner.subtitle || 'Sem subtítulo'}
             </p>
           </div>
         </div>
-        <ChevronDown className={`w-5 h-5 text-white/10 group-hover:text-white/40 transition-all duration-500 ${isOpen ? 'rotate-180' : ''}`} />
+        <div className="flex items-center gap-6">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate(banner.id, { is_active: !banner.is_active });
+              onAlert(
+                !banner.is_active ? 'Banner Ativado' : 'Banner Pausado',
+                !banner.is_active ? 'O slide agora está visível no site.' : 'O slide foi removido temporariamente do ar.',
+                !banner.is_active ? 'info' : 'warning'
+              );
+            }}
+            className={`p-3 rounded-xl border transition-all ${
+              banner.is_active 
+                ? 'bg-white/5 border-white/10 text-white/40 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-500' 
+                : 'bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500 hover:text-white'
+            }`}
+            title={banner.is_active ? "Pausar Banner" : "Ativar Banner"}
+          >
+            {banner.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          </button>
+          <ChevronDown className={`w-5 h-5 text-white/10 group-hover:text-white/40 transition-all duration-500 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
       </button>
 
       <AnimatePresence>
@@ -295,8 +328,8 @@ const BannerAccordion: React.FC<BannerAccordionProps> = ({ banner, index, onUpda
                   <div className="aspect-video bg-black rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-2xl">
                     <img src={localImageUrl} className="w-full h-full object-cover opacity-60" alt="" />
                     <div className="absolute inset-0 flex flex-col justify-center px-12 space-y-2">
-                       <p className="text-white/40 text-xs uppercase tracking-[0.3em] font-serif">{localSubtitle}</p>
-                       <h4 className="text-3xl font-serif italic text-white leading-tight">{localTitle}</h4>
+                       {localSubtitle && <p className="text-white/40 text-xs uppercase tracking-[0.3em] font-serif">{localSubtitle}</p>}
+                       {localTitle && <h4 className="text-3xl font-serif italic text-white leading-tight">{localTitle}</h4>}
                     </div>
                   </div>
                 </div>

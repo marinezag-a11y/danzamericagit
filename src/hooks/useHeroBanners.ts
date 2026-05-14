@@ -7,6 +7,7 @@ export interface HeroBanner {
   title: string;
   subtitle: string;
   order_index: number;
+  is_active: boolean;
 }
 
 export function useHeroBanners() {

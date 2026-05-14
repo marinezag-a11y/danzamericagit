@@ -129,15 +129,24 @@ export default function Home() {
   const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
   const [selectedTierData, setSelectedTierData] = useState<{name: string, price: string, benefits: string[]} | null>(null);
 
+  const activeBanners = banners.filter(b => b.is_active !== false);
+
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (activeBanners.length <= 1) return;
     
     const interval = setInterval(() => {
-      setCurrentBannerIdx((prev) => (prev + 1) % banners.length);
+      setCurrentBannerIdx((prev) => (prev + 1) % activeBanners.length);
     }, 6000);
 
     return () => clearInterval(interval);
-  }, [banners.length]);
+  }, [activeBanners.length]);
+
+  // Safety: reset index if active banners change and current index is out of bounds
+  useEffect(() => {
+    if (currentBannerIdx >= activeBanners.length && activeBanners.length > 0) {
+      setCurrentBannerIdx(0);
+    }
+  }, [activeBanners.length, currentBannerIdx]);
 
   // Keyboard navigation for Lightbox
   useEffect(() => {
@@ -157,10 +166,10 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedImageIdx, images.length]);
 
-  const currentBanner = banners[currentBannerIdx] || { 
+  const currentBanner = activeBanners[currentBannerIdx] || { 
     id: 'static-hero', 
-    title: 'A Jornada: 26 Anos de Dança', 
-    subtitle: 'Melhor Grupo no Festival Arte Minas 2026',
+    title: '', 
+    subtitle: '',
     image_url: '/hero-bg.jpg' 
   };
 
@@ -269,58 +278,56 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 max-w-6xl w-full">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex items-center gap-4 mb-8"
-          >
-            <span className="h-[1px] w-12 bg-brand-orange"></span>
-            <p className="text-white text-xs uppercase tracking-[0.4em] font-display font-medium">
-              {currentBanner.subtitle || 'Melhor Grupo no Festival Arte Minas 2026'}
-            </p>
-          </motion.div>
-          
-          <AnimatePresence mode="wait">
-            <motion.h1 
-              key={currentBanner.id + '-title'}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
-              className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[110px] text-white leading-[1.1] mb-12 font-serif"
+          {currentBanner.subtitle && (
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 }}
+              className="flex items-center gap-4 mb-8"
             >
-              {currentBanner.title ? (
-                currentBanner.title.includes(':') ? (
+              <span className="h-[1px] w-12 bg-brand-orange"></span>
+              <p className="text-white text-xs uppercase tracking-[0.4em] font-display font-medium">
+                {currentBanner.subtitle}
+              </p>
+            </motion.div>
+          )}
+          
+          {currentBanner.title && (
+            <AnimatePresence mode="wait">
+              <motion.h1 
+                key={currentBanner.id + '-title'}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[110px] text-white leading-[1.1] mb-12 font-serif"
+              >
+                {currentBanner.title.includes(':') ? (
                   <>
                     {(currentBanner.title.split(':')[0] || '').trim()}:<br />
                     <span className="italic">{(currentBanner.title.split(':')[1] || '').trim()}</span>
                   </>
-                ) : currentBanner.title
-              ) : (
-                <>
-                  A Jornada:<br />
-                  <span className="italic">26 Anos de</span><br />
-                  Dança
-                </>
-              )}
-            </motion.h1>
-          </AnimatePresence>
+                ) : currentBanner.title}
+              </motion.h1>
+            </AnimatePresence>
+          )}
 
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2 }}
-            className="flex flex-col md:flex-row gap-12 items-start md:items-center"
-          >
-            <p className="text-white/60 text-lg max-w-lg font-serif leading-relaxed italic">
-              {currentBanner.subtitle || 'Transformando talento mineiro em excelência mundial. Nossa próxima parada: Danzamerica, Argentina.'}
-            </p>
-          </motion.div>
+          {currentBanner.subtitle && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.2 }}
+              className="flex flex-col md:flex-row gap-12 items-start md:items-center"
+            >
+              <p className="text-white/60 text-lg max-w-lg font-serif leading-relaxed italic">
+                {currentBanner.subtitle}
+              </p>
+            </motion.div>
+          )}
 
-          {banners.length > 1 && (
+          {activeBanners.length > 1 && (
             <div className="flex gap-4 mt-12">
-              {banners.map((_, idx) => (
+              {activeBanners.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentBannerIdx(idx)}

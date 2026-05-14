@@ -82,50 +82,64 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     if (failedNotifications.length === 0) return;
     
     setResendingAll(true);
-    onAlert('Iniciando Reenvio', `Tentando reenviar ${failedNotifications.length} e-mails...`, 'info');
+    onAlert('Iniciando Reenvio', `Preparando para processar ${failedNotifications.length} e-mails...`, 'info');
     
     let successCount = 0;
     let failCount = 0;
 
-    for (const order of failedNotifications) {
-      try {
-        const isRaffle = order.type === 'raffle';
-        const payload: any = {
-          order_id: order.id,
-          customer_name: order.customer_name,
-          customer_phone: order.customer_phone,
-          customer_email: order.customer_email,
-          total_price: order.total_price || order.product_price,
-          pix_key: order.pix_key,
-          pix_bank: order.pix_bank,
-          pix_receiver: order.pix_receiver
-        };
+    // Process in small chunks to avoid timeouts and show progress
+    const chunks = [];
+    const chunkSize = 3; // 3 parallel calls at a time is safe
+    for (let i = 0; i < failedNotifications.length; i += chunkSize) {
+      chunks.push(failedNotifications.slice(i, i + chunkSize));
+    }
 
-        if (isRaffle) {
-          payload.campaign_id = order.campaign_id;
-          payload.dancer_name = order.dancer_name;
-          payload.selected_numbers = order.selected_numbers;
-        } else {
-          payload.items = order.items || [];
+    for (let i = 0; i < chunks.length; i++) {
+      const currentChunk = chunks[i];
+      const processedCount = i * chunkSize + currentChunk.length;
+      
+      onAlert('Processando Reenvio', `Enviando lote ${i + 1} de ${chunks.length} (${processedCount}/${failedNotifications.length} concluídos)...`, 'info');
+
+      await Promise.all(currentChunk.map(async (order) => {
+        try {
+          const isRaffle = order.type === 'raffle';
+          const payload: any = {
+            order_id: order.id,
+            customer_name: order.customer_name,
+            customer_phone: order.customer_phone,
+            customer_email: order.customer_email,
+            total_price: order.total_price || order.product_price,
+            pix_key: order.pix_key || settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com',
+            pix_bank: order.pix_bank || settings?.pix_checkout_bank?.value || 'SICOOB',
+            pix_receiver: order.pix_receiver || settings?.pix_checkout_receiver?.value || 'Tatiana Figueiredo'
+          };
+
+          if (isRaffle) {
+            payload.campaign_id = order.campaign_id;
+            payload.dancer_name = order.dancer_name;
+            payload.selected_numbers = order.selected_numbers;
+          } else {
+            payload.items = order.items || [];
+          }
+
+          const { data, error: invokeError } = await supabase.functions.invoke('send-order', {
+            body: payload
+          });
+
+          if (invokeError || !data?.success) throw invokeError || new Error(data?.error || 'Erro desconhecido');
+          successCount++;
+        } catch (err) {
+          console.error(`Falha ao reenviar e-mail para pedido ${order.id}:`, err);
+          failCount++;
         }
-
-        const { data, error: invokeError } = await supabase.functions.invoke('send-order', {
-          body: payload
-        });
-
-        if (invokeError || !data?.success) throw invokeError || new Error(data?.error || 'Erro desconhecido');
-        successCount++;
-      } catch (err) {
-        console.error(`Falha ao reenviar e-mail para pedido ${order.id}:`, err);
-        failCount++;
-      }
+      }));
     }
 
     if (successCount > 0) {
       onAlert('Reenvio Concluído', `${successCount} e-mails reenviados com sucesso.${failCount > 0 ? ` (${failCount} falhas)` : ''}`, 'info');
       refresh();
     } else if (failCount > 0) {
-      onAlert('Falha no Reenvio', `Não foi possível reenviar os ${failCount} e-mails. Verifique se os endereços estão corretos ou se o limite diário (teto) de envios foi atingido.`, 'danger');
+      onAlert('Falha no Reenvio', `Não foi possível reenviar os e-mails. Verifique se o limite diário de envios foi atingido.`, 'danger');
     }
     
     setResendingAll(false);

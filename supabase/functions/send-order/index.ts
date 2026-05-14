@@ -235,7 +235,7 @@ serve(async (req) => {
       }).eq('id', finalOrderId)
     }
 
-    return new Response(JSON.stringify({ success: finalSuccess }), { 
+    return new Response(JSON.stringify({ success: finalSuccess, error: errorDetail, providerData: result.data }), { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: finalSuccess ? 200 : 500
     })

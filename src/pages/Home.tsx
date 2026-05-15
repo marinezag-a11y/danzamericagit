@@ -699,7 +699,7 @@ export default function Home() {
               className="mt-10 inline-flex items-center gap-3 px-8 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-white hover:text-brand-orange transition-all duration-300 shadow-xl"
             >
               <Download className="w-4 h-4" />
-              Baixar Plano de Patrocínio
+              Baixar Portfólio
             </motion.a>
           </div>
 

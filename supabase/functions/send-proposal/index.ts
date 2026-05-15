@@ -77,7 +77,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: 'Danzamerica 2026 <proposta@nucleotatianafigueiredo.com.br>',
-        to: ['nucleodedanca@yahoo.com.br', 'marinezag@gmail.com'],
+        to: ['nucleodedanca@yahoo.com.br', 'marinezag@gmail.com', 'karlaalvessilva1@gmail.com'],
         reply_to: email,
         subject: `Solicitação de Proposta: ${tier_name} - ${name}`,
         html: adminEmailHtml,

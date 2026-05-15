@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useSponsorship, SponsorshipTier } from '../../../hooks/useSponsorship';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
+import { SponsorBrandsManager } from './SponsorBrandsManager';
+import { SponsorshipRequestsList } from './SponsorshipRequestsList';
 
 interface SponsorshipManagerProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
@@ -168,6 +170,16 @@ export function SponsorshipManager({ onAlert }: SponsorshipManagerProps) {
             onAlert={onAlert}
           />
         ))}
+      </div>
+
+      {/* Sponsor Brands Section */}
+      <div className="pt-20 border-t border-white/5">
+        <SponsorBrandsManager onAlert={(type, msg) => onAlert(type === 'success' ? 'Sucesso' : 'Erro', msg, type === 'success' ? 'info' : 'danger')} />
+      </div>
+
+      {/* Sponsorship Requests Section */}
+      <div className="pt-20 border-t border-white/5">
+        <SponsorshipRequestsList />
       </div>
     </div>
   );

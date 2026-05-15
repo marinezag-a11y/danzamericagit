@@ -3,7 +3,7 @@ import { Loader2, Upload } from 'lucide-react';
 import { uploadImage } from '../../../lib/upload';
 
 // Global Image Optimization Utility
-const optimizeImage = (file: File, maxWidth: number): Promise<Blob> => {
+const optimizeImage = (file: File, maxWidth: number): Promise<{ blob: Blob, type: string }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -26,11 +26,17 @@ const optimizeImage = (file: File, maxWidth: number): Promise<Blob> => {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
+        
+        // Se for PNG, não preenchemos o fundo para manter transparência
+        const isPng = file.type === 'image/png';
+        const mimeType = isPng ? 'image/png' : 'image/jpeg';
+        const quality = isPng ? 1.0 : 0.75;
+
         ctx?.drawImage(img, 0, 0, width, height);
         
         canvas.toBlob((blob) => {
-          resolve(blob || file);
-        }, 'image/jpeg', 0.75);
+          resolve({ blob: blob || file, type: mimeType });
+        }, mimeType, quality);
       };
     };
   });
@@ -62,9 +68,11 @@ export function OptimizedImageUploader({
 
     setUploading(true);
     try {
-      const optimizedBlob = await optimizeImage(file, maxWidth);
+      const { blob: optimizedBlob, type: mimeType } = await optimizeImage(file, maxWidth);
       const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-      const optimizedFile = new File([optimizedBlob], `${baseName}.jpg`, { type: 'image/jpeg' });
+      const extension = mimeType === 'image/png' ? 'png' : 'jpg';
+      
+      const optimizedFile = new File([optimizedBlob], `${baseName}.${extension}`, { type: mimeType });
       const result = await uploadImage(optimizedFile, folder);
       
       if (result.success && result.url) {

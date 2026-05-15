@@ -6,7 +6,8 @@ import {
   ChevronLeft,
   X,
   Loader2,
-  Download
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useSiteSettings } from '../hooks/useSiteSettings';
@@ -19,6 +20,7 @@ import { useHelpItems } from '../hooks/useHelpItems';
 import { useFinancial } from '../hooks/useFinancial';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useEventTracking } from '../hooks/useEventTracking';
+import { useSponsorBrands } from '../hooks/useSponsorBrands';
 import { Header } from '../components/layout/Header';
 import { DonationDropdown } from '../components/DonationDropdown';
 import { Footer } from '../components/layout/Footer';
@@ -120,6 +122,7 @@ export default function Home() {
   const { items: journeyItems, loading: journeyLoading } = useJourney();
   const { items: helpItems, loading: helpLoading } = useHelpItems();
   const { totals, loading: financialLoading } = useFinancial();
+  const { brands: sponsorBrands, loading: sponsorBrandsLoading } = useSponsorBrands();
 
   // Analytics: track page view
   usePageTracking();
@@ -228,7 +231,7 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
   
-  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading) return (
+  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading || sponsorBrandsLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
       <p className="text-[10px] uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
@@ -750,6 +753,56 @@ export default function Home() {
           </div>
         </div>
       </section>
+      
+      {/* Sponsor Brands Sub-section */}
+      {sponsorBrands && sponsorBrands.length > 0 && (
+        <section className="py-24 bg-[#141414] px-6 lg:px-12 border-t border-white/5">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl text-white font-serif italic mb-4">Marcas que dão ritmo ao Nosso Sonho</h2>
+              <div className="h-1 w-20 bg-brand-orange mx-auto opacity-20"></div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-16 md:gap-20 items-center justify-items-center">
+              {sponsorBrands.filter(b => b.is_active).map((brand) => (
+                <motion.div 
+                  key={brand.id}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  className="group flex flex-col items-center gap-6 w-full"
+                >
+                  <a 
+                    href={brand.link_url || '#'} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full h-32 md:h-44 flex items-center justify-center p-4 md:p-6 transition-transform duration-500 group-hover:-translate-y-2"
+                  >
+                    <img 
+                      src={brand.logo_url} 
+                      alt={brand.name} 
+                      className="max-w-full max-h-full object-contain transition-all duration-500 hover:scale-110"
+                    />
+                  </a>
+                  
+                  {brand.link_url && (
+                    <motion.a
+                      href={brand.link_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-6 py-3 bg-brand-orange text-white text-[9px] uppercase tracking-[0.2em] font-black transition-all rounded-xl flex items-center gap-3 shadow-lg shadow-brand-orange/20"
+                    >
+                      VISITAR <ExternalLink className="w-3 h-3" />
+                    </motion.a>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       </main>
 
       <Footer />

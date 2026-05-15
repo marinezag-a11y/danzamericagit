@@ -209,9 +209,6 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   };
 
   const handlePrintReport = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const reportDate = new Date().toLocaleString('pt-BR');
     const filterInfo = `Filtros: Status [${filter}] | Tipo [${typeFilter}] | Bailarino [${dancerFilter}] | Período [${startDate || 'Início'} - ${endDate || 'Hoje'}]`;
 
@@ -221,20 +218,28 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
           <title>Relatório de Pedidos - Danzamerica</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1a1a1a; }
+            body { font-family: 'Inter', sans-serif; padding: 20px; color: #1a1a1a; margin: 0; }
             .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 30px; }
-            .logo { font-size: 24px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-            .meta { font-size: 10px; color: #666; text-align: right; }
-            .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
-            .kpi-card { background: #f8f8f8; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
-            .kpi-label { font-size: 9px; text-transform: uppercase; font-weight: 700; color: #999; margin-bottom: 8px; }
-            .kpi-value { font-size: 20px; font-weight: 700; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { text-align: left; font-size: 10px; text-transform: uppercase; color: #999; padding: 12px; border-bottom: 2px solid #f0f0f0; }
-            td { padding: 12px; font-size: 12px; border-bottom: 1px solid #f0f0f0; }
-            .status { font-weight: 700; text-transform: uppercase; font-size: 9px; }
-            .footer { margin-top: 50px; font-size: 9px; color: #ccc; text-align: center; }
-            @media print { .no-print { display: none; } }
+            .logo { font-size: 20px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+            .meta { font-size: 9px; color: #666; text-align: right; }
+            .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+            .kpi-card { background: #f8f8f8; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+            .kpi-label { font-size: 8px; text-transform: uppercase; font-weight: 700; color: #999; margin-bottom: 5px; }
+            .kpi-value { font-size: 16px; font-weight: 700; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th { text-align: left; font-size: 9px; text-transform: uppercase; color: #999; padding: 10px; border-bottom: 2px solid #f0f0f0; }
+            td { padding: 10px; font-size: 11px; border-bottom: 1px solid #f0f0f0; word-break: break-word; }
+            .status { font-weight: 700; text-transform: uppercase; font-size: 8px; }
+            .footer { margin-top: 40px; font-size: 8px; color: #ccc; text-align: center; }
+            @media print { 
+              .no-print { display: none; } 
+              body { padding: 0; }
+            }
+            @media (max-width: 600px) {
+              .kpi-grid { grid-template-columns: 1fr; }
+              .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+              .meta { text-align: left; }
+            }
           </style>
         </head>
         <body>
@@ -246,7 +251,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
             </div>
           </div>
           
-          <h2 style="font-size: 16px; margin-bottom: 20px;">Relatório Consolidado de Pedidos</h2>
+          <h2 style="font-size: 14px; margin-bottom: 15px;">Relatório Consolidado de Pedidos</h2>
 
           <div class="kpi-grid">
             <div class="kpi-card">
@@ -287,13 +292,29 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
           </table>
 
           <div class="footer">Danzamerica - Sistema de Gestão Interna</div>
-          <script>window.print();</script>
+          <script>
+            window.onload = () => {
+              window.print();
+              setTimeout(() => {
+                // Opcional: fechar a aba após imprimir (alguns mobile não permitem)
+              }, 1000);
+            };
+          </script>
         </body>
       </html>
     `;
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+
+    if (!printWindow) {
+      onAlert('Pop-up Bloqueado', 'Por favor, habilite pop-ups para visualizar o relatório no navegador.', 'warning');
+      return;
+    }
+    
+    // Limpeza da URL do blob após um tempo
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
   const handleSort = (key: string) => {

@@ -203,6 +203,7 @@ export function HelpItemsManager({ onAlert }: HelpItemsManagerProps) {
                             onUploadSuccess={(url) => setNewImageUrl(url)}
                             onAlert={onAlert}
                             folder="help"
+                            maxWidth={600}
                           />
                         </div>
                       </div>
@@ -428,6 +429,7 @@ const HelpItemAccordion: React.FC<HelpItemAccordionProps> = ({ item, index, onUp
                         onAlert={onAlert}
                         folder="help"
                         label="Substituir Foto"
+                        maxWidth={600}
                       />
                     </div>
                   </div>

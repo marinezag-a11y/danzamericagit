@@ -114,7 +114,7 @@ export function useAnalytics() {
       // Fetch total count and data separately
       let baseQuery = supabase
         .from('page_views')
-        .select('*', { count: 'exact' })
+        .select('session_id, page_path, referrer, device_type, created_at, duration_seconds', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (dateFilter) {

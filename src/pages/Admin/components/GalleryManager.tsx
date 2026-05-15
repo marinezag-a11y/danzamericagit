@@ -98,6 +98,7 @@ export function GalleryManager({ onAlert }: GalleryManagerProps) {
                             onUploadSuccess={(url) => setNewUrl(url)}
                             onAlert={onAlert}
                             folder="gallery"
+                            maxWidth={800}
                           />
                         </div>
                         <div className="pt-8 border-t border-white/5 space-y-4">
@@ -276,6 +277,7 @@ const GalleryItemAccordion: React.FC<GalleryItemAccordionProps> = ({ image, inde
                       onUploadSuccess={(url) => setLocalUrl(url)}
                       onAlert={onAlert}
                       folder="gallery"
+                      maxWidth={800}
                     />
                   </div>
                 </div>

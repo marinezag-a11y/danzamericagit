@@ -1,16 +1,16 @@
 import { supabase } from './supabase';
 
-export async function uploadImage(file: File, folder: string = 'general') {
+export async function uploadImage(file: File, folder: string = 'general', customPath?: string) {
   try {
     if (!supabase) throw new Error('Supabase not configured');
 
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
+    const fileName = customPath ? customPath : `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+    const filePath = customPath ? customPath : `${folder}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('images')
-      .upload(filePath, file);
+      .upload(filePath, file, { upsert: true });
 
     if (uploadError) throw uploadError;
 

@@ -3,7 +3,7 @@ import { Loader2, Upload } from 'lucide-react';
 import { uploadImage } from '../../../lib/upload';
 
 // Global Image Optimization Utility
-const optimizeImage = (file: File): Promise<Blob> => {
+const optimizeImage = (file: File, maxWidth: number): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -17,7 +17,7 @@ const optimizeImage = (file: File): Promise<Blob> => {
         let width = img.width;
         let height = img.height;
         
-        const MAX_WIDTH = 1600;
+        const MAX_WIDTH = maxWidth;
         if (width > MAX_WIDTH) {
           height = (MAX_WIDTH / width) * height;
           width = MAX_WIDTH;
@@ -30,7 +30,7 @@ const optimizeImage = (file: File): Promise<Blob> => {
         
         canvas.toBlob((blob) => {
           resolve(blob || file);
-        }, 'image/jpeg', 0.8);
+        }, 'image/jpeg', 0.75);
       };
     };
   });
@@ -42,6 +42,7 @@ interface OptimizedImageUploaderProps {
   label?: string;
   className?: string;
   folder?: string;
+  maxWidth?: number;
 }
 
 export function OptimizedImageUploader({ 
@@ -49,7 +50,8 @@ export function OptimizedImageUploader({
   onAlert, 
   label = "Subir Imagem (Otimizada)", 
   className = "", 
-  folder = "content" 
+  folder = "content",
+  maxWidth = 1600
 }: OptimizedImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const uploadId = useId();
@@ -60,7 +62,7 @@ export function OptimizedImageUploader({
 
     setUploading(true);
     try {
-      const optimizedBlob = await optimizeImage(file);
+      const optimizedBlob = await optimizeImage(file, maxWidth);
       const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
       const optimizedFile = new File([optimizedBlob], `${baseName}.jpg`, { type: 'image/jpeg' });
       const result = await uploadImage(optimizedFile, folder);

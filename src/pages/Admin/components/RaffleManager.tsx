@@ -266,6 +266,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                                  onUploadSuccess={(url) => setNewImageUrl(url)}
                                  onAlert={onAlert}
                                  folder="raffles"
+                                 maxWidth={800}
                                />
                              </div>
                            </div>
@@ -524,6 +525,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                         onAlert={onAlert}
                         folder="raffles"
                         label="Trocar Foto"
+                        maxWidth={800}
                       />
                     </div>
                   </div>

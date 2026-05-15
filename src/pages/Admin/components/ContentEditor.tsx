@@ -163,6 +163,7 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
                                     onAlert('Imagem Atualizada', 'A nova imagem foi salva automaticamente.', 'info');
                                   }}
                                   onAlert={onAlert}
+                                  maxWidth={1200}
                                 />
                               </div>
                             ) : key.includes('subtitle') || key.includes('description') || key.includes('text') ? (

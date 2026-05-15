@@ -120,6 +120,7 @@ export function DancersManager({ onAlert }: DancersManagerProps) {
                               onAlert={onAlert}
                               folder="dancers"
                               label={newPhotoUrl ? "Substituir Foto" : "Enviar Retrato"}
+                              maxWidth={600}
                             />
                           </div>
                         </div>
@@ -312,6 +313,7 @@ const DancerAccordion: React.FC<DancerAccordionProps> = ({ dancer, index, onUpda
                           onAlert={onAlert}
                           folder="dancers"
                           label="Alterar"
+                          maxWidth={600}
                         />
                       </div>
                     </div>

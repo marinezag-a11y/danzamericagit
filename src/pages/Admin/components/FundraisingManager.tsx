@@ -120,6 +120,7 @@ export function FundraisingManager({ onAlert }: FundraisingManagerProps) {
               onAlert={onAlert}
               label="Alterar Imagem do Desafio"
               folder="challenge"
+              maxWidth={1400}
             />
             <p className="text-[10px] text-white/20 mt-4 italic">Recomendado: 1920x1080px para melhor impacto visual no topo do site.</p>
           </div>

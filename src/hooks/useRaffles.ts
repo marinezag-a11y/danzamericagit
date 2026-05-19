@@ -14,8 +14,10 @@ export interface RaffleCampaign {
   is_active: boolean;
   goal_per_dancer: number;
   cost: number;
+  completion_text?: string;
   created_at: string;
 }
+
 
 export interface RaffleOrder {
   id: string;

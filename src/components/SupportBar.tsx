@@ -1,16 +1,21 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export function SupportBar() {
   const navigate = useNavigate();
-  const [isSupportMode, setIsSupportMode] = React.useState(localStorage.getItem('support_mode') === 'true');
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  const [isSupportMode, setIsSupportMode] = React.useState(
+    localStorage.getItem('support_mode') === 'true' && isAdminRoute
+  );
   const [impersonatedUser, setImpersonatedUser] = React.useState(localStorage.getItem('support_user_name') || 'Usuário');
 
   React.useEffect(() => {
     const checkSupport = () => {
-      const active = localStorage.getItem('support_mode') === 'true';
+      const active = localStorage.getItem('support_mode') === 'true' && isAdminRoute;
       setIsSupportMode(active);
       setImpersonatedUser(localStorage.getItem('support_user_name') || 'Usuário');
       
@@ -26,7 +31,7 @@ export function SupportBar() {
     return () => {
       document.body.style.paddingTop = '0px';
     };
-  }, []);
+  }, [location.pathname, isAdminRoute]);
 
   if (!isSupportMode) return null;
 

@@ -55,6 +55,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
   const [newTotal, setNewTotal] = useState(100);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newCost, setNewCost] = useState(0);
+  const [newCompletionText, setNewCompletionText] = useState('');
   const [creating, setCreating] = useState(false);
 
   const handleOpenOrders = async (campaignId: string) => {
@@ -86,7 +87,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
-    const res = await createCampaign({
+    const campaignData: any = {
       name: newName,
       description: newDescription,
       price_per_number: newPrice,
@@ -95,7 +96,13 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
       cost: newCost,
       is_active: true,
       goal_per_dancer: Math.ceil(newTotal / (parseInt(settings['dancers_count']?.value || '19')))
-    });
+    };
+
+    if (newCompletionText) {
+      campaignData.completion_text = newCompletionText;
+    }
+
+    const res = await createCampaign(campaignData);
     
     if (res.success) {
       onAlert('Sucesso', 'Nova ação criada com sucesso.', 'info');
@@ -105,6 +112,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
       setNewPrice(0);
       setNewImageUrl('');
       setNewCost(0);
+      setNewCompletionText('');
     } else {
       onAlert('Erro', res.error || 'Erro ao criar campanha', 'danger');
     }
@@ -255,6 +263,16 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                               className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl resize-none shadow-inner"
                             />
                           </div>
+                          
+                          <div className="space-y-4">
+                            <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Texto de Conclusão da Meta (Tarja)</label>
+                            <input 
+                              type="text" value={newCompletionText}
+                              onChange={(e) => setNewCompletionText(e.target.value)}
+                              placeholder="Ex: Sorteio no dia 25/12 às 20h"
+                              className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
+                            />
+                          </div>
                         </div>
                         
                         <div className="space-y-8">
@@ -380,6 +398,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
   const [localTotal, setLocalTotal] = useState(campaign.total_numbers);
   const [localImageUrl, setLocalImageUrl] = useState(campaign.image_url);
   const [localCost, setLocalCost] = useState(campaign.cost || 0);
+  const [localCompletionText, setLocalCompletionText] = useState(campaign.completion_text || '');
   const [itemToDelete, setItemToDelete] = useState<boolean>(false);
 
   useEffect(() => {
@@ -390,6 +409,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
       setLocalTotal(campaign.total_numbers);
       setLocalImageUrl(campaign.image_url);
       setLocalCost(campaign.cost || 0);
+      setLocalCompletionText(campaign.completion_text || '');
     }
   }, [campaign, isOpen]);
 
@@ -404,7 +424,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
 
   const handleSave = async () => {
     setSaving(true);
-    const result = await onUpdate(campaign.id, {
+    const updates: any = {
       name: localName,
       description: localDescription,
       price_per_number: localPrice,
@@ -412,7 +432,15 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
       image_url: localImageUrl,
       cost: localCost,
       goal_per_dancer: Math.ceil(localTotal / (parseInt(settings['dancers_count']?.value || '19')))
-    });
+    };
+
+    if (localCompletionText) {
+      updates.completion_text = localCompletionText;
+    } else if (campaign.completion_text !== undefined) {
+      updates.completion_text = null;
+    }
+
+    const result = await onUpdate(campaign.id, updates);
     setSaving(false);
     if (result.success) {
       setIsOpen(false);
@@ -511,6 +539,16 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                       rows={4} value={localDescription}
                       onChange={(e) => setLocalDescription(e.target.value)}
                       className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl resize-none shadow-inner"
+                    />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Texto de Conclusão da Meta (Tarja)</label>
+                    <input 
+                      type="text" value={localCompletionText}
+                      onChange={(e) => setLocalCompletionText(e.target.value)}
+                      placeholder="Ex: Sorteio no dia 25/12 às 20h"
+                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-brand-orange/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner"
                     />
                   </div>
                 </div>

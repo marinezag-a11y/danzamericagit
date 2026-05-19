@@ -145,7 +145,7 @@ export function RaffleSection() {
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                className="bg-brand-grey group flex flex-col md:flex-row overflow-hidden hover:shadow-[0_64px_128px_-16px_rgba(0,0,0,0.15)] transition-all duration-700 cursor-pointer rounded-[3rem] border border-black/5"
+                className="bg-brand-grey group flex flex-col md:flex-row overflow-hidden hover:shadow-[0_64px_128px_-16px_rgba(0,0,0,0.15)] transition-all duration-700 cursor-pointer rounded-[3rem] border border-black/5 relative"
                 onClick={() => {
                   const isSoldOut = (soldCounts[campaign.id] || 0) >= campaign.total_numbers;
                   if (isSoldOut) {
@@ -155,6 +155,15 @@ export function RaffleSection() {
                   }
                 }}
               >
+                {/* Tarja Diagonal de Campanha Finalizada */}
+                {(soldCounts[campaign.id] || 0) >= campaign.total_numbers && (
+                  <div className="absolute top-0 left-0 overflow-hidden w-40 h-40 z-20 pointer-events-none">
+                    <div className="absolute top-8 -left-12 w-56 bg-emerald-600 text-white text-[9px] uppercase tracking-[0.2em] font-black py-2.5 text-center -rotate-45 shadow-lg border-y border-white/20 flex items-center justify-center gap-1.5 backdrop-blur-sm bg-emerald-600/90">
+                      Finalizada{campaign.completion_text ? ` - ${campaign.completion_text}` : ''}
+                    </div>
+                  </div>
+                )}
+
                 <div className="w-full md:w-2/5 aspect-video md:aspect-auto relative overflow-hidden bg-white">
                   <img 
                     src={campaign.image_url || 'https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?q=80&w=1200&auto=format&fit=crop'} 

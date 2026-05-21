@@ -53,8 +53,18 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
 
   const duplicateNumbers = React.useMemo(() => {
     const counts: Record<number, number> = {};
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
     (orders || []).forEach(o => {
       if (o.status !== 'cancelled' && o.type === 'raffle') {
+        // Ignorar ordens pendentes com mais de 10 minutos para alinhar com a regra de expiração do banco
+        if (o.status === 'pending') {
+          const createdAtDate = new Date(o.created_at);
+          if (createdAtDate < tenMinutesAgo) {
+            return;
+          }
+        }
+
         (o.selected_numbers || []).forEach((n: number) => {
           counts[n] = (counts[n] || 0) + 1;
         });

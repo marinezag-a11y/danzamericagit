@@ -26,6 +26,7 @@ import { useHelpOrders } from '../../../hooks/useHelpOrders';
 import { useProfiles } from '../../../hooks/useProfiles';
 import { useDancers } from '../../../hooks/useDancers';
 import { useSiteSettings } from '../../../hooks/useSiteSettings';
+import { useRaffles } from '../../../hooks/useRaffles';
 import { NotificationSettings } from './ui/NotificationSettings';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { ReasonModal } from '../../../components/modals/ReasonModal';
@@ -42,11 +43,13 @@ interface OrdersManagerProps {
 export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const { orders, loading: loadingOrders, error, updateOrder, addOrder, deleteOrder, refresh } = useHelpOrders();
   const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
+  const { campaigns } = useRaffles();
   const { profiles } = useProfiles();
   const { dancers } = useDancers();
   const [savingEmails, setSavingEmails] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'sent' | 'cancelled'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'store' | 'raffle'>('all');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
 
   const duplicateNumbers = React.useMemo(() => {
     const counts: Record<number, number> = {};
@@ -147,7 +150,13 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
 
   const filteredOrders = (orders || []).filter(o => {
     const matchesStatus = filter === 'all' || o?.status === filter;
-    const matchesType = typeFilter === 'all' || o?.type === typeFilter;
+    
+    // Se uma campanha específica estiver selecionada, força a exibição apenas de pedidos do tipo 'raffle' (rifa)
+    const matchesType = selectedCampaignId !== 'all'
+      ? o?.type === 'raffle'
+      : (typeFilter === 'all' || o?.type === typeFilter);
+
+    const matchesCampaign = selectedCampaignId === 'all' || (o?.type === 'raffle' && o?.campaign_id === selectedCampaignId);
     
     const matchesSearch = !searchTerm || 
       o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -162,7 +171,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     const matchesStartDate = !startDate || orderDate >= startDate;
     const matchesEndDate = !endDate || orderDate <= endDate;
 
-    return matchesStatus && matchesType && matchesSearch && matchesDancer && matchesStartDate && matchesEndDate;
+    return matchesStatus && matchesType && matchesCampaign && matchesSearch && matchesDancer && matchesStartDate && matchesEndDate;
   }).sort((a, b) => {
     let valA: any = a[sortBy as keyof typeof a];
     let valB: any = b[sortBy as keyof typeof b];
@@ -210,7 +219,10 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
 
   const handlePrintReport = () => {
     const reportDate = new Date().toLocaleString('pt-BR');
-    const filterInfo = `Filtros: Status [${filter}] | Tipo [${typeFilter}] | Bailarino [${dancerFilter}] | Período [${startDate || 'Início'} - ${endDate || 'Hoje'}]`;
+    const campaignName = selectedCampaignId === 'all' 
+      ? 'Todas' 
+      : campaigns.find(c => c.id === selectedCampaignId)?.name || 'Campanha Selecionada';
+    const filterInfo = `Filtros: Status [${filter}] | Tipo [${typeFilter}] | Ação [${campaignName}] | Bailarino [${dancerFilter}] | Período [${startDate || 'Início'} - ${endDate || 'Hoje'}]`;
 
     const html = `
       <html>
@@ -412,6 +424,26 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
+          {campaigns.length > 0 && (
+            <select
+              value={selectedCampaignId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedCampaignId(val);
+                if (val !== 'all') {
+                  setTypeFilter('raffle');
+                }
+              }}
+              className="px-6 py-3 bg-white/5 border border-white/10 text-white text-[10px] uppercase tracking-widest font-bold rounded-full outline-none focus:border-brand-orange/50 transition-all cursor-pointer appearance-none pr-10 relative"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'white\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 16px center', backgroundSize: '12px' }}
+            >
+              <option value="all" className="bg-brand-dark">Todas as Ações</option>
+              {campaigns.map(c => (
+                <option key={c.id} value={c.id} className="bg-brand-dark">{c.name}</option>
+              ))}
+            </select>
+          )}
+
           <button 
             onClick={handlePrintReport}
             className="flex items-center gap-2 bg-white text-brand-dark px-6 py-3 text-[10px] uppercase tracking-widest font-black transition-all hover:bg-brand-orange hover:text-white rounded-sm shadow-xl"
@@ -458,7 +490,12 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
               {(['all', 'store', 'raffle'] as const).map(t => (
                 <button
                   key={t}
-                  onClick={() => setTypeFilter(t)}
+                  onClick={() => {
+                    setTypeFilter(t);
+                    if (t !== 'raffle') {
+                      setSelectedCampaignId('all');
+                    }
+                  }}
                   className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm border ${typeFilter === t ? 'bg-white text-brand-dark border-white' : 'bg-transparent text-white/40 border-white/10 hover:border-white/30'}`}
                 >
                   {t === 'all' ? 'Tudo' : t === 'store' ? 'Produtos da Loja' : 'Ações entre Amigos'}
@@ -542,6 +579,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
                 setEndDate('');
                 setFilter('all');
                 setTypeFilter('all');
+                setSelectedCampaignId('all');
               }}
               className="group flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-red-500/10 text-white/40 hover:text-red-500 transition-all text-[10px] uppercase tracking-[0.2em] font-bold rounded-sm border border-white/10"
             >

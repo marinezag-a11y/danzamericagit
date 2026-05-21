@@ -23,6 +23,7 @@ export interface HelpOrder {
   // Specific to raffle
   dancer_name?: string;
   selected_numbers?: number[];
+  campaign_id?: string;
   // Specific to store
   items?: HelpOrderItem[];
 }

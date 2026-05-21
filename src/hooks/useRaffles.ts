@@ -28,6 +28,7 @@ export interface RaffleOrder {
   selected_numbers: number[];
   total_price: number;
   dancer_name?: string;
+  session_id?: string;
   status: 'pending' | 'paid' | 'cancelled';
   notification_sent?: boolean;
   created_at: string;
@@ -175,18 +176,37 @@ export function useRaffles() {
 
   const createOrder = async (order: Omit<RaffleOrder, 'created_at' | 'status'>) => {
     try {
-      // Inserir sem .select() para evitar erro de RLS em usuários anônimos
-      const { error } = await supabase
-        .from('raffle_orders')
-        .insert([order]);
+      // 1. Chamar a função RPC segura com locks e checagem a nível de banco (transação perfeita)
+      const { data, error } = await supabase.rpc('create_raffle_order_safely', {
+        p_id: order.id,
+        p_campaign_id: order.campaign_id,
+        p_customer_name: order.customer_name,
+        p_customer_email: order.customer_email,
+        p_customer_phone: order.customer_phone,
+        p_selected_numbers: order.selected_numbers,
+        p_total_price: order.total_price,
+        p_dancer_name: order.dancer_name || null,
+        p_session_id: order.session_id || null
+      });
 
-      if (error) throw error;
+      if (error) {
+        // Se o erro for de redundância (números já ocupados)
+        if (error.message?.includes('redundancy') || error.details?.includes('redundancy')) {
+          return {
+            success: false,
+            error: 'redundancy: Um ou mais números selecionados já foram comprados ou reservados por outra pessoa nesse instante. Por favor, escolha outros números.'
+          };
+        }
+        throw error;
+      }
+
       return { success: true };
     } catch (err: any) {
       console.error('Create raffle order error:', err);
       return { success: false, error: err.message };
     }
   };
+
 
   useEffect(() => {
     if (!supabase) {

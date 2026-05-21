@@ -12,7 +12,7 @@ interface RaffleCheckoutModalProps {
   onClose: () => void;
 }
 
-type Step = 'quantity' | 'roulette' | 'checkout' | 'success';
+type Step = 'quantity' | 'roulette' | 'checkout' | 'infinitepay_checkout' | 'success';
 
 export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalProps) {
   const { fetchTakenTickets, createOrder } = useRaffles();
@@ -33,6 +33,15 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   const [copied, setCopied] = useState(false);
   const [sessionId] = useState(() => Math.random().toString(36).substring(2, 15));
   
+  // Estados para integração com InfinitePay
+  const [infinitePayUrl, setInfinitePayUrl] = useState('');
+  const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
+  const [orderId, setOrderId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'automatic' | 'manual'>('automatic');
+  const [isConfirmedAutomatic, setIsConfirmedAutomatic] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(true);
+  const [timeLeft, setTimeLeft] = useState(60);
+
   const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
   const pixType = settings?.pix_checkout_type?.value || "E-mail";
   const pixReceiver = settings?.pix_checkout_receiver?.value || "Tatiana Figueiredo";
@@ -80,6 +89,72 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       supabase.removeChannel(channel);
     };
   }, [campaign.id]);
+
+  // Escutar a confirmação do pagamento via Pix automático em tempo real
+  useEffect(() => {
+    if (step !== 'infinitepay_checkout' || !orderId) return;
+
+    console.log(`[Realtime] Subscrevendo ao status do pedido ${orderId}`);
+    
+    const channel = supabase
+      .channel(`order_payment_status:${orderId}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'raffle_orders',
+        filter: `id=eq.${orderId}`
+      }, (payload) => {
+        console.log('[Realtime] Payload de atualização do pedido:', payload);
+        if (payload.new && payload.new.status === 'paid') {
+          console.log('[Realtime] Pagamento confirmado! Avançando para a tela de sucesso.');
+          setIsConfirmedAutomatic(true);
+          showToast('Pagamento confirmado via Pix com sucesso!', 'success');
+          setStep('success');
+        }
+      })
+      .subscribe();
+
+    return () => {
+      console.log(`[Realtime] Removendo subscrição do pedido ${orderId}`);
+      supabase.removeChannel(channel);
+    };
+  }, [step, orderId]);
+
+  // Timer de 60 segundos com cancelamento automático de ordens expiradas no Supabase
+  useEffect(() => {
+    if (step !== 'infinitepay_checkout' || !orderId) return;
+
+    if (timeLeft <= 0) {
+      const cancelExpiredOrder = async () => {
+        try {
+          console.log(`[Timer] Tempo esgotado para o pedido ${orderId}. Cancelando no banco...`);
+          // Cancela o pedido no banco de dados para liberar os números de forma instantânea
+          await supabase
+            .from('raffle_orders')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+
+          showToast('Tempo limite de 1 minuto excedido. Seus números foram liberados.', 'danger');
+          
+          // Reseta o passo de volta para a roleta
+          setStep('roulette');
+          setHasSpunOnce(false);
+          setSelectedNumbers([]);
+          setTimeLeft(60); // Reseta o timer
+        } catch (error) {
+          console.error('[Timer] Erro ao cancelar pedido expirado:', error);
+        }
+      };
+      cancelExpiredOrder();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [step, orderId, timeLeft]);
 
   const handleReserve = async (nums: number[]) => {
     if (!campaign || nums.length === 0) return;
@@ -142,6 +217,8 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
     setSubmitting(true);
     try {
       const newOrderId = crypto.randomUUID();
+      setOrderId(newOrderId);
+      
       const orderData = {
         id: newOrderId,
         campaign_id: campaign.id,
@@ -157,29 +234,87 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
 
       if (result.success) {
         await supabase.from('raffle_reservations').delete().eq('session_id', sessionId);
-        setStep('success');
         
-        if (supabase) {
-          supabase.functions.invoke('send-order', {
-            body: {
-              ...orderData,
-              order_id: newOrderId,
-              type: 'raffle_order',
-              campaign_name: campaign.name,
-              items: [
-                { 
-                  name: `Rifa: ${campaign.name}`, 
-                  price: orderData.total_price,
-                  description: `Números: ${selectedNumbers.join(', ')}`
-                }
-              ],
-              pix_key: pixKey,
-              pix_type: pixType,
-              pix_receiver: pixReceiver,
-              pix_bank: pixBank,
-              contact_whatsapp: settings?.contact_whatsapp?.value
+        // Se escolheu pagamento automático, chamamos a Edge Function para gerar o checkout da InfinitePay
+        if (paymentMethod === 'automatic') {
+          console.log('[Payment] Generating InfinitePay Pix link...');
+          try {
+            const { data: payData, error: payError } = await supabase.functions.invoke('create-infinitepay-payment', {
+              body: {
+                order_id: newOrderId,
+                total_price: orderData.total_price,
+                customer_name: customerName,
+                customer_email: customerEmail,
+                customer_phone: customerPhone,
+                campaign_name: campaign.name
+              }
+            });
+
+            if (payError || !payData?.url) {
+              console.error('[Payment] InfinitePay creation error:', payError);
+              showToast('Não foi possível iniciar o Pix automático. Redirecionando para Pix manual.', 'warning');
+              setStep('success'); // Fallback para Pix manual
+            } else {
+              console.log('[Payment] InfinitePay link generated successfully:', payData.url);
+              setInfinitePayUrl(payData.url);
+              setIframeLoading(true);
+              setTimeLeft(60); // Inicia o contador de 1 minuto
+              setStep('infinitepay_checkout');
+
+              // Dispara notificação de reserva de pedido em background
+              if (supabase) {
+                supabase.functions.invoke('send-order', {
+                  body: {
+                    ...orderData,
+                    order_id: newOrderId,
+                    type: 'raffle_order',
+                    campaign_name: campaign.name,
+                    items: [
+                      { 
+                        name: `Rifa: ${campaign.name}`, 
+                        price: orderData.total_price,
+                        description: `Números: ${selectedNumbers.join(', ')}`
+                      }
+                    ],
+                    pix_key: pixKey,
+                    pix_type: pixType,
+                    pix_receiver: pixReceiver,
+                    pix_bank: pixBank,
+                    contact_whatsapp: settings?.contact_whatsapp?.value
+                  }
+                }).catch(errEmail => console.error('Background email error:', errEmail));
+              }
             }
-          }).catch(e => console.error('Background email error:', e));
+          } catch (payException) {
+            console.error('[Payment] Payment integration exception:', payException);
+            setStep('success'); // Fallback
+          }
+        } else {
+          // Pagamento Pix manual
+          setStep('success');
+          
+          if (supabase) {
+            supabase.functions.invoke('send-order', {
+              body: {
+                ...orderData,
+                order_id: newOrderId,
+                type: 'raffle_order',
+                campaign_name: campaign.name,
+                items: [
+                  { 
+                    name: `Rifa: ${campaign.name}`, 
+                    price: orderData.total_price,
+                    description: `Números: ${selectedNumbers.join(', ')}`
+                  }
+                ],
+                pix_key: pixKey,
+                pix_type: pixType,
+                pix_receiver: pixReceiver,
+                pix_bank: pixBank,
+                contact_whatsapp: settings?.contact_whatsapp?.value
+              }
+            }).catch(e => console.error('Background email error:', e));
+          }
         }
       } else {
         // Se houver erro de redundância ou outro erro
@@ -392,8 +527,50 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     <input 
                       type="tel" required placeholder="WhatsApp (00) 00000-0000"
                       value={customerPhone} onChange={e => setCustomerPhone(maskPhone(e.target.value))}
-                      className="w-full p-6 bg-black/[0.04] border border-transparent rounded-2xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium"
                     />
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <label className="text-[9px] uppercase tracking-[0.3em] text-brand-orange font-black block italic opacity-60">
+                      Forma de Pagamento
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('automatic')}
+                        className={`p-5 rounded-2xl border text-left transition-all flex flex-col gap-2 outline-none cursor-pointer ${
+                          paymentMethod === 'automatic'
+                            ? 'border-brand-orange bg-brand-orange/[0.04] text-brand-dark shadow-md'
+                            : 'border-black/5 bg-black/[0.02] text-brand-dark/60 hover:border-black/10'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-black italic">⚡ Pix Automático</span>
+                          {paymentMethod === 'automatic' && (
+                            <span className="w-3.5 h-3.5 rounded-full bg-brand-orange flex items-center justify-center text-white text-[8px] font-black">✓</span>
+                          )}
+                        </div>
+                        <p className="text-[9px] opacity-70 leading-tight">Gera QR Code exclusivo e confirma na tela na hora, sem precisar de comprovante.</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('manual')}
+                        className={`p-5 rounded-2xl border text-left transition-all flex flex-col gap-2 outline-none cursor-pointer ${
+                          paymentMethod === 'manual'
+                            ? 'border-brand-orange bg-brand-orange/[0.04] text-brand-dark shadow-md'
+                            : 'border-black/5 bg-black/[0.02] text-brand-dark/60 hover:border-black/10'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-black italic">🔑 Pix Manual</span>
+                          {paymentMethod === 'manual' && (
+                            <span className="w-3.5 h-3.5 rounded-full bg-brand-orange flex items-center justify-center text-white text-[8px] font-black">✓</span>
+                          )}
+                        </div>
+                        <p className="text-[9px] opacity-70 leading-tight">Chave Pix tradicional. Exige a transferência e o envio do comprovante via WhatsApp.</p>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="pt-6 space-y-4">
@@ -409,6 +586,158 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
               </motion.div>
             )}
 
+            {step === 'infinitepay_checkout' && (
+              <motion.div 
+                key="step-infinitepay-checkout"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="flex flex-col gap-6 w-full"
+              >
+                {/* Header Compacto com Contagem Regressiva */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-black/5">
+                  <div className="text-left space-y-1">
+                    <p className="text-brand-orange text-[9px] uppercase tracking-[0.2em] font-black flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
+                      ⚡ PIX AUTOMÁTICO INSTANTÂNEO
+                    </p>
+                    <h3 className="text-xl sm:text-2xl font-serif italic text-brand-dark">Aguardando Pagamento</h3>
+                    <p className="text-[10px] text-brand-dark/50 italic leading-tight">
+                      Seus números estão reservados! Finalize o pagamento em até 1 minuto.
+                    </p>
+                  </div>
+                  
+                  {/* Timer de Expirar em vermelho piscante */}
+                  <div className="flex items-center gap-2 px-4 py-2 bg-red-500/5 border border-red-500/10 rounded-full w-full sm:w-auto justify-center">
+                    <span className="text-[10px] uppercase tracking-widest font-black text-red-600 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                      Reserva expira em: 00:{String(timeLeft).padStart(2, '0')}s
+                    </span>
+                  </div>
+                </div>
+
+                {/* Barra de Progresso do Timer */}
+                <div className="w-full h-1 bg-black/[0.04] rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-brand-orange"
+                    initial={{ width: '100%' }}
+                    animate={{ width: `${(timeLeft / 60) * 100}%` }}
+                    transition={{ duration: 1, ease: 'linear' }}
+                  />
+                </div>
+
+                {/* Split Grid Layout responsivo focado na vertical */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+                  {/* Coluna 1: Ações de Pagamento e Copia e Cola (PC & Mobile) */}
+                  <div className="md:col-span-6 flex flex-col justify-between bg-brand-dark text-white p-6 sm:p-8 rounded-[2rem] space-y-6">
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-brand-orange text-[8px] uppercase tracking-[0.2em] font-black">NÚMEROS SELECIONADOS</p>
+                        <h4 className="text-lg font-serif italic text-white/95">{campaign.name}</h4>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">SEUS NÚMEROS DA SORTE:</p>
+                        <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1">
+                          {selectedNumbers.sort((a, b) => a - b).map(n => (
+                            <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/5 rounded text-[10px] font-bold text-white/95">#{String(n).padStart(3, '0')}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-white/10 flex justify-between items-baseline">
+                        <span className="text-[8px] uppercase tracking-widest text-white/30 font-black">TOTAL A PAGAR:</span>
+                        <span className="text-2xl font-serif italic text-brand-orange">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Botões Copia e Cola & Pagar no Banco */}
+                    <div className="space-y-3 pt-4 border-t border-white/10">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(infinitePayUrl);
+                          setCopied(true);
+                          showToast('Link de pagamento copiado com sucesso! Abra o app do seu banco para pagar.', 'success');
+                          setTimeout(() => setCopied(false), 3000);
+                        }}
+                        className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] uppercase tracking-widest font-black transition-all flex items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95"
+                      >
+                        {copied ? <><Check size={14} /> COPIADO COM SUCESSO!</> : <><Copy size={14} /> COPIAR LINK DE PAGAMENTO</>}
+                      </button>
+
+                      <a 
+                        href={infinitePayUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-4 bg-brand-orange hover:bg-brand-orange/95 text-white rounded-xl text-[10px] uppercase tracking-widest font-black transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-brand-orange/20 active:scale-95 text-center"
+                      >
+                        ⚡ ABRIR PAGAMENTO NO BANCO
+                      </a>
+                      
+                      <p className="text-[8px] text-white/40 text-center italic leading-tight">
+                        * Use o botão copiar para colar o link no seu navegador ou enviar ao celular.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Coluna 2: Status do Realtime e Orientações */}
+                  <div className="md:col-span-6 bg-black/[0.02] border border-black/5 p-6 sm:p-8 rounded-[2rem] flex flex-col justify-between space-y-6 text-left">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2.5">
+                        <Loader2 size={16} className="text-brand-orange animate-spin" />
+                        <span className="text-xs font-black uppercase tracking-wider text-brand-dark">Confirmando em Tempo Real...</span>
+                      </div>
+                      <p className="text-[10px] text-brand-dark/60 leading-relaxed font-medium">
+                        Assim que você concluir a transferência Pix no app do seu banco, nosso sistema receberá a notificação da InfinitePay e esta tela mudará sozinha na mesma hora.
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-green-500/[0.04] border border-green-500/10 rounded-2xl text-[9px] text-green-700 leading-normal space-y-1">
+                      <p className="font-bold flex items-center gap-1">✓ Sem envio de comprovante</p>
+                      <p>O Pix é identificado automaticamente. Não precisa falar no WhatsApp nem tirar print do recibo.</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showToast('Redirecionando para o Pix manual.', 'info');
+                        setStep('success');
+                        setPaymentMethod('manual');
+                      }}
+                      className="w-full text-center text-brand-dark/40 hover:text-brand-orange transition-colors text-[9px] font-black uppercase tracking-widest italic cursor-pointer outline-none"
+                    >
+                      Desejo pagar via Pix manual tradicional
+                    </button>
+                  </div>
+                </div>
+
+                {/* Seção 3: Visualizador Iframe Integrado para PC/Tablet */}
+                <div className="w-full flex flex-col gap-2 pt-2 border-t border-black/5">
+                  <div className="flex items-center justify-between text-[10px] text-brand-dark/40 px-1 font-bold">
+                    <span>SE PREFERIR, PAGUE DIRETAMENTE ABAIXO:</span>
+                    <span>(InfinitePay Checkout Seguro)</span>
+                  </div>
+                  
+                  <div className="w-full h-[360px] sm:h-[450px] rounded-2xl overflow-hidden border border-black/10 shadow-inner relative bg-[#F5F5F5] flex items-center justify-center">
+                    {iframeLoading && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#F5F5F5] z-10">
+                        <Loader2 size={36} className="text-brand-orange animate-spin" />
+                        <p className="text-xs font-black uppercase tracking-widest text-brand-dark/40">Carregando painel de pagamento...</p>
+                      </div>
+                    )}
+                    <iframe
+                      src={infinitePayUrl}
+                      className="w-full h-full border-0 rounded-2xl"
+                      title="InfinitePay Checkout"
+                      allow="clipboard-write"
+                      onLoad={() => setIframeLoading(false)}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {step === 'success' && (
               <motion.div 
                 key="step-success"
@@ -420,50 +749,92 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                   <Check size={48} strokeWidth={4} />
                 </div>
 
-                <div className="space-y-3">
-                  <h3 className="text-3xl font-serif italic text-brand-dark">Pedido de Rifa Recebido!</h3>
-                  <p className="text-sm text-brand-dark/50 italic max-w-md mx-auto">
-                    Seus números foram reservados com sucesso. Agora realize o pagamento via PIX para oficializar sua participação.
-                  </p>
-                </div>
-
-                <div className="w-full max-w-sm bg-white p-8 rounded-[3rem] border border-black/5 shadow-2xl space-y-8">
-                  <div className="space-y-4">
-                    <p className="text-[10px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">CHAVE PIX ({pixType})</p>
-                    <div className="bg-black/[0.04] p-6 rounded-[2rem] border border-transparent">
-                      <p className="font-mono text-sm text-brand-dark break-all font-black">{pixKey}</p>
+                {isConfirmedAutomatic ? (
+                  // Layout Premium para confirmação automática instantânea (WOW factor!)
+                  <div className="space-y-6 max-w-lg">
+                    <div className="space-y-2">
+                      <h3 className="text-3xl sm:text-4xl font-serif italic text-brand-dark">Apoio Confirmado via Pix!</h3>
+                      <p className="text-sm text-brand-dark/50 italic max-w-md mx-auto">
+                        Seu pagamento foi compensado de forma instantânea em nosso sistema. Sua participação é oficial!
+                      </p>
                     </div>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(pixKey);
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 3000);
-                      }}
-                      className="w-full py-4 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all flex items-center justify-center gap-2"
-                    >
-                      {copied ? <><Check size={12} /> COPIADO!</> : <><Copy size={12} /> COPIAR CHAVE PIX</>}
-                    </button>
+
+                    <div className="w-full max-w-md mx-auto bg-white p-8 rounded-[3rem] border border-black/5 shadow-2xl space-y-6">
+                      <div className="text-center bg-green-500/5 border border-green-500/10 p-5 rounded-[2rem] space-y-2">
+                        <span className="text-[9px] uppercase tracking-[0.2em] font-black text-green-600 block">⚡ STATUS DA TRANSAÇÃO</span>
+                        <strong className="text-sm font-black text-green-700 italic block">PAGO & PARTICIPADO</strong>
+                      </div>
+
+                      <div className="bg-brand-dark text-white p-6 rounded-[2.5rem] text-left space-y-4">
+                        <p className="text-[9px] uppercase tracking-widest text-white/30 font-black">NÚMEROS OFICIAIS ADQUIRIDOS:</p>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {selectedNumbers.sort((a, b) => a - b).map(n => (
+                            <span key={n} className="px-3 py-1 bg-white/15 border border-white/10 rounded-lg text-xs font-bold text-white">#{String(n).padStart(3, '0')}</span>
+                          ))}
+                        </div>
+                        <div className="pt-4 border-t border-white/10 flex justify-between items-center text-xs">
+                          <span className="text-white/40 font-bold">VALOR DOADO:</span>
+                          <span className="font-serif italic text-brand-orange text-lg">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-left space-y-2 p-4 bg-black/[0.02] rounded-2xl text-[10px] text-brand-dark/60 leading-relaxed">
+                        <p className="font-bold text-brand-dark">💡 O que acontece agora?</p>
+                        <p>✓ Não é necessário enviar nenhum comprovante por WhatsApp.</p>
+                        <p>✓ Seus números foram permanentemente ocupados em nosso painel.</p>
+                        <p>✓ Um e-mail formal de confirmação de pagamento contendo seus números já foi disparado para a sua caixa de entrada.</p>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-6 text-left border-t border-black/5 pt-8">
-                    <div>
-                      <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black mb-1">BANCO</p>
-                      <p className="text-xs font-black text-brand-dark">{pixBank}</p>
+                ) : (
+                  // Layout Tradicional para Pix manual
+                  <>
+                    <div className="space-y-3">
+                      <h3 className="text-3xl font-serif italic text-brand-dark">Pedido de Rifa Recebido!</h3>
+                      <p className="text-sm text-brand-dark/50 italic max-w-md mx-auto">
+                        Seus números foram reservados com sucesso. Agora realize o pagamento via PIX para oficializar sua participação.
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black mb-1">RECEBEDOR</p>
-                      <p className="text-xs font-black text-brand-dark">{pixReceiver}</p>
-                    </div>
-                  </div>
 
-                  <a 
-                    href={`https://wa.me/55${(settings?.contact_whatsapp?.value || '31992127292').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Fiz minha participação na rifa ${campaign.name} e quero enviar o comprovante.`)}`}
-                    target="_blank"
-                    className="w-full py-6 bg-[#25D366] text-white rounded-[2rem] text-[11px] uppercase tracking-[0.4em] font-black hover:shadow-green-500/40 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
-                  >
-                    <Smartphone size={20} /> ENVIAR COMPROVANTE
-                  </a>
-                </div>
+                    <div className="w-full max-w-sm bg-white p-8 rounded-[3rem] border border-black/5 shadow-2xl space-y-8">
+                      <div className="space-y-4">
+                        <p className="text-[10px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">CHAVE PIX ({pixType})</p>
+                        <div className="bg-black/[0.04] p-6 rounded-[2rem] border border-transparent">
+                          <p className="font-mono text-sm text-brand-dark break-all font-black">{pixKey}</p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(pixKey);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 3000);
+                          }}
+                          className="w-full py-4 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all flex items-center justify-center gap-2"
+                        >
+                          {copied ? <><Check size={12} /> COPIADO!</> : <><Copy size={12} /> COPIAR CHAVE PIX</>}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-6 text-left border-t border-black/5 pt-8">
+                        <div>
+                          <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black mb-1">BANCO</p>
+                          <p className="text-xs font-black text-brand-dark">{pixBank}</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black mb-1">RECEBEDOR</p>
+                          <p className="text-xs font-black text-brand-dark">{pixReceiver}</p>
+                        </div>
+                      </div>
+
+                      <a 
+                        href={`https://wa.me/55${(settings?.contact_whatsapp?.value || '31992127292').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Fiz minha participação na rifa ${campaign.name} e quero enviar o comprovante.`)}`}
+                        target="_blank"
+                        className="w-full py-6 bg-[#25D366] text-white rounded-[2rem] text-[11px] uppercase tracking-[0.4em] font-black hover:shadow-green-500/40 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
+                      >
+                        <Smartphone size={20} /> ENVIAR COMPROVANTE
+                      </a>
+                    </div>
+                  </>
+                )}
 
                 <button onClick={onClose} className="px-12 py-4 text-[10px] uppercase tracking-widest font-black text-brand-dark/20 hover:text-brand-dark italic">Concluir e Fechar</button>
               </motion.div>

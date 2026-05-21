@@ -26,7 +26,7 @@ interface DancerSponsorshipModalProps {
   campaignId?: string; // If null, we'll try to find an active one
 }
 
-type Step = 'dancer' | 'quantity' | 'roulette' | 'checkout' | 'success';
+type Step = 'dancer' | 'quantity' | 'roulette' | 'checkout' | 'infinitepay_checkout' | 'success';
 
 export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSponsorshipModalProps) {
   const { dancers, loading: loadingDancers } = useDancers();
@@ -47,6 +47,16 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   const [customerEmail, setCustomerEmail] = useState('');
   const [sessionId] = useState(() => Math.random().toString(36).substring(2, 15));
   const [lastReservedNumbers, setLastReservedNumbers] = useState<number[]>([]);
+
+  // Estados para integração com InfinitePay
+  const [infinitePayUrl, setInfinitePayUrl] = useState('');
+  const [orderId, setOrderId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'automatic' | 'manual'>('automatic');
+  const [isConfirmedAutomatic, setIsConfirmedAutomatic] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(true);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [copied, setCopied] = useState(false);
+
   const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
     show: false,
     message: '',
@@ -76,9 +86,34 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   }, [activeCampaign, takenNumbers]);
 
   useEffect(() => {
-    if (isOpen && activeCampaign) {
-      fetchTakenTickets(activeCampaign.id).then(setTakenNumbers);
-    }
+    if (!isOpen || !activeCampaign) return;
+
+    const loadTaken = async () => {
+      const taken = await fetchTakenTickets(activeCampaign.id);
+      setTakenNumbers(taken);
+    };
+    loadTaken();
+
+    // Inscrição em tempo real para atualizações de disponibilidade
+    const channel = supabase
+      .channel('public:dancer_sponsorship_availability')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'raffle_orders',
+        filter: `campaign_id=eq.${activeCampaign.id}`
+      }, () => loadTaken())
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'raffle_reservations',
+        filter: `campaign_id=eq.${activeCampaign.id}`
+      }, () => loadTaken())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [isOpen, activeCampaign]);
 
   useEffect(() => {
@@ -87,6 +122,70 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
       if (active) setSelectedDancer(active);
     }
   }, [dancers]);
+
+  // Escutar a confirmação do pagamento via Pix automático em tempo real
+  useEffect(() => {
+    if (step !== 'infinitepay_checkout' || !orderId) return;
+
+    console.log(`[Realtime] Subscrevendo ao status do pedido ${orderId}`);
+    
+    const channel = supabase
+      .channel(`sponsorship_order_payment_status:${orderId}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'raffle_orders',
+        filter: `id=eq.${orderId}`
+      }, (payload) => {
+        console.log('[Realtime] Payload de atualização do pedido:', payload);
+        if (payload.new && payload.new.status === 'paid') {
+          console.log('[Realtime] Pagamento confirmado! Avançando para a tela de sucesso.');
+          setIsConfirmedAutomatic(true);
+          showToast('Pagamento confirmado via Pix com sucesso!', 'success');
+          setStep('success');
+        }
+      })
+      .subscribe();
+
+    return () => {
+      console.log(`[Realtime] Removendo subscrição do pedido ${orderId}`);
+      supabase.removeChannel(channel);
+    };
+  }, [step, orderId]);
+
+  // Timer de 60 segundos com cancelamento automático de ordens expiradas no Supabase
+  useEffect(() => {
+    if (step !== 'infinitepay_checkout' || !orderId) return;
+
+    if (timeLeft <= 0) {
+      const cancelExpiredOrder = async () => {
+        try {
+          console.log(`[Timer] Tempo esgotado para o pedido ${orderId}. Cancelando no banco...`);
+          await supabase
+            .from('raffle_orders')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+
+          showToast('Tempo limite de 1 minuto excedido. Seus números foram liberados.', 'danger');
+          
+          setStep('roulette');
+          setHasSpunOnce(false);
+          setSelectedNumbers([]);
+          setTimeLeft(60);
+        } catch (error) {
+          console.error('[Timer] Erro ao cancelar pedido expirado:', error);
+        }
+      };
+      cancelExpiredOrder();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [step, orderId, timeLeft]);
 
   const handleNext = () => {
     if (step === 'dancer') setStep('quantity');
@@ -168,12 +267,14 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
     setIsSubmitting(true);
     try {
       // Fallback para UUID caso crypto.randomUUID não esteja disponível
-      const orderId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+      const newOrderId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
         ? crypto.randomUUID() 
         : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      setOrderId(newOrderId);
 
       const orderData = {
-        id: orderId,
+        id: newOrderId,
         campaign_id: activeCampaign.id,
         customer_name: customerName,
         customer_email: customerEmail,
@@ -193,41 +294,107 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
           .delete()
           .eq('session_id', sessionId);
 
-        setStep('success');
-        
-        // Background notification
-        if (supabase) {
-          const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com';
-          const pixReceiver = settings?.pix_checkout_receiver?.value || 'Tatiana Aparecida Figueiredo';
-          const pixBank = settings?.pix_checkout_bank?.value || 'SICOOB';
-          const pixType = settings?.pix_checkout_type?.value || 'E-mail';
-          const contactWhatsapp = settings?.contact_whatsapp?.value || '31992127292';
+        const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com';
+        const pixReceiver = settings?.pix_checkout_receiver?.value || 'Tatiana Aparecida Figueiredo';
+        const pixBank = settings?.pix_checkout_bank?.value || 'SICOOB';
+        const pixType = settings?.pix_checkout_type?.value || 'E-mail';
+        const contactWhatsapp = settings?.contact_whatsapp?.value || '31992127292';
 
-          supabase.functions.invoke('send-order', {
-            body: {
-              ...orderData,
-              order_id: orderId,
-              type: 'raffle_order',
-              campaign_name: activeCampaign.name,
-              dancer_name: selectedDancer?.name || 'Geral',
-              items: [
-                { 
-                  name: `Apoio ao Talento: ${selectedDancer?.name || 'Geral'}`, 
-                  price: activeCampaign.price_per_number * selectedNumbers.length,
-                  description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
-                }
-              ],
-              pix_key: pixKey,
-              pix_receiver: pixReceiver,
-              pix_bank: pixBank,
-              pix_type: pixType,
-              contact_whatsapp: contactWhatsapp
+        if (paymentMethod === 'automatic') {
+          console.log('[Payment] Generating InfinitePay Pix link for Dancer Sponsorship...');
+          try {
+            const { data: payData, error: payError } = await supabase.functions.invoke('create-infinitepay-payment', {
+              body: {
+                order_id: newOrderId,
+                total_price: orderData.total_price,
+                customer_name: customerName,
+                customer_email: customerEmail,
+                customer_phone: customerPhone,
+                campaign_name: `${activeCampaign.name} (Apoio: ${selectedDancer?.name || 'Geral'})`
+              }
+            });
+
+            if (payError || !payData?.url) {
+              console.error('[Payment] InfinitePay creation error:', payError);
+              showToast('Não foi possível iniciar o Pix automático. Redirecionando para Pix manual.', 'warning');
+              setStep('success'); // Fallback para Pix manual
+            } else {
+              console.log('[Payment] InfinitePay link generated successfully:', payData.url);
+              setInfinitePayUrl(payData.url);
+              setIframeLoading(true);
+              setTimeLeft(60); // Inicia o contador de 1 minuto
+              setStep('infinitepay_checkout');
+
+              // Background notification
+              if (supabase) {
+                supabase.functions.invoke('send-order', {
+                  body: {
+                    ...orderData,
+                    order_id: newOrderId,
+                    type: 'raffle_order',
+                    campaign_name: activeCampaign.name,
+                    dancer_name: selectedDancer?.name || 'Geral',
+                    items: [
+                      { 
+                        name: `Apoio ao Talento: ${selectedDancer?.name || 'Geral'}`, 
+                        price: activeCampaign.price_per_number * selectedNumbers.length,
+                        description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
+                      }
+                    ],
+                    pix_key: pixKey,
+                    pix_receiver: pixReceiver,
+                    pix_bank: pixBank,
+                    pix_type: pixType,
+                    contact_whatsapp: contactWhatsapp
+                  }
+                }).catch(e => console.error('Background email error:', e));
+              }
             }
-          }).catch(e => console.error('Background email error:', e));
+          } catch (payException) {
+            console.error('[Payment] Payment integration exception:', payException);
+            setStep('success'); // Fallback
+          }
+        } else {
+          // Pagamento Pix manual
+          setStep('success');
+          
+          // Background notification
+          if (supabase) {
+            supabase.functions.invoke('send-order', {
+              body: {
+                ...orderData,
+                order_id: newOrderId,
+                type: 'raffle_order',
+                campaign_name: activeCampaign.name,
+                dancer_name: selectedDancer?.name || 'Geral',
+                items: [
+                  { 
+                    name: `Apoio ao Talento: ${selectedDancer?.name || 'Geral'}`, 
+                    price: activeCampaign.price_per_number * selectedNumbers.length,
+                    description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
+                  }
+                ],
+                pix_key: pixKey,
+                pix_receiver: pixReceiver,
+                pix_bank: pixBank,
+                pix_type: pixType,
+                contact_whatsapp: contactWhatsapp
+              }
+            }).catch(e => console.error('Background email error:', e));
+          }
         }
       } else {
-        console.error('Order creation failed:', res?.error);
-        showToast(res?.error || 'Erro ao criar pedido. Por favor, tente novamente.', 'danger');
+        if (res?.error?.includes('redundancy') || res?.error?.includes('vendidos') || res?.error?.includes('RESERVADOS')) {
+          showToast('Ops! Um ou mais números selecionados acabaram de ser reservados por outra pessoa. Por favor, escolha outros números.', 'danger');
+          const taken = await fetchTakenTickets(activeCampaign.id);
+          setTakenNumbers(taken);
+          setSelectedNumbers([]);
+          setStep('roulette');
+          setHasSpunOnce(false);
+        } else {
+          console.error('Order creation failed:', res?.error);
+          showToast(res?.error || 'Erro ao criar pedido. Por favor, tente novamente.', 'danger');
+        }
       }
     } catch (error: any) {
       console.error('Error submitting order:', error);
@@ -634,6 +801,49 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                          </div>
                       </div>
 
+                      <div className="space-y-4 pt-2">
+                        <label className="text-[9px] uppercase tracking-[0.3em] text-brand-orange font-black block italic opacity-60 ml-4">
+                          Forma de Pagamento
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('automatic')}
+                            className={`p-5 rounded-2xl border text-left transition-all flex flex-col gap-2 outline-none cursor-pointer ${
+                              paymentMethod === 'automatic'
+                                ? 'border-brand-orange bg-brand-orange/[0.04] text-brand-dark shadow-md'
+                                : 'border-black/5 bg-black/[0.02] text-brand-dark/60 hover:border-black/10'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-black italic">⚡ Pix Automático</span>
+                              {paymentMethod === 'automatic' && (
+                                <span className="w-3.5 h-3.5 rounded-full bg-brand-orange flex items-center justify-center text-white text-[8px] font-black">✓</span>
+                              )}
+                            </div>
+                            <p className="text-[9px] opacity-70 leading-tight">Gera QR Code exclusivo e confirma na tela na hora, sem precisar de comprovante.</p>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('manual')}
+                            className={`p-5 rounded-2xl border text-left transition-all flex flex-col gap-2 outline-none cursor-pointer ${
+                              paymentMethod === 'manual'
+                                ? 'border-brand-orange bg-brand-orange/[0.04] text-brand-dark shadow-md'
+                                : 'border-black/5 bg-black/[0.02] text-brand-dark/60 hover:border-black/10'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-black italic">🔑 Pix Manual</span>
+                              {paymentMethod === 'manual' && (
+                                <span className="w-3.5 h-3.5 rounded-full bg-brand-orange flex items-center justify-center text-white text-[8px] font-black">✓</span>
+                              )}
+                            </div>
+                            <p className="text-[9px] opacity-70 leading-tight">Chave Pix tradicional. Exige a transferência e o envio do comprovante via WhatsApp.</p>
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="p-6 bg-brand-orange/5 border border-brand-orange/10 rounded-2xl flex gap-4">
                          <div className="w-1 h-auto bg-brand-orange rounded-full shrink-0" />
                          <p className="text-[10px] text-brand-orange font-black italic leading-relaxed uppercase tracking-[0.2em] opacity-70">
@@ -654,6 +864,172 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                       <button type="button" onClick={handleBack} className="text-[10px] uppercase tracking-[0.4em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic">Revisar Números</button>
                     </div>
                   </form>
+                </motion.div>
+              )}
+
+              {step === 'infinitepay_checkout' && (
+                <motion.div 
+                  key="step-infinitepay-checkout"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  className="flex flex-col gap-6 w-full"
+                >
+                  {/* Header Compacto com Contagem Regressiva */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-black/5">
+                    <div className="text-left space-y-1">
+                      <p className="text-brand-orange text-[9px] uppercase tracking-[0.2em] font-black flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
+                        ⚡ PIX AUTOMÁTICO INSTANTÂNEO
+                      </p>
+                      <h3 className="text-xl sm:text-2xl font-serif italic text-brand-dark">Aguardando Pagamento</h3>
+                      <p className="text-[10px] text-brand-dark/50 italic leading-tight">
+                        Seus números estão reservados! Finalize o pagamento em até 1 minuto.
+                      </p>
+                    </div>
+                    
+                    {/* Timer de Expirar em vermelho piscante */}
+                    <div className="flex items-center gap-2 px-4 py-2 bg-red-500/5 border border-red-500/10 rounded-full w-full sm:w-auto justify-center">
+                      <span className="text-[10px] uppercase tracking-widest font-black text-red-600 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                        Reserva expira em: 00:{String(timeLeft).padStart(2, '0')}s
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Barra de Progresso do Timer */}
+                  <div className="w-full h-1 bg-black/[0.04] rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-brand-orange"
+                      initial={{ width: '100%' }}
+                      animate={{ width: `${(timeLeft / 60) * 100}%` }}
+                      transition={{ duration: 1, ease: 'linear' }}
+                    />
+                  </div>
+
+                  {/* Split Grid Layout responsivo focado na vertical */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+                    {/* Coluna 1: Ações de Pagamento e Copia e Cola (PC & Mobile) */}
+                    <div className="md:col-span-6 flex flex-col justify-between bg-brand-dark text-white p-6 sm:p-8 rounded-[2rem] space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/15 bg-white shrink-0">
+                            {selectedDancer?.photo_url ? (
+                              <img src={selectedDancer.photo_url} className="w-full h-full object-cover scale-[1.8]" alt="" />
+                            ) : (
+                              <div className="w-full h-full bg-white/5 flex items-center justify-center"><User className="w-5 h-5 text-white/10" /></div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-brand-orange text-[7px] uppercase tracking-[0.2em] font-black">APOIO DIRECIONADO</p>
+                            <h4 className="text-sm font-serif italic text-white/95">{selectedDancer?.name}</h4>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-white/10">
+                          <p className="text-[8px] uppercase tracking-widest text-white/30 font-black mb-1">CAMPANHA</p>
+                          <p className="text-xs text-white/80 font-serif italic">{activeCampaign.name}</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">SEUS NÚMEROS DA SORTE:</p>
+                          <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1">
+                            {selectedNumbers.sort((a, b) => a - b).map(n => (
+                              <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/5 rounded text-[10px] font-bold text-white/95">#{String(n).padStart(3, '0')}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/10 flex justify-between items-baseline">
+                          <span className="text-[8px] uppercase tracking-widest text-white/30 font-black">TOTAL A PAGAR:</span>
+                          <span className="text-2xl font-serif italic text-brand-orange">R$ {activeCampaign ? (selectedNumbers.length * activeCampaign.price_per_number).toFixed(2) : '0.00'}</span>
+                        </div>
+                      </div>
+
+                      {/* Botões Copia e Cola & Pagar no Banco */}
+                      <div className="space-y-3 pt-4 border-t border-white/10">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(infinitePayUrl);
+                            setCopied(true);
+                            showToast('Link de pagamento copiado com sucesso! Abra o app do seu banco para pagar.', 'success');
+                            setTimeout(() => setCopied(false), 3000);
+                          }}
+                          className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] uppercase tracking-widest font-black transition-all flex items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95"
+                        >
+                          {copied ? <><Check size={14} /> COPIADO COM SUCESSO!</> : <><Copy size={14} /> COPIAR LINK DE PAGAMENTO</>}
+                        </button>
+
+                        <a 
+                          href={infinitePayUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-4 bg-brand-orange hover:bg-brand-orange/95 text-white rounded-xl text-[10px] uppercase tracking-widest font-black transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-brand-orange/20 active:scale-95 text-center"
+                        >
+                          ⚡ ABRIR PAGAMENTO NO BANCO
+                        </a>
+                        
+                        <p className="text-[8px] text-white/40 text-center italic leading-tight">
+                          * Use o botão copiar para colar o link no seu navegador ou enviar ao celular.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Coluna 2: Status do Realtime e Orientações */}
+                    <div className="md:col-span-6 bg-black/[0.02] border border-black/5 p-6 sm:p-8 rounded-[2rem] flex flex-col justify-between space-y-6 text-left">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2.5">
+                          <Loader2 size={16} className="text-brand-orange animate-spin" />
+                          <span className="text-xs font-black uppercase tracking-wider text-brand-dark">Confirmando em Tempo Real...</span>
+                        </div>
+                        <p className="text-[10px] text-brand-dark/60 leading-relaxed font-medium">
+                          Assim que você concluir a transferência Pix no app do seu banco, nosso system receberá a notificação da InfinitePay e esta tela mudará sozinha na mesma hora.
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-green-500/[0.04] border border-green-500/10 rounded-2xl text-[9px] text-green-700 leading-normal space-y-1">
+                        <p className="font-bold flex items-center gap-1">✓ Sem envio de comprovante</p>
+                        <p>O Pix é identificado automaticamente. Não precisa falar no WhatsApp nem tirar print do recibo.</p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          showToast('Redirecionando para o Pix manual.', 'info');
+                          setStep('success');
+                          setPaymentMethod('manual');
+                        }}
+                        className="w-full text-center text-brand-dark/40 hover:text-brand-orange transition-colors text-[9px] font-black uppercase tracking-widest italic cursor-pointer outline-none"
+                      >
+                        Desejo pagar via Pix manual tradicional
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Seção 3: Visualizador Iframe Integrado para PC/Tablet */}
+                  <div className="w-full flex flex-col gap-2 pt-2 border-t border-black/5">
+                    <div className="flex items-center justify-between text-[10px] text-brand-dark/40 px-1 font-bold">
+                      <span>SE PREFERIR, PAGUE DIRETAMENTE ABAIXO:</span>
+                      <span>(InfinitePay Checkout Seguro)</span>
+                    </div>
+                    
+                    <div className="w-full h-[360px] sm:h-[450px] rounded-2xl overflow-hidden border border-black/10 shadow-inner relative bg-[#F5F5F5] flex items-center justify-center">
+                      {iframeLoading && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#F5F5F5] z-10">
+                          <Loader2 size={36} className="text-brand-orange animate-spin" />
+                          <p className="text-xs font-black uppercase tracking-widest text-brand-dark/40">Carregando painel de pagamento...</p>
+                        </div>
+                      )}
+                      <iframe
+                        src={infinitePayUrl}
+                        className="w-full h-full border-0 rounded-2xl"
+                        title="InfinitePay Checkout"
+                        allow="clipboard-write"
+                        onLoad={() => setIframeLoading(false)}
+                      />
+                    </div>
+                  </div>
                 </motion.div>
               )}
 
@@ -687,58 +1063,102 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     </motion.div>
                   </div>
 
-                  <div className="space-y-3">
-                    <h3 className="text-2xl sm:text-3xl font-serif italic text-brand-dark leading-tight">Pedido Recebido!</h3>
-                    <p className="text-xs text-brand-dark/50 max-w-sm mx-auto leading-relaxed italic">
-                      Sua reserva para apoiar <span className="text-brand-dark font-black underline decoration-brand-orange/40 decoration-2 underline-offset-4">{selectedDancer?.name}</span> foi processada. Agora falta pouco!
-                    </p>
-                  </div>
+                  {isConfirmedAutomatic ? (
+                    // Layout Premium para confirmação automática instantânea (WOW factor!)
+                    <div className="space-y-6 max-w-lg">
+                      <div className="space-y-2">
+                        <h3 className="text-2xl sm:text-3xl font-serif italic text-brand-dark leading-tight">Apoio Confirmado via Pix!</h3>
+                        <p className="text-xs text-brand-dark/50 max-w-md mx-auto leading-relaxed italic">
+                          Seu pagamento foi compensado de forma instantânea em nosso sistema. Seu apoio a <span className="text-brand-dark font-black underline decoration-brand-orange/40 decoration-2 underline-offset-4">{selectedDancer?.name}</span> é oficial!
+                        </p>
+                      </div>
 
-                  <div className="w-full max-w-sm bg-white p-6 rounded-[2rem] border border-black/5 shadow-xl space-y-6">
-                    <div className="space-y-4">
-                      <p className="text-[9px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">CHAVE PIX ({settings?.pix_checkout_type?.value || 'E-mail'})</p>
-                      <div className="relative group">
-                        <div className="bg-black/[0.04] p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-transparent hover:border-brand-orange/30 transition-all shadow-inner">
-                          <p className="font-mono text-xs sm:text-sm text-brand-dark break-all font-black tracking-tight">
-                            {settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com'}
-                          </p>
+                      <div className="w-full max-w-md mx-auto bg-white p-6 rounded-[2rem] border border-black/5 shadow-xl space-y-6">
+                        <div className="text-center bg-green-500/5 border border-green-500/10 p-4 rounded-[1.5rem] space-y-1">
+                          <span className="text-[9px] uppercase tracking-[0.2em] font-black text-green-600 block">⚡ STATUS DA TRANSAÇÃO</span>
+                          <strong className="text-xs font-black text-green-700 italic block">PAGO & APOIADO</strong>
                         </div>
+
+                        <div className="bg-brand-dark text-white p-5 rounded-[2rem] text-left space-y-3">
+                          <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">NÚMEROS OFICIAIS ADQUIRIDOS:</p>
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {selectedNumbers.sort((a, b) => a - b).map(n => (
+                              <span key={n} className="px-2.5 py-0.5 bg-white/15 border border-white/10 rounded text-[10px] font-bold text-white">#{String(n).padStart(3, '0')}</span>
+                            ))}
+                          </div>
+                          <div className="pt-3 border-t border-white/10 flex justify-between items-center text-[10px]">
+                            <span className="text-white/40 font-bold">VALOR DOADO:</span>
+                            <span className="font-serif italic text-brand-orange text-sm">R$ {activeCampaign ? (selectedNumbers.length * activeCampaign.price_per_number).toFixed(2) : '0.00'}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-left space-y-1.5 p-4 bg-black/[0.02] rounded-xl text-[9px] text-brand-dark/60 leading-relaxed">
+                          <p className="font-bold text-brand-dark">💡 O que acontece agora?</p>
+                          <p>✓ Não é necessário enviar nenhum comprovante por WhatsApp.</p>
+                          <p>✓ Seus números foram permanentemente ocupados em nosso painel.</p>
+                          <p>✓ Um e-mail formal de confirmação de pagamento contendo seus números já foi disparado para a sua caixa de entrada.</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Layout Tradicional para Pix manual
+                    <>
+                      <div className="space-y-3">
+                        <h3 className="text-2xl sm:text-3xl font-serif italic text-brand-dark leading-tight">Pedido Recebido!</h3>
+                        <p className="text-xs text-brand-dark/50 max-w-sm mx-auto leading-relaxed italic">
+                          Sua reserva para apoiar <span className="text-brand-dark font-black underline decoration-brand-orange/40 decoration-2 underline-offset-4">{selectedDancer?.name}</span> foi processada. Agora falta pouco!
+                        </p>
+                      </div>
+
+                      <div className="w-full max-w-sm bg-white p-6 rounded-[2rem] border border-black/5 shadow-xl space-y-6">
+                        <div className="space-y-4">
+                          <p className="text-[9px] uppercase tracking-[0.4em] text-brand-dark/30 font-black">CHAVE PIX ({settings?.pix_checkout_type?.value || 'E-mail'})</p>
+                          <div className="relative group">
+                            <div className="bg-black/[0.04] p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-transparent hover:border-brand-orange/30 transition-all shadow-inner">
+                              <p className="font-mono text-xs sm:text-sm text-brand-dark break-all font-black tracking-tight">
+                                {settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com'}
+                              </p>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                const key = settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com';
+                                navigator.clipboard.writeText(key);
+                                setCopied(true);
+                                showToast('Chave PIX copiada!', 'success');
+                                setTimeout(() => setCopied(false), 3000);
+                              }}
+                              className="mt-3 w-full py-3 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all flex items-center justify-center gap-2"
+                            >
+                              {copied ? <><Check size={12} /> COPIADO!</> : <><Copy size={12} /> COPIAR CHAVE PIX</>}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-6 text-left border-t border-black/5 pt-8">
+                          <div>
+                            <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">BANCO</p>
+                            <p className="text-sm font-black text-brand-dark tracking-tight">{settings?.pix_checkout_bank?.value || 'SICOOB'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">RECEBEDOR</p>
+                            <p className="text-sm font-black text-brand-dark tracking-tight">{settings?.pix_checkout_receiver?.value || 'Tatiana Aparecida Figueiredo'}</p>
+                          </div>
+                        </div>
+
                         <button 
                           onClick={() => {
-                            const key = settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com';
-                            navigator.clipboard.writeText(key);
-                            showToast('Chave PIX copiada!', 'success');
+                            const whatsapp = settings['contact_whatsapp']?.value || '31992127292';
+                            const msg = encodeURIComponent(`Olá! Fiz minha participação na rifa para apoiar ${selectedDancer?.name} e quero enviar o comprovante.`);
+                            window.open(`https://wa.me/55${whatsapp.replace(/\D/g, '')}?text=${msg}`);
                           }}
-                          className="mt-3 w-full py-3 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all flex items-center justify-center gap-2"
+                          className="w-full py-5 bg-[#25D366] text-white rounded-[1.5rem] text-[11px] uppercase tracking-[0.3em] font-black hover:shadow-[0_15px_30px_-5px_rgba(37,211,102,0.4)] transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
                         >
-                          <Copy size={12} /> COPIAR CHAVE PIX
+                          <Smartphone size={18} />
+                          ENVIAR COMPROVANTE AGORA
                         </button>
                       </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-6 text-left border-t border-black/5 pt-8">
-                      <div>
-                        <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">BANCO</p>
-                        <p className="text-sm font-black text-brand-dark tracking-tight">{settings?.pix_checkout_bank?.value || 'SICOOB'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">RECEBEDOR</p>
-                        <p className="text-sm font-black text-brand-dark tracking-tight">{settings?.pix_checkout_receiver?.value || 'Tatiana Aparecida Figueiredo'}</p>
-                      </div>
-                    </div>
-
-                    <button 
-                      onClick={() => {
-                        const whatsapp = settings['contact_whatsapp']?.value || '31992127292';
-                        const msg = encodeURIComponent(`Olá! Quero oficializar meu apoio para ${selectedDancer?.name}.`);
-                        window.open(`https://wa.me/55${whatsapp.replace(/\D/g, '')}?text=${msg}`);
-                      }}
-                      className="w-full py-5 bg-[#25D366] text-white rounded-[1.5rem] text-[11px] uppercase tracking-[0.3em] font-black hover:shadow-[0_15px_30px_-5px_rgba(37,211,102,0.4)] transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
-                    >
-                      <Smartphone size={18} />
-                      ENVIAR COMPROVANTE AGORA
-                    </button>
-                  </div>
+                    </>
+                  )}
 
                   <button 
                     onClick={onClose}

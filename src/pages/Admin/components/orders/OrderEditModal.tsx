@@ -30,9 +30,10 @@ interface OrderEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
+  onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
 }
 
-export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, onClose, onSave }) => {
+export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, onClose, onSave, onAlert }) => {
   const [updating, setUpdating] = useState(false);
   const { items: helpItems } = useHelpItems();
   const { dancers } = useDancers();

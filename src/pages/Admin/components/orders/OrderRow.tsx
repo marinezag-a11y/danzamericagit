@@ -375,6 +375,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
         onClose={() => setIsModalOpen(false)}
         order={order}
         onSave={handleSaveFromModal}
+        onAlert={onAlert}
       />
 
       <ReasonModal

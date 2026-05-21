@@ -39,7 +39,8 @@ export function BannerManager({ onAlert }: BannerManagerProps) {
       title: newTitle, 
       subtitle: newSubtitle, 
       image_url: newUrl, 
-      order_index: (banners || []).length 
+      order_index: (banners || []).length,
+      is_active: true
     });
     
     if (result.success) {

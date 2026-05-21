@@ -352,7 +352,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="modal-container relative z-10 w-full max-w-4xl"
+        className="modal-container relative z-10 w-full max-w-2xl"
       >
         {/* Progress Bar */}
         {step !== 'success' && (
@@ -531,46 +531,12 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     />
                   </div>
 
-                  <div className="space-y-4 pt-2">
-                    <label className="text-[9px] uppercase tracking-[0.3em] text-brand-orange font-black block italic opacity-60">
-                      Forma de Pagamento
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('automatic')}
-                        className={`p-5 rounded-2xl border text-left transition-all flex flex-col gap-2 outline-none cursor-pointer ${
-                          paymentMethod === 'automatic'
-                            ? 'border-brand-orange bg-brand-orange/[0.04] text-brand-dark shadow-md'
-                            : 'border-black/5 bg-black/[0.02] text-brand-dark/60 hover:border-black/10'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xs font-black italic">⚡ Pix Automático</span>
-                          {paymentMethod === 'automatic' && (
-                            <span className="w-3.5 h-3.5 rounded-full bg-brand-orange flex items-center justify-center text-white text-[8px] font-black">✓</span>
-                          )}
-                        </div>
-                        <p className="text-[9px] opacity-70 leading-tight">Gera QR Code exclusivo e confirma na tela na hora, sem precisar de comprovante.</p>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('manual')}
-                        className={`p-5 rounded-2xl border text-left transition-all flex flex-col gap-2 outline-none cursor-pointer ${
-                          paymentMethod === 'manual'
-                            ? 'border-brand-orange bg-brand-orange/[0.04] text-brand-dark shadow-md'
-                            : 'border-black/5 bg-black/[0.02] text-brand-dark/60 hover:border-black/10'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xs font-black italic">🔑 Pix Manual</span>
-                          {paymentMethod === 'manual' && (
-                            <span className="w-3.5 h-3.5 rounded-full bg-brand-orange flex items-center justify-center text-white text-[8px] font-black">✓</span>
-                          )}
-                        </div>
-                        <p className="text-[9px] opacity-70 leading-tight">Chave Pix tradicional. Exige a transferência e o envio do comprovante via WhatsApp.</p>
-                      </button>
+                  {/* Quiet/Passive payment indicator showing that only Pix Automático is used */}
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[10px] uppercase tracking-[0.5em] text-brand-dark/30 font-black">FORMA DE PAGAMENTO</p>
+                    <div className="p-5 rounded-2xl border border-brand-orange bg-brand-orange/[0.02] text-brand-dark flex flex-col gap-1.5">
+                      <span className="text-xs font-black italic text-brand-orange">⚡ Pix Automático Instantâneo</span>
+                      <p className="text-[9px] opacity-70 leading-tight">Gera QR Code exclusivo e confirma na tela na hora, sem precisar de comprovante.</p>
                     </div>
                   </div>
 
@@ -699,41 +665,6 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                       <p>O Pix é identificado automaticamente. Não precisa falar no WhatsApp nem tirar print do recibo.</p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        showToast('Redirecionando para o Pix manual.', 'info');
-                        setStep('success');
-                        setPaymentMethod('manual');
-                      }}
-                      className="w-full text-center text-brand-dark/40 hover:text-brand-orange transition-colors text-[9px] font-black uppercase tracking-widest italic cursor-pointer outline-none"
-                    >
-                      Desejo pagar via Pix manual tradicional
-                    </button>
-                  </div>
-                </div>
-
-                {/* Seção 3: Visualizador Iframe Integrado para PC/Tablet */}
-                <div className="w-full flex flex-col gap-2 pt-2 border-t border-black/5">
-                  <div className="flex items-center justify-between text-[10px] text-brand-dark/40 px-1 font-bold">
-                    <span>SE PREFERIR, PAGUE DIRETAMENTE ABAIXO:</span>
-                    <span>(InfinitePay Checkout Seguro)</span>
-                  </div>
-                  
-                  <div className="w-full h-[360px] sm:h-[450px] rounded-2xl overflow-hidden border border-black/10 shadow-inner relative bg-[#F5F5F5] flex items-center justify-center">
-                    {iframeLoading && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#F5F5F5] z-10">
-                        <Loader2 size={36} className="text-brand-orange animate-spin" />
-                        <p className="text-xs font-black uppercase tracking-widest text-brand-dark/40">Carregando painel de pagamento...</p>
-                      </div>
-                    )}
-                    <iframe
-                      src={infinitePayUrl}
-                      className="w-full h-full border-0 rounded-2xl"
-                      title="InfinitePay Checkout"
-                      allow="clipboard-write"
-                      onLoad={() => setIframeLoading(false)}
-                    />
                   </div>
                 </div>
               </motion.div>

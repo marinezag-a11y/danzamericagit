@@ -471,7 +471,9 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="modal-container relative z-10"
+        className={`modal-container relative z-10 transition-all duration-500 ${
+          (step === 'checkout' || step === 'dancer' || step === 'infinitepay_checkout') ? 'sm:!max-w-4xl' : ''
+        }`}
       >
         {/* Progress Bar */}
         {step !== 'success' && (
@@ -764,16 +766,16 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   initial={{ opacity: 0, x: 50 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -50 }}
-                  className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-12"
+                  className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6"
                 >
-                  {/* Summary Side */}
-                  <div className="bg-brand-dark text-white p-4 sm:p-12 rounded-[2rem] sm:rounded-[4rem] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] relative overflow-hidden group">
+                  {/* Summary Side - Otimizado para não devorar espaço no Desktop */}
+                  <div className="bg-brand-dark text-white p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-110 transition-transform duration-1000" />
                     
-                    <div className="relative z-10 h-full flex flex-col justify-between gap-12">
-                      <div className="space-y-10">
-                        <div className="flex items-center gap-3 sm:gap-8">
-                          <div className="w-12 h-12 sm:w-24 sm:h-24 rounded-xl sm:rounded-3xl overflow-hidden border-2 sm:border-4 border-white/10 shadow-2xl flex-shrink-0 rotate-3 bg-white">
+                    <div className="relative z-10 h-full flex flex-col justify-between gap-6 sm:gap-10">
+                      <div className="space-y-6 sm:space-y-8">
+                        <div className="flex items-center gap-3 sm:gap-5">
+                          <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl flex-shrink-0 rotate-3 bg-white">
                             {selectedDancer?.photo_url ? (
                               <img 
                                 src={selectedDancer.photo_url} 
@@ -785,31 +787,31 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                             )}
                           </div>
                           <div>
-                            <p className="text-[7px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-white/30 font-black">BENEFICIÁRIO</p>
-                            <h4 className="text-base sm:text-3xl font-serif italic text-white leading-tight mt-0.5 sm:mt-1">{selectedDancer?.name}</h4>
+                            <p className="text-[7px] sm:text-[9px] uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white/30 font-black">BENEFICIÁRIO</p>
+                            <h4 className="text-base sm:text-2xl font-serif italic text-white leading-tight mt-0.5 sm:mt-1">{selectedDancer?.name}</h4>
                           </div>
                         </div>
 
-                        <div className="space-y-3 sm:space-y-6">
-                          <p className="text-[7px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-white/30 font-black">NÚMEROS RESERVADOS:</p>
-                          <div className="flex flex-wrap gap-2">
+                        <div className="space-y-2.5 sm:space-y-4">
+                          <p className="text-[7px] sm:text-[9px] uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white/30 font-black">NÚMEROS RESERVADOS:</p>
+                          <div className="flex flex-wrap gap-1.5">
                             {selectedNumbers.map(n => (
-                              <span key={n} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-white/90">#{String(n).padStart(3, '0')}</span>
+                              <span key={n} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-[9px] font-bold text-white/90">#{String(n).padStart(3, '0')}</span>
                             ))}
                           </div>
                         </div>
                       </div>
 
-                      <div className="pt-4 sm:pt-12 border-t border-white/10 flex items-center justify-between">
-                        <span className="text-[8px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-white/30 font-black">TOTAL:</span>
-                        <span className="text-2xl sm:text-5xl font-serif italic text-brand-orange tracking-tighter">
+                      <div className="pt-4 sm:pt-8 border-t border-white/10 flex items-center justify-between">
+                        <span className="text-[8px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white/30 font-black">TOTAL:</span>
+                        <span className="text-2xl sm:text-4xl font-serif italic text-brand-orange tracking-tighter">
                           R$ {activeCampaign ? (activeCampaign.price_per_number * quantity).toFixed(2) : '0.00'}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="flex flex-col justify-between py-4">
+                  <form onSubmit={handleSubmit} className="flex flex-col justify-between py-2 sm:py-4">
                     <div className="space-y-6">
                       <div className="space-y-2">
                          <p className="text-[10px] uppercase tracking-[0.5em] text-brand-dark/30 font-black ml-4">SEUS DADOS <span className="text-brand-orange">*</span></p>

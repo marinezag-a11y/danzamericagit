@@ -405,7 +405,9 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="modal-container relative z-10"
+        className={`modal-container relative z-10 transition-all duration-500 ${
+          (step === 'checkout' || step === 'infinitepay_checkout') ? 'sm:!max-w-4xl' : ''
+        }`}
       >
         {/* Progress Bar */}
         {step !== 'success' && (
@@ -545,7 +547,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 key="step-checkout"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6"
               >
                 <div className="bg-brand-dark text-white p-6 rounded-2xl space-y-4">
                   <div className="space-y-1">

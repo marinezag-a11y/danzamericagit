@@ -631,14 +631,9 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     <p className="text-[11px] uppercase tracking-[0.4em] text-brand-orange font-black mt-3 italic opacity-60">Talento Selecionado</p>
                     
                     {activeCampaign && (
-                      <div className="mt-8 pt-6 border-t border-black/5 max-w-xs mx-auto">
-                        <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/20 font-black mb-2">Ação em Participação</p>
-                        <p className="text-sm font-serif italic text-brand-dark/70 leading-tight">{activeCampaign.name}</p>
-                        {activeCampaign.description && (
-                          <p className="text-[10px] text-brand-dark/40 font-serif italic mt-2 leading-relaxed whitespace-pre-line">
-                            {activeCampaign.description}
-                          </p>
-                        )}
+                      <div className="mt-4 pt-3 border-t border-black/5 max-w-xs mx-auto">
+                        <p className="text-[7px] uppercase tracking-[0.2em] text-brand-dark/20 font-black mb-0.5">Ação em Participação</p>
+                        <p className="text-[11px] font-sans font-bold text-brand-dark/60 leading-tight">{activeCampaign.name}</p>
                       </div>
                     )}
                   </div>

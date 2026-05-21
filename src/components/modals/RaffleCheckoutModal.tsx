@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy, RotateCw, Check, Smartphone, ChevronRight, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy, RotateCw, Check, Smartphone, ChevronRight, ChevronDown, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { RaffleCampaign, useRaffles } from '../../hooks/useRaffles';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { supabase } from '../../lib/supabase';
@@ -103,6 +103,13 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   const [isConfirmedAutomatic, setIsConfirmedAutomatic] = useState(false);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(300);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+
+  useEffect(() => {
+    if (step === 'checkout') {
+      setShowScrollIndicator(true);
+    }
+  }, [step]);
 
   const pixKey = settings?.infinitepay_pix_key?.value || '';
   const pixReceiver = settings?.infinitepay_receiver?.value || 'NUCLEO DE DANCA TATIANA FIGUEIREDO';
@@ -431,7 +438,14 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
           <X className="w-5 h-5" />
         </button>
 
-        <div className="modal-content p-4 sm:p-6">
+        <div 
+          className="modal-content p-4 sm:p-6"
+          onScroll={(e) => {
+            if (e.currentTarget.scrollTop > 20) {
+              setShowScrollIndicator(false);
+            }
+          }}
+        >
           <AnimatePresence mode="wait">
             {step === 'quantity' && (
               <motion.div 
@@ -568,6 +582,25 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     <span className="text-[10px] uppercase tracking-widest text-white/30 font-black">TOTAL:</span>
                     <span className="text-2xl font-sans font-black text-brand-orange">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
                   </div>
+
+                  {/* Indicador de Scroll no Mobile com desvanecimento suave */}
+                  <AnimatePresence>
+                    {showScrollIndicator && (
+                      <motion.div 
+                        className="sm:hidden flex flex-col items-center gap-1 mt-4 text-brand-orange/80"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: [0, 5, 0] }}
+                        exit={{ opacity: 0 }}
+                        transition={{ 
+                          opacity: { duration: 0.3 },
+                          y: { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
+                        }}
+                      >
+                        <span className="text-[8px] uppercase tracking-widest font-black opacity-80">Preencha seus dados abaixo</span>
+                        <ChevronDown className="w-4 h-4 shrink-0" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <form onSubmit={handleOrder} className="space-y-4 py-1">

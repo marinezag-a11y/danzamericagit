@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, ArrowRight, Ticket, Loader2, Smartphone, Mail, User, RotateCw, Check, Copy, AlertTriangle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ChevronDown, ArrowRight, Ticket, Loader2, Smartphone, Mail, User, RotateCw, Check, Copy, AlertTriangle } from 'lucide-react';
 import { WheelPicker } from '../ui/WheelPicker';
 import { LuckyRoulette } from '../ui/LuckyRoulette';
 import { Toast } from '../ui/Toast';
@@ -119,6 +119,13 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   const [iframeLoading, setIframeLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(300);
   const [copied, setCopied] = useState(false);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+
+  useEffect(() => {
+    if (step === 'checkout') {
+      setShowScrollIndicator(true);
+    }
+  }, [step]);
 
   const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
     show: false,
@@ -499,7 +506,14 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
           <X className="w-5 h-5" />
         </button>
 
-        <div className="modal-content relative">
+        <div 
+          className="modal-content relative"
+          onScroll={(e) => {
+            if (e.currentTarget.scrollTop > 20) {
+              setShowScrollIndicator(false);
+            }
+          }}
+        >
           {/* Header - Compact for Mobile */}
           <div className="mb-3 sm:mb-6 text-center px-6 pt-6 sm:pt-4">
             <motion.h2 
@@ -808,6 +822,25 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                           R$ {activeCampaign ? (activeCampaign.price_per_number * quantity).toFixed(2) : '0.00'}
                         </span>
                       </div>
+
+                      {/* Indicador de Scroll no Mobile com desvanecimento suave */}
+                      <AnimatePresence>
+                        {showScrollIndicator && (
+                          <motion.div 
+                            className="sm:hidden flex flex-col items-center gap-1 mt-4 text-brand-orange/80"
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: [0, 5, 0] }}
+                            exit={{ opacity: 0 }}
+                            transition={{ 
+                              opacity: { duration: 0.3 },
+                              y: { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
+                            }}
+                          >
+                            <span className="text-[8px] uppercase tracking-widest font-black opacity-80">Preencha seus dados abaixo</span>
+                            <ChevronDown className="w-4 h-4 shrink-0" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
 

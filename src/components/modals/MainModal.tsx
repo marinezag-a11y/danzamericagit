@@ -140,7 +140,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   const { settings } = useSiteSettings();
   const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
   const pixType = settings?.pix_checkout_type?.value || "E-mail";
-  const pixReceiver = settings?.pix_checkout_receiver?.value || "Tatiana Figueiredo";
+  const pixReceiver = settings?.pix_checkout_receiver?.value || "NUCLEO DE DANCA TATIANA FIGUEIREDO";
   const pixBank = settings?.pix_checkout_bank?.value || "NuBank";
 
   const handleCopyPix = async () => {

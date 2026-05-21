@@ -251,88 +251,38 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
                             </div>
                           </div>
 
-                          {/* Detailed Checkout Pix Card */}
-                          <div className="mt-12 bg-white/[0.02] border border-white/5 p-8 rounded-2xl ml-4">
-                            <h5 className="text-[10px] uppercase tracking-[0.3em] text-white/40 font-bold mb-8">Dados Bancários (Check-out)</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                          {/* InfinitePay Pix Config Card */}
+                          <div className="mt-12 bg-white/[0.02] border border-brand-orange/20 p-8 rounded-2xl ml-4">
+                            <h5 className="text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold mb-2">Dados Pix InfinitePay (Checkout)</h5>
+                            <p className="text-[9px] text-white/30 mb-8 leading-relaxed">
+                              Configure a chave Pix registrada na sua conta InfinitePay. Esta chave é usada para gerar o Pix Copia e Cola e o QR Code no checkout. Encontre-a em: App InfinitePay → Conta → Chaves Pix.
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                               <div className="space-y-4">
-                                <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Chave PIX</label>
+                                <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Chave Pix InfinitePay</label>
                                 <input 
                                   type="text" 
                                   className="w-full bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/50 outline-none transition-all text-white/80 rounded-xl"
-                                  value={localValues['pix_key_checkout'] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    const cleanVal = val.replace(/\D/g, '');
-                                    let detectedType = localValues['pix_checkout_type'];
-
-                                    if (val.includes('@')) {
-                                      detectedType = 'email';
-                                    } else if (val.includes('(') || val.startsWith('+')) {
-                                      detectedType = 'telefone';
-                                    } else if (val.includes('.') || val.includes('-')) {
-                                      detectedType = 'cpf';
-                                    } else if (cleanVal.length === 11) {
-                                      // No Brasil, celulares com DDD têm 11 dígitos e o 3º dígito é sempre 9
-                                      const isMobile = cleanVal.charAt(2) === '9';
-                                      detectedType = isMobile ? 'telefone' : 'cpf';
-                                    } else if (cleanVal.length === 10) {
-                                      detectedType = 'telefone';
-                                    }
-
-                                    setLocalValues(prev => ({ 
-                                      ...prev, 
-                                      pix_key_checkout: val,
-                                      pix_checkout_type: detectedType 
-                                    }));
-                                  }}
-                                  placeholder="Chave para pagamentos"
+                                  value={localValues['infinitepay_pix_key'] || ''}
+                                  onChange={(e) => setLocalValues(prev => ({ ...prev, infinitepay_pix_key: e.target.value }))}
+                                  placeholder="Ex: CNPJ, e-mail ou chave aleatória da InfinitePay"
                                 />
                               </div>
                               <div className="space-y-4">
-                                <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Tipo de Chave</label>
-                                <div className="flex gap-2">
-                                  {['email', 'cpf', 'telefone'].map(type => (
-                                    <button
-                                      key={type}
-                                      type="button"
-                                      onClick={() => setLocalValues(prev => ({ ...prev, pix_checkout_type: type }))}
-                                      className={`flex-1 py-3 text-[9px] uppercase font-bold tracking-widest rounded-lg border transition-all ${
-                                        localValues['pix_checkout_type'] === type 
-                                          ? 'bg-brand-orange border-brand-orange text-white' 
-                                          : 'bg-black/20 border-white/5 text-white/30 hover:border-white/20'
-                                      }`}
-                                    >
-                                      {type}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="space-y-4">
-                                <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Nome do Recebedor</label>
+                                <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Nome do Recebedor (InfinitePay)</label>
                                 <input 
                                   type="text" 
                                   className="w-full bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/50 outline-none transition-all text-white/80 rounded-xl"
-                                  value={localValues['pix_checkout_receiver'] || ''}
-                                  onChange={(e) => setLocalValues(prev => ({ ...prev, pix_checkout_receiver: e.target.value }))}
-                                  placeholder="Nome Completo"
-                                />
-                              </div>
-                              <div className="space-y-4">
-                                <label className="block text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold ml-1">Banco</label>
-                                <input 
-                                  type="text" 
-                                  className="w-full bg-black/40 border border-white/10 p-4 text-sm font-sans focus:border-brand-orange/50 outline-none transition-all text-white/80 rounded-xl"
-                                  value={localValues['pix_checkout_bank'] || ''}
-                                  onChange={(e) => setLocalValues(prev => ({ ...prev, pix_checkout_bank: e.target.value }))}
-                                  placeholder="Ex: Itaú, NuBank..."
+                                  value={localValues['infinitepay_receiver'] || ''}
+                                  onChange={(e) => setLocalValues(prev => ({ ...prev, infinitepay_receiver: e.target.value }))}
+                                  placeholder="Ex: NUCLEO DE DANCA TATIANA FIGUEIREDO"
                                 />
                               </div>
                             </div>
                           </div>
                           <div className="flex justify-end mt-8 pl-4">
                             <button 
-                              onClick={() => handleSaveSection('Links de Doação', ['pix_key', 'pix_key_checkout', 'vakinha_url', 'pix_checkout_type', 'pix_checkout_receiver', 'pix_checkout_bank', 'contact_whatsapp', 'dancers_count'])}
+                              onClick={() => handleSaveSection('Links de Doação', ['pix_key', 'vakinha_url', 'contact_whatsapp', 'dancers_count', 'infinitepay_pix_key', 'infinitepay_receiver'])}
                               disabled={saving === 'Links de Doação'}
                               className="px-10 py-4 bg-brand-orange text-white font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-white hover:text-brand-dark transition-all flex items-center gap-3 shadow-xl disabled:opacity-50"
                             >

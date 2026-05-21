@@ -190,7 +190,7 @@ export function LuckyRoulette({
                         fontWeight="900"
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="font-serif italic"
+                        className="font-sans font-black"
                         filter="url(#premium-shadow)"
                         transform={`rotate(90, 78, 50)`}
                       >
@@ -251,7 +251,7 @@ export function LuckyRoulette({
                         : 'bg-white border-black/5 hover:border-brand-orange/30 hover:shadow-2xl hover:scale-105'
                     }`}
                   >
-                    <span className={`text-2xl font-serif italic font-bold ${isFixed ? 'text-white' : 'text-brand-dark'}`}>{num}</span>
+                    <span className={`text-2xl font-sans font-black ${isFixed ? 'text-white' : 'text-brand-dark'}`}>{num}</span>
                     <div className={`absolute -top-2 -right-2 p-2 rounded-full shadow-lg transition-all duration-500 ${
                       isFixed ? 'bg-[#FFD700] text-brand-dark opacity-100 scale-100' : 'bg-brand-dark/10 text-brand-dark/20 opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100'
                     }`}>

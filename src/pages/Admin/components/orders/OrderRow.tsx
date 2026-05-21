@@ -112,7 +112,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
         total_price: order.total_price || order.product_price,
         pix_key: order.pix_key || settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com',
         pix_bank: order.pix_bank || settings?.pix_checkout_bank?.value || 'SICOOB',
-        pix_receiver: order.pix_receiver || settings?.pix_checkout_receiver?.value || 'Tatiana Figueiredo'
+        pix_receiver: order.pix_receiver || settings?.pix_checkout_receiver?.value || 'NUCLEO DE DANCA TATIANA FIGUEIREDO'
       };
 
       if (isRaffle) {
@@ -147,7 +147,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
   const handleWhatsAppNotify = () => {
     const pixKey = settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com';
     const pixBank = settings['pix_checkout_bank']?.value || 'SICOOB';
-    const pixReceiver = settings['pix_checkout_receiver']?.value || 'Tatiana Figueiredo';
+    const pixReceiver = settings['pix_checkout_receiver']?.value || 'NUCLEO DE DANCA TATIANA FIGUEIREDO';
     
     const orderId = order.id.split('-')[0].toUpperCase();
     const isRaffle = order.type === 'raffle';

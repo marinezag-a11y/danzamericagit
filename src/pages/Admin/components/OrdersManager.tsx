@@ -114,7 +114,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
             total_price: order.total_price || order.product_price,
             pix_key: order.pix_key || settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com',
             pix_bank: order.pix_bank || settings?.pix_checkout_bank?.value || 'SICOOB',
-            pix_receiver: order.pix_receiver || settings?.pix_checkout_receiver?.value || 'Tatiana Figueiredo'
+            pix_receiver: order.pix_receiver || settings?.pix_checkout_receiver?.value || 'NUCLEO DE DANCA TATIANA FIGUEIREDO'
           };
 
           if (isRaffle) {

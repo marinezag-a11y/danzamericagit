@@ -85,7 +85,7 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
             ...orderData,
             pix_key: settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com',
             pix_bank: settings?.pix_checkout_bank?.value || 'SICOOB',
-            pix_receiver: settings?.pix_checkout_receiver?.value || 'Tatiana Figueiredo'
+            pix_receiver: settings?.pix_checkout_receiver?.value || 'NUCLEO DE DANCA TATIANA FIGUEIREDO'
           }
         });
       } catch (err) {

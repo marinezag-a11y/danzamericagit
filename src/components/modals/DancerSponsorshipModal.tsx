@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Ticket, Loader2, Smartphone, Mail, User, RotateCw, Check, Copy } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ArrowRight, Ticket, Loader2, Smartphone, Mail, User, RotateCw, Check, Copy, AlertTriangle } from 'lucide-react';
 import { WheelPicker } from '../ui/WheelPicker';
 import { LuckyRoulette } from '../ui/LuckyRoulette';
 import { Toast } from '../ui/Toast';
@@ -19,6 +19,67 @@ const maskPhone = (value: string) => {
   }
   return numbers.substring(0, 11);
 };
+
+function cleanString(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9\s]/gi, '')
+    .toUpperCase();
+}
+
+function generatePixPayload(key: string, amount: number, name: string, city: string = 'BELO HORIZONTE'): string {
+  const parts = {
+    payloadIndicator: '000201',
+    merchantAccount: '',
+    merchantCategory: '52040000',
+    currency: '5303986',
+    amount: '',
+    country: '5802BR',
+    name: '',
+    city: '',
+    additionalData: '62070503***',
+  };
+
+  const cleanKey = key.trim();
+  const merchantAccountSub = '0014br.gov.bcb.pix' + '01' + String(cleanKey.length).padStart(2, '0') + cleanKey;
+  parts.merchantAccount = '26' + String(merchantAccountSub.length).padStart(2, '0') + merchantAccountSub;
+
+  const amountStr = Number(amount).toFixed(2);
+  parts.amount = '54' + String(amountStr.length).padStart(2, '0') + amountStr;
+
+  const cleanName = cleanString(name).substring(0, 25);
+  parts.name = '59' + String(cleanName.length).padStart(2, '0') + cleanName;
+
+  const cleanCity = cleanString(city).substring(0, 15);
+  parts.city = '60' + String(cleanCity.length).padStart(2, '0') + cleanCity;
+
+  const payloadBase = 
+    parts.payloadIndicator +
+    parts.merchantAccount +
+    parts.merchantCategory +
+    parts.currency +
+    parts.amount +
+    parts.country +
+    parts.name +
+    parts.city +
+    parts.additionalData +
+    '6304';
+
+  let crc = 0xFFFF;
+  for (let c = 0; c < payloadBase.length; c++) {
+    crc ^= payloadBase.charCodeAt(c) << 8;
+    for (let i = 0; i < 8; i++) {
+      if (crc & 0x8000) {
+        crc = (crc << 1) ^ 0x1021;
+      } else {
+        crc = crc << 1;
+      }
+    }
+  }
+  const crcHex = (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+  return payloadBase + crcHex;
+}
 
 interface DancerSponsorshipModalProps {
   isOpen: boolean;
@@ -42,6 +103,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   const [isSpinning, setIsSpinning] = useState(false);
   const [hasSpunOnce, setHasSpunOnce] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -50,11 +112,12 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
   // Estados para integração com InfinitePay
   const [infinitePayUrl, setInfinitePayUrl] = useState('');
+  const [pixCode, setPixCode] = useState('');
   const [orderId, setOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'automatic' | 'manual'>('automatic');
   const [isConfirmedAutomatic, setIsConfirmedAutomatic] = useState(false);
   const [iframeLoading, setIframeLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(300);
   const [copied, setCopied] = useState(false);
 
   const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
@@ -166,12 +229,12 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
             .update({ status: 'cancelled', updated_at: new Date().toISOString() })
             .eq('id', orderId);
 
-          showToast('Tempo limite de 1 minuto excedido. Seus números foram liberados.', 'danger');
+          showToast('Tempo limite de 5 minutos excedido. Seus números foram liberados.', 'danger');
           
           setStep('roulette');
           setHasSpunOnce(false);
           setSelectedNumbers([]);
-          setTimeLeft(60);
+          setTimeLeft(300);
         } catch (error) {
           console.error('[Timer] Erro ao cancelar pedido expirado:', error);
         }
@@ -294,73 +357,41 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
           .delete()
           .eq('session_id', sessionId);
 
-        const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com';
-        const pixReceiver = settings?.pix_checkout_receiver?.value || 'Tatiana Aparecida Figueiredo';
-        const pixBank = settings?.pix_checkout_bank?.value || 'SICOOB';
-        const pixType = settings?.pix_checkout_type?.value || 'E-mail';
+        const calculatedTotalPrice = selectedNumbers.length * activeCampaign.price_per_number;
         const contactWhatsapp = settings?.contact_whatsapp?.value || '31992127292';
 
         if (paymentMethod === 'automatic') {
-          console.log('[Payment] Generating InfinitePay Pix link for Dancer Sponsorship...');
+          console.log('[InfinitePay] Criando cobrança via Edge Function...');
+          setIsGeneratingPayment(true);
           try {
-            const { data: payData, error: payError } = await supabase.functions.invoke('create-infinitepay-payment', {
+            const { data: ipData, error: ipError } = await supabase.functions.invoke('create-infinitepay-payment', {
               body: {
                 order_id: newOrderId,
-                total_price: orderData.total_price,
+                total_price: calculatedTotalPrice,
                 customer_name: customerName,
                 customer_email: customerEmail,
                 customer_phone: customerPhone,
-                campaign_name: `${activeCampaign.name} (Apoio: ${selectedDancer?.name || 'Geral'})`
+                campaign_name: `${activeCampaign.name}${selectedDancer ? ` - ${selectedDancer.name}` : ''}`,
+                redirect_url: window.location.href
               }
             });
 
-            if (payError || !payData?.url) {
-              console.error('[Payment] InfinitePay creation error:', payError);
-              const errorDetails = payError?.message || (payError ? JSON.stringify(payError) : 'Sem URL retornada');
-              showToast(`Não foi possível iniciar o Pix automático: ${errorDetails}. Redirecionando para Pix manual.`, 'warning');
-              setStep('success'); // Fallback para Pix manual
-            } else {
-              console.log('[Payment] InfinitePay link generated successfully:', payData.url);
-              setInfinitePayUrl(payData.url);
-              setIframeLoading(true);
-              setTimeLeft(60); // Inicia o contador de 1 minuto
-              setStep('infinitepay_checkout');
-
-              // Background notification
-              if (supabase) {
-                supabase.functions.invoke('send-order', {
-                  body: {
-                    ...orderData,
-                    order_id: newOrderId,
-                    type: 'raffle_order',
-                    campaign_name: activeCampaign.name,
-                    dancer_name: selectedDancer?.name || 'Geral',
-                    items: [
-                      { 
-                        name: `Apoio ao Talento: ${selectedDancer?.name || 'Geral'}`, 
-                        price: activeCampaign.price_per_number * selectedNumbers.length,
-                        description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
-                      }
-                    ],
-                    pix_key: pixKey,
-                    pix_receiver: pixReceiver,
-                    pix_bank: pixBank,
-                    pix_type: pixType,
-                    contact_whatsapp: contactWhatsapp
-                  }
-                }).catch(e => console.error('Background email error:', e));
-              }
+            if (ipError || !ipData?.url) {
+              console.error('[InfinitePay] Erro ao criar link de pagamento:', ipError || ipData);
+              showToast('Não foi possível gerar o link de pagamento. Tente novamente.', 'danger');
+              setIsSubmitting(false);
+              setIsGeneratingPayment(false);
+              return;
             }
-          } catch (payException) {
-            console.error('[Payment] Payment integration exception:', payException);
-            setStep('success'); // Fallback
-          }
-        } else {
-          // Pagamento Pix manual
-          setStep('success');
-          
-          // Background notification
-          if (supabase) {
+
+            setInfinitePayUrl(ipData.url);
+            setTimeLeft(300);
+            setStep('infinitepay_checkout');
+
+            // Abre a página da InfinitePay em nova aba automaticamente
+            window.open(ipData.url, '_blank', 'noopener,noreferrer');
+
+            // Notificação de reserva em background
             supabase.functions.invoke('send-order', {
               body: {
                 ...orderData,
@@ -368,21 +399,40 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                 type: 'raffle_order',
                 campaign_name: activeCampaign.name,
                 dancer_name: selectedDancer?.name || 'Geral',
-                items: [
-                  { 
-                    name: `Apoio ao Talento: ${selectedDancer?.name || 'Geral'}`, 
-                    price: activeCampaign.price_per_number * selectedNumbers.length,
-                    description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
-                  }
-                ],
-                pix_key: pixKey,
-                pix_receiver: pixReceiver,
-                pix_bank: pixBank,
-                pix_type: pixType,
+                items: [{ 
+                  name: `Apoio ao Talento: ${selectedDancer?.name || 'Geral'}`, 
+                  price: calculatedTotalPrice,
+                  description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
+                }],
+                payment_url: ipData.url,
                 contact_whatsapp: contactWhatsapp
               }
-            }).catch(e => console.error('Background email error:', e));
+            }).catch(e => console.error('Background send-order error:', e));
+
+          } catch (payException) {
+            console.error('[InfinitePay] Exceção ao gerar pagamento:', payException);
+            showToast('Erro inesperado ao gerar pagamento. Por favor, tente novamente.', 'danger');
+          } finally {
+            setIsGeneratingPayment(false);
           }
+        } else {
+          // Pagamento Pix manual
+          setStep('success');
+          supabase.functions.invoke('send-order', {
+            body: {
+              ...orderData,
+              order_id: newOrderId,
+              type: 'raffle_order',
+              campaign_name: activeCampaign.name,
+              dancer_name: selectedDancer?.name || 'Geral',
+              items: [{ 
+                name: `Apoio ao Talento: ${selectedDancer?.name || 'Geral'}`, 
+                price: calculatedTotalPrice,
+                description: `Campanha: ${activeCampaign.name} | Números: ${selectedNumbers.join(', ')}`
+              }],
+              contact_whatsapp: contactWhatsapp
+            }
+          }).catch(e => console.error('Background email error:', e));
         }
       } else {
         if (res?.error?.includes('redundancy') || res?.error?.includes('vendidos') || res?.error?.includes('RESERVADOS')) {
@@ -449,12 +499,12 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
         <div className="modal-content relative">
           {/* Header - Compact for Mobile */}
-          <div className="mb-4 sm:mb-12 text-center px-6 pt-6 sm:pt-4">
+          <div className="mb-3 sm:mb-6 text-center px-6 pt-6 sm:pt-4">
             <motion.h2 
               key={step}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-lg sm:text-4xl font-serif italic text-brand-dark leading-tight"
+              className="text-lg sm:text-2xl font-sans font-black text-brand-dark leading-tight"
             >
               {step === 'dancer' ? 'Escolha seu Talento' : 
                step === 'quantity' ? 'Quantidade de Números' :
@@ -462,12 +512,12 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                step === 'checkout' ? 'Finalizar Apoio' : 'Sonho Realizado!'}
               <span className="text-brand-orange">.</span>
             </motion.h2>
-            <p className="text-[8px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-brand-dark/20 font-black mt-2 sm:mt-4 italic">
+            <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.2em] sm:tracking-[0.3em] text-brand-dark/30 font-black mt-1 sm:mt-2 font-sans">
               {step === 'success' ? 'OBRIGADO PELA SUA GENEROSIDADE' : 'INVESTINDO NO FUTURO DA DANÇA'}
             </p>
           </div>
 
-          <div className="min-h-[400px] sm:min-h-[500px] flex flex-col">
+          <div className="flex flex-col">
             <AnimatePresence mode="wait">
               {step === 'dancer' && (
                 <motion.div 
@@ -742,11 +792,6 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                           <div>
                             <p className="text-[7px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-white/30 font-black">BENEFICIÁRIO</p>
                             <h4 className="text-base sm:text-3xl font-serif italic text-white leading-tight mt-0.5 sm:mt-1">{selectedDancer?.name}</h4>
-                            {activeCampaign && (
-                              <p className="text-[10px] text-white/40 font-serif italic mt-2 leading-relaxed whitespace-pre-line">
-                                {activeCampaign.description}
-                              </p>
-                            )}
                           </div>
                         </div>
 
@@ -780,26 +825,24 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                               placeholder="Nome Completo *"
                               value={customerName} 
                               onChange={e => setCustomerName(e.target.value)}
-                              className="w-full bg-black/[0.04] border border-transparent p-4 sm:p-7 rounded-xl sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
+                              className="w-full p-4 bg-black/[0.04] border border-transparent rounded-xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium text-sm placeholder:text-brand-dark/20 text-brand-dark"
                             />
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <input 
-                                type="tel" 
-                                required 
-                                placeholder="WhatsApp *"
-                                value={customerPhone} 
-                                onChange={e => setCustomerPhone(maskPhone(e.target.value))}
-                                className="w-full bg-black/[0.04] border border-transparent p-4 sm:p-7 rounded-xl sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
-                              />
-                              <input 
-                                type="email" 
-                                required 
-                                placeholder="E-mail *"
-                                value={customerEmail} 
-                                onChange={e => setCustomerEmail(e.target.value)}
-                                className="w-full bg-black/[0.04] border border-transparent p-4 sm:p-7 rounded-xl sm:rounded-[2.5rem] text-sm outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark"
-                              />
-                            </div>
+                            <input 
+                              type="tel" 
+                              required 
+                              placeholder="WhatsApp *"
+                              value={customerPhone} 
+                              onChange={e => setCustomerPhone(maskPhone(e.target.value))}
+                              className="w-full p-4 bg-black/[0.04] border border-transparent rounded-xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium text-sm placeholder:text-brand-dark/20 text-brand-dark"
+                            />
+                            <input 
+                              type="email" 
+                              required 
+                              placeholder="E-mail *"
+                              value={customerEmail} 
+                              onChange={e => setCustomerEmail(e.target.value)}
+                              className="w-full p-4 bg-black/[0.04] border border-transparent rounded-xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium text-sm placeholder:text-brand-dark/20 text-brand-dark"
+                            />
                          </div>
                       </div>
 
@@ -824,10 +867,9 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                       <button 
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full py-5 sm:py-8 bg-brand-orange text-white rounded-xl sm:rounded-[2.5rem] text-[11px] sm:text-[13px] uppercase tracking-[0.3em] sm:tracking-[0.5em] font-black hover:bg-brand-dark transition-all shadow-xl sm:shadow-[0_32px_64px_-16px_rgba(204,0,0,0.5)] flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50"
+                        className="w-full py-4 bg-brand-orange text-white rounded-xl text-[11px] uppercase tracking-[0.2em] font-black hover:bg-brand-dark transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                       >
-                        {isSubmitting ? <Loader2 className="w-4 h-4 sm:w-6 sm:h-6 animate-spin" /> : <Check size={20} strokeWidth={3} />}
-                        CONFIRMAR E APOIAR
+                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check size={16} strokeWidth={3} /> CONFIRMAR E APOIAR</>}
                       </button>
                       <button type="button" onClick={handleBack} className="text-[10px] uppercase tracking-[0.4em] font-black text-brand-dark/20 hover:text-brand-dark transition-all italic">Revisar Números</button>
                     </div>
@@ -843,124 +885,97 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   exit={{ opacity: 0, y: -15 }}
                   className="flex flex-col gap-6 w-full"
                 >
-                  {/* Header Compacto com Contagem Regressiva */}
+                  {/* Header com Timer */}
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-black/5">
                     <div className="text-left space-y-1">
                       <p className="text-brand-orange text-[9px] uppercase tracking-[0.2em] font-black flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-                        ⚡ PIX AUTOMÁTICO INSTANTÂNEO
+                        ⚡ PIX VIA INFINITEPAY
                       </p>
-                      <h3 className="text-xl sm:text-2xl font-serif italic text-brand-dark">Aguardando Pagamento</h3>
-                      <p className="text-[10px] text-brand-dark/50 italic leading-tight">
-                        Seus números estão reservados! Finalize o pagamento em até 1 minuto.
+                      <h3 className="text-lg sm:text-xl font-sans font-black text-brand-dark">Aguardando Pagamento</h3>
+                      <p className="text-[9px] text-brand-dark/50 font-sans leading-tight">
+                        A página de pagamento InfinitePay foi aberta em uma nova aba. Finalize o Pix por lá.
                       </p>
                     </div>
-                    
-                    {/* Timer de Expirar em vermelho piscante */}
                     <div className="flex items-center gap-2 px-4 py-2 bg-red-500/5 border border-red-500/10 rounded-full w-full sm:w-auto justify-center">
                       <span className="text-[10px] uppercase tracking-widest font-black text-red-600 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                        Reserva expira em: 00:{String(timeLeft).padStart(2, '0')}s
+                        Expira em: {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
                       </span>
                     </div>
                   </div>
 
-                  {/* Barra de Progresso do Timer */}
+                  {/* Progress Bar */}
                   <div className="w-full h-1 bg-black/[0.04] rounded-full overflow-hidden">
                     <motion.div 
                       className="h-full bg-brand-orange"
                       initial={{ width: '100%' }}
-                      animate={{ width: `${(timeLeft / 60) * 100}%` }}
+                      animate={{ width: `${(timeLeft / 300) * 100}%` }}
                       transition={{ duration: 1, ease: 'linear' }}
                     />
                   </div>
 
-                  {/* Split Grid Layout responsivo focado na vertical */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-                    {/* Coluna 1: Ações de Pagamento e Copia e Cola (PC & Mobile) */}
-                    <div className="md:col-span-6 flex flex-col justify-between bg-brand-dark text-white p-6 sm:p-8 rounded-[2rem] space-y-6">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/15 bg-white shrink-0">
-                            {selectedDancer?.photo_url ? (
-                              <img src={selectedDancer.photo_url} className="w-full h-full object-cover scale-[1.8]" alt="" />
-                            ) : (
-                              <div className="w-full h-full bg-white/5 flex items-center justify-center"><User className="w-5 h-5 text-white/10" /></div>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-brand-orange text-[7px] uppercase tracking-[0.2em] font-black">APOIO DIRECIONADO</p>
-                            <h4 className="text-sm font-serif italic text-white/95">{selectedDancer?.name}</h4>
-                          </div>
-                        </div>
-
-                        <div className="pt-3 border-t border-white/10">
-                          <p className="text-[8px] uppercase tracking-widest text-white/30 font-black mb-1">CAMPANHA</p>
-                          <p className="text-xs text-white/80 font-serif italic">{activeCampaign.name}</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">SEUS NÚMEROS DA SORTE:</p>
-                          <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1">
-                            {selectedNumbers.sort((a, b) => a - b).map(n => (
-                              <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/5 rounded text-[10px] font-bold text-white/95">#{String(n).padStart(3, '0')}</span>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-white/10 flex justify-between items-baseline">
-                          <span className="text-[8px] uppercase tracking-widest text-white/30 font-black">TOTAL A PAGAR:</span>
-                          <span className="text-2xl font-serif italic text-brand-orange">R$ {activeCampaign ? (selectedNumbers.length * activeCampaign.price_per_number).toFixed(2) : '0.00'}</span>
-                        </div>
+                  {/* Resumo do Pedido */}
+                  <div className="bg-brand-dark text-white p-5 rounded-xl space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg overflow-hidden border border-white/15 bg-white shrink-0">
+                        {selectedDancer?.photo_url ? (
+                          <img src={selectedDancer.photo_url} className="w-full h-full object-cover scale-[1.8]" alt="" />
+                        ) : (
+                          <div className="w-full h-full bg-white/5 flex items-center justify-center"><User className="w-4 h-4 text-white/10" /></div>
+                        )}
                       </div>
+                      <div>
+                        <p className="text-brand-orange text-[7px] uppercase tracking-[0.2em] font-black">APOIO DIRECIONADO</p>
+                        <h4 className="text-xs font-sans font-bold text-white/95">{selectedDancer?.name || 'Geral'}</h4>
+                      </div>
+                    </div>
+                    <div className="space-y-2 pt-2 border-t border-white/10">
+                      <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">SEUS NÚMEROS DA SORTE:</p>
+                      <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto pr-1">
+                        {selectedNumbers.sort((a, b) => a - b).map(n => (
+                          <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/5 rounded text-[9px] font-bold text-white/95">#{String(n).padStart(3, '0')}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-white/10 flex justify-between items-center">
+                      <span className="text-[9px] uppercase tracking-widest text-white/40 font-black">TOTAL:</span>
+                      <span className="text-2xl font-sans font-black text-brand-orange">R$ {activeCampaign ? (selectedNumbers.length * activeCampaign.price_per_number).toFixed(2) : '0.00'}</span>
+                    </div>
+                  </div>
 
-                      {/* Botões Copia e Cola & Pagar no Banco */}
-                      <div className="space-y-3 pt-4 border-t border-white/10">
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(infinitePayUrl);
-                            setCopied(true);
-                            showToast('Link de pagamento copiado com sucesso! Abra o app do seu banco para pagar.', 'success');
-                            setTimeout(() => setCopied(false), 3000);
-                          }}
-                          className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] uppercase tracking-widest font-black transition-all flex items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95"
-                        >
-                          {copied ? <><Check size={14} /> COPIADO COM SUCESSO!</> : <><Copy size={14} /> COPIAR LINK DE PAGAMENTO</>}
-                        </button>
-
-                        <a 
-                          href={infinitePayUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full py-4 bg-brand-orange hover:bg-brand-orange/95 text-white rounded-xl text-[10px] uppercase tracking-widest font-black transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-brand-orange/20 active:scale-95 text-center"
-                        >
-                          ⚡ ABRIR PAGAMENTO NO BANCO
-                        </a>
-                        
-                        <p className="text-[8px] text-white/40 text-center italic leading-tight">
-                          * Use o botão copiar para colar o link no seu navegador ou enviar ao celular.
+                  {/* Status e Ações */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <a
+                      href={infinitePayUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 py-4 bg-brand-orange text-white rounded-xl text-[11px] uppercase tracking-widest font-black hover:bg-brand-dark transition-all shadow-lg active:scale-95"
+                    >
+                      <ArrowRight size={14} />
+                      ABRIR PÁGINA DE PAGAMENTO
+                    </a>
+                    <div className="flex items-center gap-3 p-4 bg-black/[0.03] border border-black/5 rounded-xl">
+                      <Loader2 size={18} className="text-brand-orange animate-spin shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Aguardando confirmação...</p>
+                        <p className="text-[9px] text-brand-dark/50 leading-tight mt-0.5">
+                          Esta tela muda automaticamente quando o pagamento for confirmado pela InfinitePay.
                         </p>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Coluna 2: Status do Realtime e Orientações */}
-                    <div className="md:col-span-6 bg-black/[0.02] border border-black/5 p-6 sm:p-8 rounded-[2rem] flex flex-col justify-between space-y-6 text-left">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2.5">
-                          <Loader2 size={16} className="text-brand-orange animate-spin" />
-                          <span className="text-xs font-black uppercase tracking-wider text-brand-dark">Confirmando em Tempo Real...</span>
-                        </div>
-                        <p className="text-[10px] text-brand-dark/60 leading-relaxed font-medium">
-                          Assim que você concluir a transferência Pix no app do seu banco, nosso system receberá a notificação da InfinitePay e esta tela mudará sozinha na mesma hora.
-                        </p>
-                      </div>
-
-                      <div className="p-4 bg-green-500/[0.04] border border-green-500/10 rounded-2xl text-[9px] text-green-700 leading-normal space-y-1">
-                        <p className="font-bold flex items-center gap-1">✓ Sem envio de comprovante</p>
-                        <p>O Pix é identificado automaticamente. Não precisa falar no WhatsApp nem tirar print do recibo.</p>
-                      </div>
-
+                  {/* Instruções */}
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex gap-3 text-left">
+                    <Check size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Como pagar:</p>
+                      <p className="text-[9px] text-brand-dark/60 leading-relaxed">
+                        1. Clique em <strong>"ABRIR PÁGINA DE PAGAMENTO"</strong> acima (ou use a aba já aberta).<br/>
+                        2. Na página da InfinitePay, escolha <strong>Pix</strong> e copie o código ou escaneie o QR Code.<br/>
+                        3. Pague no app do seu banco. A confirmação aparece aqui automaticamente.
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -1000,8 +1015,8 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     // Layout Premium para confirmação automática instantânea (WOW factor!)
                     <div className="space-y-6 max-w-lg">
                       <div className="space-y-2">
-                        <h3 className="text-2xl sm:text-3xl font-serif italic text-brand-dark leading-tight">Apoio Confirmado via Pix!</h3>
-                        <p className="text-xs text-brand-dark/50 max-w-md mx-auto leading-relaxed italic">
+                        <h3 className="text-2xl sm:text-3xl font-sans font-black text-brand-dark leading-tight">Apoio Confirmado via Pix!</h3>
+                        <p className="text-xs text-brand-dark/50 max-w-md mx-auto leading-relaxed font-sans font-medium">
                           Seu pagamento foi compensado de forma instantânea em nosso sistema. Seu apoio a <span className="text-brand-dark font-black underline decoration-brand-orange/40 decoration-2 underline-offset-4">{selectedDancer?.name}</span> é oficial!
                         </p>
                       </div>
@@ -1009,7 +1024,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                       <div className="w-full max-w-md mx-auto bg-white p-6 rounded-[2rem] border border-black/5 shadow-xl space-y-6">
                         <div className="text-center bg-green-500/5 border border-green-500/10 p-4 rounded-[1.5rem] space-y-1">
                           <span className="text-[9px] uppercase tracking-[0.2em] font-black text-green-600 block">⚡ STATUS DA TRANSAÇÃO</span>
-                          <strong className="text-xs font-black text-green-700 italic block">PAGO & APOIADO</strong>
+                          <strong className="text-xs font-black text-green-700 block">PAGO & APOIADO</strong>
                         </div>
 
                         <div className="bg-brand-dark text-white p-5 rounded-[2rem] text-left space-y-3">
@@ -1021,7 +1036,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                           </div>
                           <div className="pt-3 border-t border-white/10 flex justify-between items-center text-[10px]">
                             <span className="text-white/40 font-bold">VALOR DOADO:</span>
-                            <span className="font-serif italic text-brand-orange text-sm">R$ {activeCampaign ? (selectedNumbers.length * activeCampaign.price_per_number).toFixed(2) : '0.00'}</span>
+                            <span className="font-sans font-black text-brand-orange text-sm">R$ {activeCampaign ? (selectedNumbers.length * activeCampaign.price_per_number).toFixed(2) : '0.00'}</span>
                           </div>
                         </div>
 
@@ -1037,8 +1052,8 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     // Layout Tradicional para Pix manual
                     <>
                       <div className="space-y-3">
-                        <h3 className="text-2xl sm:text-3xl font-serif italic text-brand-dark leading-tight">Pedido Recebido!</h3>
-                        <p className="text-xs text-brand-dark/50 max-w-sm mx-auto leading-relaxed italic">
+                        <h3 className="text-2xl sm:text-3xl font-sans font-black text-brand-dark leading-tight">Pedido Recebido!</h3>
+                        <p className="text-xs text-brand-dark/50 max-w-sm mx-auto leading-relaxed font-sans font-medium">
                           Sua reserva para apoiar <span className="text-brand-dark font-black underline decoration-brand-orange/40 decoration-2 underline-offset-4">{selectedDancer?.name}</span> foi processada. Agora falta pouco!
                         </p>
                       </div>
@@ -1074,7 +1089,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                           </div>
                           <div>
                             <p className="text-[8px] uppercase tracking-[0.3em] text-brand-dark/30 font-black mb-1">RECEBEDOR</p>
-                            <p className="text-sm font-black text-brand-dark tracking-tight">{settings?.pix_checkout_receiver?.value || 'Tatiana Aparecida Figueiredo'}</p>
+                            <p className="text-sm font-black text-brand-dark tracking-tight">{settings?.pix_checkout_receiver?.value || 'NUCLEO DE DANCA TATIANA FIGUEIREDO'}</p>
                           </div>
                         </div>
 

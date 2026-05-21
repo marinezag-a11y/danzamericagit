@@ -1,11 +1,72 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy, RotateCw, Check, Smartphone, ChevronRight } from 'lucide-react';
+import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy, RotateCw, Check, Smartphone, ChevronRight, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { RaffleCampaign, useRaffles } from '../../hooks/useRaffles';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { supabase } from '../../lib/supabase';
 import { Toast } from '../ui/Toast';
 import { LuckyRoulette } from '../ui/LuckyRoulette';
+
+function cleanString(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9\s]/gi, '')
+    .toUpperCase();
+}
+
+function generatePixPayload(key: string, amount: number, name: string, city: string = 'BELO HORIZONTE'): string {
+  const parts = {
+    payloadIndicator: '000201',
+    merchantAccount: '',
+    merchantCategory: '52040000',
+    currency: '5303986',
+    amount: '',
+    country: '5802BR',
+    name: '',
+    city: '',
+    additionalData: '62070503***',
+  };
+
+  const cleanKey = key.trim();
+  const merchantAccountSub = '0014br.gov.bcb.pix' + '01' + String(cleanKey.length).padStart(2, '0') + cleanKey;
+  parts.merchantAccount = '26' + String(merchantAccountSub.length).padStart(2, '0') + merchantAccountSub;
+
+  const amountStr = Number(amount).toFixed(2);
+  parts.amount = '54' + String(amountStr.length).padStart(2, '0') + amountStr;
+
+  const cleanName = cleanString(name).substring(0, 25);
+  parts.name = '59' + String(cleanName.length).padStart(2, '0') + cleanName;
+
+  const cleanCity = cleanString(city).substring(0, 15);
+  parts.city = '60' + String(cleanCity.length).padStart(2, '0') + cleanCity;
+
+  const payloadBase = 
+    parts.payloadIndicator +
+    parts.merchantAccount +
+    parts.merchantCategory +
+    parts.currency +
+    parts.amount +
+    parts.country +
+    parts.name +
+    parts.city +
+    parts.additionalData +
+    '6304';
+
+  let crc = 0xFFFF;
+  for (let c = 0; c < payloadBase.length; c++) {
+    crc ^= payloadBase.charCodeAt(c) << 8;
+    for (let i = 0; i < 8; i++) {
+      if (crc & 0x8000) {
+        crc = (crc << 1) ^ 0x1021;
+      } else {
+        crc = crc << 1;
+      }
+    }
+  }
+  const crcHex = (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+  return payloadBase + crcHex;
+}
 
 interface RaffleCheckoutModalProps {
   campaign: RaffleCampaign;
@@ -35,17 +96,17 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   
   // Estados para integração com InfinitePay
   const [infinitePayUrl, setInfinitePayUrl] = useState('');
+  const [pixCode, setPixCode] = useState('');
   const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'automatic' | 'manual'>('automatic');
   const [isConfirmedAutomatic, setIsConfirmedAutomatic] = useState(false);
   const [iframeLoading, setIframeLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(300);
 
-  const pixKey = settings?.pix_key_checkout?.value || settings?.pix_key?.value || "ballettatianafigueiredo@gmail.com";
-  const pixType = settings?.pix_checkout_type?.value || "E-mail";
-  const pixReceiver = settings?.pix_checkout_receiver?.value || "Tatiana Figueiredo";
-  const [pixBank, setPixBank] = useState(settings?.pix_checkout_bank?.value || "NuBank");
+  const pixKey = settings?.infinitepay_pix_key?.value || '';
+  const pixReceiver = settings?.infinitepay_receiver?.value || 'NUCLEO DE DANCA TATIANA FIGUEIREDO';
+  const pixType = settings?.pix_checkout_type?.value || 'CNPJ';
   const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
     show: false,
     message: '',
@@ -120,7 +181,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
     };
   }, [step, orderId]);
 
-  // Timer de 60 segundos com cancelamento automático de ordens expiradas no Supabase
+  // Timer de 5 minutos com cancelamento automático de ordens expiradas no Supabase
   useEffect(() => {
     if (step !== 'infinitepay_checkout' || !orderId) return;
 
@@ -134,13 +195,13 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
             .update({ status: 'cancelled', updated_at: new Date().toISOString() })
             .eq('id', orderId);
 
-          showToast('Tempo limite de 1 minuto excedido. Seus números foram liberados.', 'danger');
+          showToast('Tempo limite de 5 minutos excedido. Seus números foram liberados.', 'danger');
           
           // Reseta o passo de volta para a roleta
           setStep('roulette');
           setHasSpunOnce(false);
           setSelectedNumbers([]);
-          setTimeLeft(60); // Reseta o timer
+          setTimeLeft(300); // Reseta o timer
         } catch (error) {
           console.error('[Timer] Erro ao cancelar pedido expirado:', error);
         }
@@ -235,87 +296,79 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       if (result.success) {
         await supabase.from('raffle_reservations').delete().eq('session_id', sessionId);
         
-        // Se escolheu pagamento automático, chamamos a Edge Function para gerar o checkout da InfinitePay
+        const calculatedTotalPrice = selectedNumbers.length * campaign.price_per_number;
+
         if (paymentMethod === 'automatic') {
-          console.log('[Payment] Generating InfinitePay Pix link...');
+          console.log('[InfinitePay] Criando cobrança via Edge Function...');
+          setIsGeneratingPayment(true);
           try {
-            const { data: payData, error: payError } = await supabase.functions.invoke('create-infinitepay-payment', {
+            const { data: ipData, error: ipError } = await supabase.functions.invoke('create-infinitepay-payment', {
               body: {
                 order_id: newOrderId,
-                total_price: orderData.total_price,
+                total_price: calculatedTotalPrice,
                 customer_name: customerName,
                 customer_email: customerEmail,
                 customer_phone: customerPhone,
-                campaign_name: campaign.name
+                campaign_name: campaign.name,
+                redirect_url: window.location.href
               }
             });
 
-            if (payError || !payData?.url) {
-              console.error('[Payment] InfinitePay creation error:', payError);
-              const errorDetails = payError?.message || (payError ? JSON.stringify(payError) : 'Sem URL retornada');
-              showToast(`Não foi possível iniciar o Pix automático: ${errorDetails}. Redirecionando para Pix manual.`, 'warning');
-              setStep('success'); // Fallback para Pix manual
-            } else {
-              console.log('[Payment] InfinitePay link generated successfully:', payData.url);
-              setInfinitePayUrl(payData.url);
-              setIframeLoading(true);
-              setTimeLeft(60); // Inicia o contador de 1 minuto
-              setStep('infinitepay_checkout');
-
-              // Dispara notificação de reserva de pedido em background
-              if (supabase) {
-                supabase.functions.invoke('send-order', {
-                  body: {
-                    ...orderData,
-                    order_id: newOrderId,
-                    type: 'raffle_order',
-                    campaign_name: campaign.name,
-                    items: [
-                      { 
-                        name: `Rifa: ${campaign.name}`, 
-                        price: orderData.total_price,
-                        description: `Números: ${selectedNumbers.join(', ')}`
-                      }
-                    ],
-                    pix_key: pixKey,
-                    pix_type: pixType,
-                    pix_receiver: pixReceiver,
-                    pix_bank: pixBank,
-                    contact_whatsapp: settings?.contact_whatsapp?.value
-                  }
-                }).catch(errEmail => console.error('Background email error:', errEmail));
-              }
+            if (ipError || !ipData?.url) {
+              console.error('[InfinitePay] Erro ao criar link de pagamento:', ipError || ipData);
+              showToast('Não foi possível gerar o link de pagamento. Tente novamente.', 'danger');
+              setSubmitting(false);
+              setIsGeneratingPayment(false);
+              return;
             }
-          } catch (payException) {
-            console.error('[Payment] Payment integration exception:', payException);
-            setStep('success'); // Fallback
-          }
-        } else {
-          // Pagamento Pix manual
-          setStep('success');
-          
-          if (supabase) {
+
+            setInfinitePayUrl(ipData.url);
+            setTimeLeft(300);
+            setStep('infinitepay_checkout');
+
+            // Abre a página da InfinitePay em nova aba automaticamente
+            window.open(ipData.url, '_blank', 'noopener,noreferrer');
+
+            // Notificação de reserva em background
             supabase.functions.invoke('send-order', {
               body: {
                 ...orderData,
                 order_id: newOrderId,
                 type: 'raffle_order',
                 campaign_name: campaign.name,
-                items: [
-                  { 
-                    name: `Rifa: ${campaign.name}`, 
-                    price: orderData.total_price,
-                    description: `Números: ${selectedNumbers.join(', ')}`
-                  }
-                ],
-                pix_key: pixKey,
-                pix_type: pixType,
-                pix_receiver: pixReceiver,
-                pix_bank: pixBank,
+                items: [{ 
+                  name: `Rifa: ${campaign.name}`, 
+                  price: calculatedTotalPrice,
+                  description: `Números: ${selectedNumbers.join(', ')}`
+                }],
+                payment_url: ipData.url,
                 contact_whatsapp: settings?.contact_whatsapp?.value
               }
-            }).catch(e => console.error('Background email error:', e));
+            }).catch(e => console.error('Background send-order error:', e));
+
+          } catch (payException) {
+            console.error('[InfinitePay] Exceção ao gerar pagamento:', payException);
+            showToast('Erro inesperado ao gerar pagamento. Por favor, tente novamente.', 'danger');
+          } finally {
+            setIsGeneratingPayment(false);
           }
+        } else {
+          // Pagamento Pix manual
+          setStep('success');
+          supabase.functions.invoke('send-order', {
+            body: {
+              ...orderData,
+              order_id: newOrderId,
+              type: 'raffle_order',
+              campaign_name: campaign.name,
+              items: [{ 
+                name: `Rifa: ${campaign.name}`, 
+                price: calculatedTotalPrice,
+                description: `Números: ${selectedNumbers.join(', ')}`
+              }],
+              contact_whatsapp: settings?.contact_whatsapp?.value
+            }
+          }).catch(e => console.error('Background email error:', e));
         }
       } else {
         // Se houver erro de redundância ou outro erro
@@ -352,7 +405,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="modal-container relative z-10 w-full max-w-2xl"
+        className="modal-container relative z-10"
       >
         {/* Progress Bar */}
         {step !== 'success' && (
@@ -368,14 +421,15 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
           </div>
         )}
 
+        {/* Close Button - Styled for consistency */}
         <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 z-50 p-2 bg-white/80 rounded-full text-brand-dark/20 hover:text-brand-orange transition-all shadow-lg"
+          onClick={onClose}
+          className="absolute top-4 right-4 sm:top-8 sm:right-8 z-50 p-3 bg-white/80 hover:bg-white rounded-full text-brand-dark/40 hover:text-brand-orange transition-all shadow-lg border border-black/5"
         >
-          <X size={20} />
+          <X className="w-5 h-5" />
         </button>
 
-        <div className="modal-content p-6 sm:p-12">
+        <div className="modal-content p-4 sm:p-6">
           <AnimatePresence mode="wait">
             {step === 'quantity' && (
               <motion.div 
@@ -383,15 +437,15 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex flex-col items-center gap-8 py-8"
+                className="flex flex-col items-center gap-4 py-2"
               >
-                <div className="text-center space-y-2">
-                  <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-black">ETAPA 1 DE 3</p>
-                  <h2 className="text-3xl sm:text-5xl font-serif italic text-brand-dark">{campaign.name}</h2>
-                  <p className="text-sm text-brand-dark/40 font-serif italic">Quantos números da sorte você deseja?</p>
+                <div className="text-center space-y-1">
+                  <p className="text-brand-orange text-[9px] uppercase tracking-[0.3em] font-black">ETAPA 1 DE 3</p>
+                  <h2 className="text-2xl sm:text-3xl font-sans font-black text-brand-dark tracking-tight">{campaign.name}</h2>
+                  <p className="text-xs text-brand-dark/50 font-sans">Quantos números da sorte você deseja?</p>
                 </div>
 
-                <div className="flex items-center gap-8 sm:gap-12 bg-black/[0.02] p-8 sm:p-12 rounded-[3rem] border border-black/5">
+                <div className="flex items-center gap-4 sm:gap-6 bg-black/[0.02] p-4 sm:p-6 rounded-2xl border border-black/5">
                   <button 
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     className="w-16 h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center text-3xl font-light hover:bg-brand-dark hover:text-white transition-all active:scale-90"
@@ -399,7 +453,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     -
                   </button>
                   <div className="text-center min-w-[100px]">
-                    <span className="text-6xl sm:text-8xl font-serif italic text-brand-dark">{quantity}</span>
+                    <span className="text-5xl sm:text-6xl font-sans font-black text-brand-dark">{quantity}</span>
                     <p className="text-[10px] uppercase tracking-widest text-brand-dark/20 font-black mt-2">NÚMEROS</p>
                   </div>
                   <button 
@@ -413,7 +467,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 <div className="flex flex-col items-center gap-6 w-full">
                   <button 
                     onClick={handleNext}
-                    className="w-full sm:w-auto px-16 py-6 bg-brand-dark text-white rounded-[2rem] text-[12px] uppercase tracking-[0.4em] font-black hover:bg-brand-orange transition-all shadow-2xl flex items-center justify-center gap-4 group"
+                    className="w-full sm:w-auto px-8 py-3.5 bg-brand-dark text-white rounded-xl text-[10px] uppercase tracking-[0.2em] font-black hover:bg-brand-orange transition-all shadow-md flex items-center justify-center gap-2 group"
                   >
                     CONTINUAR PARA SORTEIO <ChevronRight size={18} className="group-hover:translate-x-2 transition-transform" />
                   </button>
@@ -430,11 +484,11 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.1 }}
-                className="flex flex-col items-center gap-8 py-4"
+                className="flex flex-col items-center gap-4 py-2"
               >
-                <div className="text-center space-y-2">
-                  <p className="text-brand-orange text-[10px] uppercase tracking-[0.3em] font-black">ETAPA 2 DE 3</p>
-                  <h2 className="text-3xl font-serif italic text-brand-dark">Sorteio da Sorte</h2>
+                <div className="text-center space-y-1">
+                  <p className="text-brand-orange text-[9px] uppercase tracking-[0.3em] font-black">ETAPA 2 DE 3</p>
+                  <h2 className="text-2xl font-sans font-black text-brand-dark">Sorteio da Sorte</h2>
                 </div>
 
                 <LuckyRoulette 
@@ -458,25 +512,26 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     <button 
                       onClick={() => setIsSpinning(true)}
                       disabled={isSpinning}
-                      className="w-full sm:w-auto px-20 py-7 bg-brand-orange text-white rounded-[2rem] text-[13px] uppercase tracking-[0.4em] font-black hover:bg-brand-dark transition-all shadow-2xl flex items-center justify-center gap-4"
+                      className="w-full sm:w-auto px-10 py-3.5 bg-brand-orange text-white rounded-xl text-[11px] uppercase tracking-[0.2em] font-black hover:bg-brand-dark transition-all shadow-md flex items-center justify-center gap-2"
                     >
                       <RotateCw size={18} className={isSpinning ? 'animate-spin' : ''} />
                       {isSpinning ? 'SORTEANDO...' : 'GIRAR SORTE'}
                     </button>
                   ) : (
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <button 
-                        onClick={() => setIsSpinning(true)}
-                        disabled={isSpinning}
-                        className="px-10 py-5 border-2 border-brand-orange text-brand-orange rounded-[2rem] text-[11px] uppercase tracking-widest font-black hover:bg-brand-orange/5 transition-all flex items-center gap-3"
+                    <div className="flex flex-col sm:flex-row items-center gap-2">
+                      <button
+                        onClick={() => setStep('quantity')}
+                        className="px-6 py-2.5 border-2 border-brand-orange text-brand-orange rounded-xl text-[10px] uppercase tracking-widest font-black hover:bg-brand-orange/5 transition-all flex items-center gap-2"
                       >
-                        <RotateCw size={14} className={isSpinning ? 'animate-spin' : ''} /> RE-SORTEAR
+                        <ArrowLeft size={14} /> VOLTAR
                       </button>
-                      <button 
-                        onClick={handleNext}
-                        className="px-16 py-6 bg-brand-dark text-white rounded-[2rem] text-[11px] uppercase tracking-widest font-black hover:bg-brand-orange transition-all shadow-xl flex items-center gap-3"
+                      <button
+                        onClick={() => {
+                          setStep('checkout');
+                        }}
+                        className="px-8 py-2.5 bg-brand-dark text-white rounded-xl text-[10px] uppercase tracking-widest font-black hover:bg-brand-orange transition-all shadow-md flex items-center gap-2"
                       >
-                        CONFIRMAR NÚMEROS <Check size={18} />
+                        CONFIRMAR NÚMEROS <Check size={14} />
                       </button>
                     </div>
                   )}
@@ -490,12 +545,12 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 key="step-checkout"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-12"
+                className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"
               >
-                <div className="bg-brand-dark text-white p-10 rounded-[3rem] space-y-8">
-                  <div className="space-y-2">
+                <div className="bg-brand-dark text-white p-6 rounded-2xl space-y-4">
+                  <div className="space-y-1">
                     <p className="text-brand-orange text-[9px] uppercase tracking-[0.4em] font-black">RESUMO DO PEDIDO</p>
-                    <h3 className="text-2xl font-serif italic">{campaign.name}</h3>
+                    <h3 className="text-xl font-sans font-black">{campaign.name}</h3>
                   </div>
 
                   <div className="space-y-4">
@@ -507,47 +562,47 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     </div>
                   </div>
 
-                  <div className="pt-8 border-t border-white/10 flex justify-between items-center">
-                    <span className="text-[11px] uppercase tracking-widest text-white/30 font-black">TOTAL:</span>
-                    <span className="text-4xl font-serif italic text-brand-orange">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
+                  <div className="pt-4 border-t border-white/10 flex justify-between items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-white/30 font-black">TOTAL:</span>
+                    <span className="text-2xl font-sans font-black text-brand-orange">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
                   </div>
                 </div>
 
-                <form onSubmit={handleOrder} className="space-y-6 py-4">
-                  <div className="space-y-4">
+                <form onSubmit={handleOrder} className="space-y-4 py-1">
+                  <div className="space-y-3">
                     <input 
                       type="text" required placeholder="Seu Nome Completo"
                       value={customerName} onChange={e => setCustomerName(e.target.value)}
-                      className="w-full p-6 bg-black/[0.04] border border-transparent rounded-2xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium"
+                      className="w-full p-4 bg-black/[0.04] border border-transparent rounded-xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium text-sm"
                     />
                     <input 
                       type="email" required placeholder="E-mail para contato"
                       value={customerEmail} onChange={e => setCustomerEmail(e.target.value)}
-                      className="w-full p-6 bg-black/[0.04] border border-transparent rounded-2xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium"
+                      className="w-full p-4 bg-black/[0.04] border border-transparent rounded-xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium text-sm"
                     />
                     <input 
                       type="tel" required placeholder="WhatsApp (00) 00000-0000"
                       value={customerPhone} onChange={e => setCustomerPhone(maskPhone(e.target.value))}
+                      className="w-full p-4 bg-black/[0.04] border border-transparent rounded-xl outline-none focus:bg-white focus:border-brand-orange/30 transition-all font-medium text-sm"
                     />
                   </div>
 
-                  {/* Quiet/Passive payment indicator showing that only Pix Automático is used */}
-                  <div className="space-y-3 pt-2">
-                    <p className="text-[10px] uppercase tracking-[0.5em] text-brand-dark/30 font-black">FORMA DE PAGAMENTO</p>
-                    <div className="p-5 rounded-2xl border border-brand-orange bg-brand-orange/[0.02] text-brand-dark flex flex-col gap-1.5">
-                      <span className="text-xs font-black italic text-brand-orange">⚡ Pix Automático Instantâneo</span>
+                  <div className="space-y-2 pt-1">
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-brand-dark/30 font-black">FORMA DE PAGAMENTO</p>
+                    <div className="p-3 rounded-xl border border-brand-orange bg-brand-orange/[0.02] text-brand-dark flex flex-col gap-1">
+                      <span className="text-[11px] font-black italic text-brand-orange">⚡ Pix Automático Instantâneo</span>
                       <p className="text-[9px] opacity-70 leading-tight">Gera QR Code exclusivo e confirma na tela na hora, sem precisar de comprovante.</p>
                     </div>
                   </div>
 
-                  <div className="pt-6 space-y-4">
+                  <div className="pt-3 space-y-2">
                     <button 
                       type="submit" disabled={submitting}
-                      className="w-full py-7 bg-brand-orange text-white rounded-2xl text-[13px] uppercase tracking-[0.4em] font-black hover:bg-brand-dark transition-all shadow-xl flex items-center justify-center gap-4 disabled:opacity-50"
+                      className="w-full py-4 bg-brand-orange text-white rounded-xl text-[11px] uppercase tracking-[0.2em] font-black hover:bg-brand-dark transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                      {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Check size={20} strokeWidth={3} /> FINALIZAR E APOIAR</>}
+                      {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check size={16} strokeWidth={3} /> FINALIZAR E APOIAR</>}
                     </button>
-                    <button type="button" onClick={handleBack} className="w-full text-[10px] uppercase tracking-widest font-black text-brand-dark/20 hover:text-brand-dark italic">Revisar Sorteio</button>
+                    <button type="button" onClick={handleBack} className="w-full text-[9px] uppercase tracking-widest font-black text-brand-dark/20 hover:text-brand-dark italic">Revisar Sorteio</button>
                   </div>
                 </form>
               </motion.div>
@@ -561,110 +616,87 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 exit={{ opacity: 0, y: -15 }}
                 className="flex flex-col gap-6 w-full"
               >
-                {/* Header Compacto com Contagem Regressiva */}
+                {/* Header com Contagem Regressiva */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-black/5">
                   <div className="text-left space-y-1">
                     <p className="text-brand-orange text-[9px] uppercase tracking-[0.2em] font-black flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-                      ⚡ PIX AUTOMÁTICO INSTANTÂNEO
+                      ⚡ PIX VIA INFINITEPAY
                     </p>
-                    <h3 className="text-xl sm:text-2xl font-serif italic text-brand-dark">Aguardando Pagamento</h3>
-                    <p className="text-[10px] text-brand-dark/50 italic leading-tight">
-                      Seus números estão reservados! Finalize o pagamento em até 1 minuto.
+                    <h3 className="text-lg sm:text-xl font-sans font-black text-brand-dark">Aguardando Pagamento</h3>
+                    <p className="text-[9px] text-brand-dark/50 font-sans leading-tight">
+                      A página de pagamento InfinitePay foi aberta em uma nova aba. Finalize o Pix por lá.
                     </p>
                   </div>
-                  
-                  {/* Timer de Expirar em vermelho piscante */}
                   <div className="flex items-center gap-2 px-4 py-2 bg-red-500/5 border border-red-500/10 rounded-full w-full sm:w-auto justify-center">
                     <span className="text-[10px] uppercase tracking-widest font-black text-red-600 flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                      Reserva expira em: 00:{String(timeLeft).padStart(2, '0')}s
+                      Expira em: {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
                     </span>
                   </div>
                 </div>
 
-                {/* Barra de Progresso do Timer */}
+                {/* Progress Bar */}
                 <div className="w-full h-1 bg-black/[0.04] rounded-full overflow-hidden">
                   <motion.div 
                     className="h-full bg-brand-orange"
                     initial={{ width: '100%' }}
-                    animate={{ width: `${(timeLeft / 60) * 100}%` }}
+                    animate={{ width: `${(timeLeft / 300) * 100}%` }}
                     transition={{ duration: 1, ease: 'linear' }}
                   />
                 </div>
 
-                {/* Split Grid Layout responsivo focado na vertical */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-                  {/* Coluna 1: Ações de Pagamento e Copia e Cola (PC & Mobile) */}
-                  <div className="md:col-span-6 flex flex-col justify-between bg-brand-dark text-white p-6 sm:p-8 rounded-[2rem] space-y-6">
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-brand-orange text-[8px] uppercase tracking-[0.2em] font-black">NÚMEROS SELECIONADOS</p>
-                        <h4 className="text-lg font-serif italic text-white/95">{campaign.name}</h4>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">SEUS NÚMEROS DA SORTE:</p>
-                        <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1">
-                          {selectedNumbers.sort((a, b) => a - b).map(n => (
-                            <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/5 rounded text-[10px] font-bold text-white/95">#{String(n).padStart(3, '0')}</span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-white/10 flex justify-between items-baseline">
-                        <span className="text-[8px] uppercase tracking-widest text-white/30 font-black">TOTAL A PAGAR:</span>
-                        <span className="text-2xl font-serif italic text-brand-orange">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
-                      </div>
+                {/* Resumo do Pedido */}
+                <div className="bg-brand-dark text-white p-5 rounded-xl space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">SEUS NÚMEROS DA SORTE:</p>
+                    <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto pr-1">
+                      {selectedNumbers.sort((a, b) => a - b).map(n => (
+                        <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/5 rounded text-[9px] font-bold text-white/95">#{String(n).padStart(3, '0')}</span>
+                      ))}
                     </div>
+                  </div>
+                  <div className="pt-3 border-t border-white/10 flex justify-between items-center">
+                    <span className="text-[9px] uppercase tracking-widest text-white/40 font-black">TOTAL:</span>
+                    <span className="text-2xl font-sans font-black text-brand-orange">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
+                  </div>
+                </div>
 
-                    {/* Botões Copia e Cola & Pagar no Banco */}
-                    <div className="space-y-3 pt-4 border-t border-white/10">
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(infinitePayUrl);
-                          setCopied(true);
-                          showToast('Link de pagamento copiado com sucesso! Abra o app do seu banco para pagar.', 'success');
-                          setTimeout(() => setCopied(false), 3000);
-                        }}
-                        className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] uppercase tracking-widest font-black transition-all flex items-center justify-center gap-2 border border-white/10 cursor-pointer active:scale-95"
-                      >
-                        {copied ? <><Check size={14} /> COPIADO COM SUCESSO!</> : <><Copy size={14} /> COPIAR LINK DE PAGAMENTO</>}
-                      </button>
+                {/* Status e Ações */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Botão re-abrir InfinitePay */}
+                  <a
+                    href={infinitePayUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 py-4 bg-brand-orange text-white rounded-xl text-[11px] uppercase tracking-widest font-black hover:bg-brand-dark transition-all shadow-lg active:scale-95"
+                  >
+                    <ArrowRight size={14} />
+                    ABRIR PÁGINA DE PAGAMENTO
+                  </a>
 
-                      <a 
-                        href={infinitePayUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-4 bg-brand-orange hover:bg-brand-orange/95 text-white rounded-xl text-[10px] uppercase tracking-widest font-black transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-brand-orange/20 active:scale-95 text-center"
-                      >
-                        ⚡ ABRIR PAGAMENTO NO BANCO
-                      </a>
-                      
-                      <p className="text-[8px] text-white/40 text-center italic leading-tight">
-                        * Use o botão copiar para colar o link no seu navegador ou enviar ao celular.
+                  {/* Status Realtime */}
+                  <div className="flex items-center gap-3 p-4 bg-black/[0.03] border border-black/5 rounded-xl">
+                    <Loader2 size={18} className="text-brand-orange animate-spin shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Aguardando confirmação...</p>
+                      <p className="text-[9px] text-brand-dark/50 leading-tight mt-0.5">
+                        Esta tela muda automaticamente assim que o pagamento for confirmado pela InfinitePay.
                       </p>
                     </div>
                   </div>
+                </div>
 
-                  {/* Coluna 2: Status do Realtime e Orientações */}
-                  <div className="md:col-span-6 bg-black/[0.02] border border-black/5 p-6 sm:p-8 rounded-[2rem] flex flex-col justify-between space-y-6 text-left">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2.5">
-                        <Loader2 size={16} className="text-brand-orange animate-spin" />
-                        <span className="text-xs font-black uppercase tracking-wider text-brand-dark">Confirmando em Tempo Real...</span>
-                      </div>
-                      <p className="text-[10px] text-brand-dark/60 leading-relaxed font-medium">
-                        Assim que você concluir a transferência Pix no app do seu banco, nosso sistema receberá a notificação da InfinitePay e esta tela mudará sozinha na mesma hora.
-                      </p>
-                    </div>
-
-                    <div className="p-4 bg-green-500/[0.04] border border-green-500/10 rounded-2xl text-[9px] text-green-700 leading-normal space-y-1">
-                      <p className="font-bold flex items-center gap-1">✓ Sem envio de comprovante</p>
-                      <p>O Pix é identificado automaticamente. Não precisa falar no WhatsApp nem tirar print do recibo.</p>
-                    </div>
-
+                {/* Instruções */}
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex gap-3 text-left">
+                  <Check size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Como pagar:</p>
+                    <p className="text-[9px] text-brand-dark/60 leading-relaxed">
+                      1. Clique em <strong>"ABRIR PÁGINA DE PAGAMENTO"</strong> acima (ou use a aba já aberta).<br/>
+                      2. Na página da InfinitePay, escolha <strong>Pix</strong> e copie o código ou escaneie o QR Code.<br/>
+                      3. Pague no app do seu banco. A confirmação aparece aqui automaticamente.
+                    </p>
                   </div>
                 </div>
               </motion.div>
@@ -683,30 +715,30 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
 
                 {isConfirmedAutomatic ? (
                   // Layout Premium para confirmação automática instantânea (WOW factor!)
-                  <div className="space-y-6 max-w-lg">
-                    <div className="space-y-2">
-                      <h3 className="text-3xl sm:text-4xl font-serif italic text-brand-dark">Apoio Confirmado via Pix!</h3>
-                      <p className="text-sm text-brand-dark/50 italic max-w-md mx-auto">
+                  <div className="space-y-4 max-w-lg">
+                    <div className="space-y-1">
+                      <h3 className="text-2xl sm:text-3xl font-sans font-black text-brand-dark">Apoio Confirmado via Pix!</h3>
+                      <p className="text-xs text-brand-dark/50 max-w-md mx-auto">
                         Seu pagamento foi compensado de forma instantânea em nosso sistema. Sua participação é oficial!
                       </p>
                     </div>
 
-                    <div className="w-full max-w-md mx-auto bg-white p-8 rounded-[3rem] border border-black/5 shadow-2xl space-y-6">
+                    <div className="w-full max-w-md mx-auto bg-white p-6 rounded-2xl border border-black/5 shadow-xl space-y-4">
                       <div className="text-center bg-green-500/5 border border-green-500/10 p-5 rounded-[2rem] space-y-2">
                         <span className="text-[9px] uppercase tracking-[0.2em] font-black text-green-600 block">⚡ STATUS DA TRANSAÇÃO</span>
                         <strong className="text-sm font-black text-green-700 italic block">PAGO & PARTICIPADO</strong>
                       </div>
 
-                      <div className="bg-brand-dark text-white p-6 rounded-[2.5rem] text-left space-y-4">
-                        <p className="text-[9px] uppercase tracking-widest text-white/30 font-black">NÚMEROS OFICIAIS ADQUIRIDOS:</p>
-                        <div className="flex flex-wrap gap-2 pt-2">
+                      <div className="bg-brand-dark text-white p-4 rounded-xl text-left space-y-3">
+                        <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">NÚMEROS OFICIAIS ADQUIRIDOS:</p>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
                           {selectedNumbers.sort((a, b) => a - b).map(n => (
-                            <span key={n} className="px-3 py-1 bg-white/15 border border-white/10 rounded-lg text-xs font-bold text-white">#{String(n).padStart(3, '0')}</span>
+                            <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/10 rounded text-[10px] font-bold text-white">#{String(n).padStart(3, '0')}</span>
                           ))}
                         </div>
-                        <div className="pt-4 border-t border-white/10 flex justify-between items-center text-xs">
+                        <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs">
                           <span className="text-white/40 font-bold">VALOR DOADO:</span>
-                          <span className="font-serif italic text-brand-orange text-lg">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
+                          <span className="font-sans font-black text-brand-orange text-base">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
                         </div>
                       </div>
 
@@ -721,8 +753,8 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 ) : (
                   // Layout Tradicional para Pix manual
                   <>
-                    <div className="space-y-3">
-                      <h3 className="text-3xl font-serif italic text-brand-dark">Pedido de Rifa Recebido!</h3>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-sans font-black text-brand-dark">Pedido de Rifa Recebido!</h3>
                       <p className="text-sm text-brand-dark/50 italic max-w-md mx-auto">
                         Seus números foram reservados com sucesso. Agora realize o pagamento via PIX para oficializar sua participação.
                       </p>
@@ -749,7 +781,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                       <div className="grid grid-cols-2 gap-6 text-left border-t border-black/5 pt-8">
                         <div>
                           <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black mb-1">BANCO</p>
-                          <p className="text-xs font-black text-brand-dark">{pixBank}</p>
+                          <p className="text-xs font-black text-brand-dark">InfinitePay</p>
                         </div>
                         <div>
                           <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black mb-1">RECEBEDOR</p>

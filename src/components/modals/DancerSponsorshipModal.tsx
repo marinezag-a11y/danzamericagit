@@ -316,7 +316,8 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
             if (payError || !payData?.url) {
               console.error('[Payment] InfinitePay creation error:', payError);
-              showToast('Não foi possível iniciar o Pix automático. Redirecionando para Pix manual.', 'warning');
+              const errorDetails = payError?.message || (payError ? JSON.stringify(payError) : 'Sem URL retornada');
+              showToast(`Não foi possível iniciar o Pix automático: ${errorDetails}. Redirecionando para Pix manual.`, 'warning');
               setStep('success'); // Fallback para Pix manual
             } else {
               console.log('[Payment] InfinitePay link generated successfully:', payData.url);

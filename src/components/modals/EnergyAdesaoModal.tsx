@@ -8,16 +8,17 @@ interface EnergyAdesaoModalProps {
   isOpen: boolean;
   onClose: () => void;
   campaignId?: string | null;
+  initialBillValue?: string;
 }
 
-export function EnergyAdesaoModal({ isOpen, onClose, campaignId }: EnergyAdesaoModalProps) {
+export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValue = '' }: EnergyAdesaoModalProps) {
   const { trackEvent } = useEventTracking();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [city, setCity] = useState('');
-  const [averageBill, setAverageBill] = useState('');
+  const [averageBill, setAverageBill] = useState(initialBillValue);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +30,11 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId }: EnergyAdesaoM
       setEmail('');
       setWhatsapp('');
       setCity('');
-      setAverageBill('');
+      setAverageBill(initialBillValue);
       setSuccess(false);
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialBillValue]);
 
   const maskPhone = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -116,17 +117,19 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId }: EnergyAdesaoM
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="modal-container relative z-10 w-full max-w-xl bg-white text-brand-dark overflow-hidden flex flex-col rounded-[2.5rem] shadow-2xl border border-black/5"
+        className="modal-container relative z-10 w-full max-w-xl bg-white text-zinc-900 overflow-hidden flex flex-col rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] border border-white/20"
       >
         {/* Header */}
-        <div className="modal-header border-b border-black/5 px-8 py-6 flex items-center justify-between">
+        <div className="modal-header border-b border-zinc-100 px-8 py-6 flex items-center justify-between bg-zinc-50/50">
           <div className="flex items-center gap-4">
-            <div className="w-2.5 h-12 bg-emerald-500 rounded-full animate-pulse" />
+            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+              <Zap className="w-6 h-6 fill-emerald-600" />
+            </div>
             <div>
-              <p className="text-emerald-600 text-[10px] uppercase tracking-[0.4em] font-black mb-0.5">
+              <p className="text-emerald-600 text-[10px] uppercase tracking-[0.2em] font-black mb-0.5">
                 Economia Inteligente
               </p>
-              <h2 className="text-2xl font-serif text-brand-dark italic leading-tight">
+              <h2 className="text-xl font-bold text-zinc-800 leading-tight">
                 Adesão ao Plano de Energia
               </h2>
             </div>

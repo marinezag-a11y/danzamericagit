@@ -15,7 +15,8 @@ import {
   Send,
   AlertCircle,
   Calendar,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
@@ -74,6 +75,7 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
   const [transitioningLead, setTransitioningLead] = useState<Lead | null>(null);
   const [targetStatus, setTargetStatus] = useState<'pending' | 'launched' | 'approved' | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
 
   // Load Data
   const loadData = async () => {
@@ -204,6 +206,22 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
       setUpdatingStatus(false);
       setTransitioningLead(null);
       setTargetStatus(null);
+    }
+  };
+
+  // Handle Delete
+  const handleDeleteConfirm = async () => {
+    if (!supabase || !deletingLead) return;
+    try {
+      const { error } = await supabase.from('energy_leads').delete().eq('id', deletingLead.id);
+      if (error) throw error;
+      setLeads(prev => prev.filter(l => l.id !== deletingLead.id));
+      onAlert('Sucesso', 'Registro excluído com sucesso.', 'info');
+    } catch (err: any) {
+      console.error('Error deleting lead:', err);
+      onAlert('Erro', 'Ocorreu um erro ao excluir o registro.', 'danger');
+    } finally {
+      setDeletingLead(null);
     }
   };
 
@@ -536,6 +554,13 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
                           >
                             Aprovado
                           </button>
+                          <button
+                            onClick={() => setDeletingLead(lead)}
+                            className="px-3 py-1.5 rounded-lg text-red-500/50 hover:text-red-500 hover:bg-red-500/10 transition-all flex items-center justify-center"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -562,6 +587,17 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
         message={`Você está prestes a alterar o status de ${transitioningLead?.name} para "${targetStatus ? getStatusLabel(targetStatus) : ''}". Isso irá salvar a alteração e poderá disparar um e-mail automático notificando a pessoa sobre a evolução do plano.`}
         confirmLabel={`SIM, ATUALIZAR STATUS`}
         variant={targetStatus === 'approved' ? 'info' : 'warning'}
+      />
+
+      {/* Confirmação de Exclusão */}
+      <ConfirmModal 
+        isOpen={!!deletingLead}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeletingLead(null)}
+        title={`Excluir Registro?`}
+        message={`Você está prestes a excluir o registro de ${deletingLead?.name}. Esta ação não pode ser desfeita e removerá os dados permanentemente.`}
+        confirmLabel={`SIM, EXCLUIR`}
+        variant="danger"
       />
     </div>
   );

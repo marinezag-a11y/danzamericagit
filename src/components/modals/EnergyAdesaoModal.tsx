@@ -22,6 +22,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [city, setCity] = useState('');
+  const [cities, setCities] = useState<{ id: string; nome: string; microrregiao: { mesorregiao: { UF: { sigla: string } } } }[]>([]);
   const [averageBill, setAverageBill] = useState(initialBillValue);
   const [showHelper, setShowHelper] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +48,16 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
       setCurrentStep(1);
     }
   }, [isOpen, initialBillValue]);
+
+  // Carrega cidades do IBGE (apenas ao chegar no passo 4) para evitar pesar o DB e acelerar o frontend
+  useEffect(() => {
+    if (isOpen && currentStep === 4 && cities.length === 0) {
+      fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
+        .then(res => res.json())
+        .then(data => setCities(data))
+        .catch(err => console.error('Erro ao buscar cidades do IBGE', err));
+    }
+  }, [isOpen, currentStep, cities.length]);
 
   const maskPhone = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -78,6 +89,35 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
       .replace(/(-\d{2})\d+?$/, '$1');
   };
 
+  const isValidCpf = (cpfStr: string) => {
+    const cpfNum = cpfStr.replace(/[^\d]+/g, '');
+    if (cpfNum.length !== 11 || !!cpfNum.match(/(\d)\1{10}/)) return false;
+    let split = cpfNum.split('').map(Number);
+    let rest = (split.slice(0, 9).reduce((acc, curr, i) => acc + curr * (10 - i), 0) * 10) % 11;
+    if (rest === 10 || rest === 11) rest = 0;
+    if (rest !== split[9]) return false;
+    rest = (split.slice(0, 10).reduce((acc, curr, i) => acc + curr * (11 - i), 0) * 10) % 11;
+    if (rest === 10 || rest === 11) rest = 0;
+    return rest === split[10];
+  };
+
+  const isValidCnpj = (cnpjStr: string) => {
+    const cnpjNum = cnpjStr.replace(/[^\d]+/g, '');
+    if (cnpjNum.length !== 14 || !!cnpjNum.match(/(\d)\1{13}/)) return false;
+    const calc = (x: number) => {
+      let numbers = cnpjNum.substring(0, x);
+      let y = x - 7;
+      let sum = 0;
+      for (let i = x; i >= 1; i--) {
+        sum += Number(numbers.charAt(x - i)) * y--;
+        if (y < 2) y = 9;
+      }
+      let res = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+      return res === Number(cnpjNum.charAt(x));
+    };
+    return calc(12) && calc(13);
+  };
+
   const handleBillChange = (value: string) => {
     // Apenas números e vírgula/ponto
     const sanitized = value.replace(/[^0-9,.]/g, '');
@@ -92,13 +132,25 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
         return;
       }
     } else if (currentStep === 2) {
-      if (personType === 'fisica' && !cpf) {
-        setError('Preencha o CPF.');
-        return;
+      if (personType === 'fisica') {
+        if (!cpf) {
+          setError('Preencha o CPF.');
+          return;
+        }
+        if (!isValidCpf(cpf)) {
+          setError('CPF inválido. Verifique os números digitados.');
+          return;
+        }
       }
-      if (personType === 'juridica' && !cnpj) {
-        setError('Preencha o CNPJ.');
-        return;
+      if (personType === 'juridica') {
+        if (!cnpj) {
+          setError('Preencha o CNPJ.');
+          return;
+        }
+        if (!isValidCnpj(cnpj)) {
+          setError('CNPJ inválido. Verifique os números digitados.');
+          return;
+        }
       }
     } else if (currentStep === 3) {
       if (!consumerUnit) {
@@ -422,11 +474,17 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
                         <input
                           type="text"
                           required
+                          list="cities-list"
                           value={city}
                           onChange={(e) => setCity(e.target.value)}
-                          placeholder="Ex: Belo Horizonte"
+                          placeholder="Ex: Belo Horizonte - MG"
                           className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                         />
+                        <datalist id="cities-list">
+                          {cities.map((c) => (
+                            <option key={c.id} value={`${c.nome} - ${c.microrregiao.mesorregiao.UF.sigla}`} />
+                          ))}
+                        </datalist>
                       </div>
                     </motion.div>
                   )}

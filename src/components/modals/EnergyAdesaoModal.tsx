@@ -27,6 +27,8 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 5;
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +44,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
       setAverageBill(initialBillValue);
       setSuccess(false);
       setError(null);
+      setCurrentStep(1);
     }
   }, [isOpen, initialBillValue]);
 
@@ -79,6 +82,41 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
     // Apenas números e vírgula/ponto
     const sanitized = value.replace(/[^0-9,.]/g, '');
     setAverageBill(sanitized);
+  };
+
+  const handleNextStep = () => {
+    setError(null);
+    if (currentStep === 1) {
+      if (!name || !email || !whatsapp) {
+        setError('Preencha todos os campos do passo 1.');
+        return;
+      }
+    } else if (currentStep === 2) {
+      if (personType === 'fisica' && !cpf) {
+        setError('Preencha o CPF.');
+        return;
+      }
+      if (personType === 'juridica' && !cnpj) {
+        setError('Preencha o CNPJ.');
+        return;
+      }
+    } else if (currentStep === 3) {
+      if (!consumerUnit) {
+        setError('Preencha o Número da Unidade Consumidora.');
+        return;
+      }
+    } else if (currentStep === 4) {
+      if (!city) {
+        setError('Preencha sua Cidade.');
+        return;
+      }
+    }
+    setCurrentStep((prev) => Math.min(prev + 1, totalSteps));
+  };
+
+  const handlePrevStep = () => {
+    setError(null);
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,197 +229,269 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
                 
-                {/* Person Type Toggle */}
-                <div className="flex bg-zinc-100 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setPersonType('fisica')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-xs font-bold rounded-lg transition-all ${
-                      personType === 'fisica' 
-                        ? 'bg-white text-emerald-600 shadow-sm' 
-                        : 'text-zinc-500 hover:text-zinc-700'
-                    }`}
-                  >
-                    <User className="w-4 h-4" /> Pessoa Física
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPersonType('juridica')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-xs font-bold rounded-lg transition-all ${
-                      personType === 'juridica' 
-                        ? 'bg-white text-emerald-600 shadow-sm' 
-                        : 'text-zinc-500 hover:text-zinc-700'
-                    }`}
-                  >
-                    <Building2 className="w-4 h-4" /> Pessoa Jurídica
-                  </button>
+                {/* Progress Bar */}
+                <div className="space-y-2 mb-8">
+                  <div className="flex gap-2 h-2">
+                    {Array.from({ length: totalSteps }).map((_, i) => (
+                      <div 
+                        key={i} 
+                        className={`flex-1 rounded-full transition-all duration-500 ${
+                          i + 1 <= currentStep ? 'bg-emerald-500' : 'bg-zinc-100'
+                        }`} 
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    PASSO {currentStep} DE {totalSteps}
+                  </p>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">
-                        {personType === 'fisica' ? 'Nome Completo *' : 'Razão Social *'}
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder={personType === 'fisica' ? "Ex: João Silva Santos" : "Ex: Empresa Silva Ltda"}
-                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">
-                        {personType === 'fisica' ? 'CPF *' : 'CNPJ *'}
-                      </label>
-                      {personType === 'fisica' ? (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  
+                  {/* Step 1: Nome, Email, WhatsApp */}
+                  {currentStep === 1 && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Nome Completo *</label>
                         <input
                           type="text"
                           required
-                          value={cpf}
-                          onChange={(e) => setCpf(maskCpf(e.target.value))}
-                          placeholder="Ex: 123.456.789-00"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Ex: João Silva Santos"
                           className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                         />
-                      ) : (
-                        <input
-                          type="text"
-                          required
-                          value={cnpj}
-                          onChange={(e) => setCnpj(maskCnpj(e.target.value))}
-                          placeholder="Ex: 12.345.678/0001-90"
-                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">E-mail *</label>
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Ex: joao@email.com"
-                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">WhatsApp *</label>
-                      <input
-                        type="tel"
-                        required
-                        value={whatsapp}
-                        onChange={(e) => setWhatsapp(maskPhone(e.target.value))}
-                        placeholder="Ex: (31) 98888-8888"
-                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex justify-between items-center mb-2 px-1">
-                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block">Nº da Unidade *</label>
-                        <button type="button" onClick={() => setShowHelper(!showHelper)} className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1 hover:underline">
-                          <HelpCircle className="w-3 h-3" /> Onde achar?
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">E-mail *</label>
+                          <input
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Ex: joao@email.com"
+                            className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">WhatsApp *</label>
+                          <input
+                            type="tel"
+                            required
+                            value={whatsapp}
+                            onChange={(e) => setWhatsapp(maskPhone(e.target.value))}
+                            placeholder="Ex: (31) 98888-8888"
+                            className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                
+                  {/* Step 2: PF/PJ e Documento */}
+                  {currentStep === 2 && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                      {/* Person Type Toggle */}
+                      <div className="flex bg-zinc-100 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setPersonType('fisica')}
+                          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-xs font-bold rounded-lg transition-all ${
+                            personType === 'fisica' 
+                              ? 'bg-white text-emerald-600 shadow-sm' 
+                              : 'text-zinc-500 hover:text-zinc-700'
+                          }`}
+                        >
+                          <User className="w-4 h-4" /> Pessoa Física
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPersonType('juridica')}
+                          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-xs font-bold rounded-lg transition-all ${
+                            personType === 'juridica' 
+                              ? 'bg-white text-emerald-600 shadow-sm' 
+                              : 'text-zinc-500 hover:text-zinc-700'
+                          }`}
+                        >
+                          <Building2 className="w-4 h-4" /> Pessoa Jurídica
                         </button>
                       </div>
-                      <input
-                        type="text"
-                        required
-                        value={consumerUnit}
-                        onChange={(e) => setConsumerUnit(e.target.value)}
-                        placeholder="Ex: 1020739601"
-                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Valor Médio da Conta *</label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">R$</span>
+
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">
+                          {personType === 'fisica' ? 'CPF *' : 'CNPJ *'}
+                        </label>
+                        {personType === 'fisica' ? (
+                          <input
+                            type="text"
+                            required
+                            value={cpf}
+                            onChange={(e) => setCpf(maskCpf(e.target.value))}
+                            placeholder="Ex: 123.456.789-00"
+                            className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            required
+                            value={cnpj}
+                            onChange={(e) => setCnpj(maskCnpj(e.target.value))}
+                            placeholder="Ex: 12.345.678/0001-90"
+                            className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          />
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Step 3: Unidade Consumidora */}
+                  {currentStep === 3 && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                      <div>
+                        <div className="flex justify-between items-center mb-2 px-1">
+                          <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block">Nº da Unidade *</label>
+                          <button type="button" onClick={() => setShowHelper(!showHelper)} className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1 hover:underline">
+                            <HelpCircle className="w-3 h-3" /> Onde achar?
+                          </button>
+                        </div>
                         <input
                           type="text"
                           required
-                          value={averageBill}
-                          onChange={(e) => handleBillChange(e.target.value)}
-                          placeholder="Ex: 250,00"
-                          className="w-full p-4 pl-10 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-bold placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          value={consumerUnit}
+                          onChange={(e) => setConsumerUnit(e.target.value)}
+                          placeholder="Ex: 1020739601"
+                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                         />
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Helper Graphic para Unidade Consumidora */}
-                  <AnimatePresence>
-                    {showHelper && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 mt-2 space-y-3">
-                          <p className="text-xs text-zinc-600 font-medium">Você encontra o <strong>N.º DA UNIDADE CONSUMIDORA</strong> na parte superior direita da sua conta de luz (Cemig), logo abaixo do seu nome e endereço, destacado em um quadro amarelo:</p>
-                          
-                          {/* Fictitious Bill Graphic */}
-                          <div className="bg-white border-2 border-zinc-200 rounded-lg p-3 shadow-sm font-mono text-[10px] sm:text-xs text-zinc-800 relative">
-                            <div className="text-emerald-700 font-black text-lg mb-2 flex items-center gap-1">
-                              <Zap className="w-5 h-5 fill-emerald-600" /> ENERGIA
-                            </div>
-                            <div className="opacity-50 blur-[2px] select-none">
-                              <p>NOME DO CLIENTE FICTÍCIO</p>
-                              <p>RUA EXEMPLO 123 - CENTRO</p>
-                              <p>12345-678 CIDADE, MG</p>
-                              <p>CPF 123.***.***-**</p>
-                            </div>
-                            
-                            <div className="mt-4 border-2 border-yellow-400 rounded-md p-2 text-center bg-yellow-50 relative animate-pulse shadow-[0_0_15px_rgba(250,204,21,0.4)]">
-                              <p className="font-bold text-[9px] sm:text-[10px] text-zinc-800 tracking-wider">N.º DA UNIDADE CONSUMIDORA</p>
-                              <p className="font-black text-sm sm:text-base text-black mt-1 tracking-widest">10.123.456.78-90</p>
+                      {/* Helper Graphic para Unidade Consumidora */}
+                      <AnimatePresence>
+                        {showHelper && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 mt-2 space-y-3">
+                              <p className="text-xs text-zinc-600 font-medium">Você encontra o <strong>N.º DA UNIDADE CONSUMIDORA</strong> na parte superior direita da sua conta de luz (Cemig), logo abaixo do seu nome e endereço, destacado em um quadro amarelo:</p>
                               
-                              <div className="absolute -right-2 -top-2 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center animate-bounce">
-                                <ArrowRight className="w-3 h-3 text-white -rotate-135" />
+                              {/* Fictitious Bill Graphic */}
+                              <div className="bg-white border-2 border-zinc-200 rounded-lg p-3 shadow-sm font-mono text-[10px] sm:text-xs text-zinc-800 relative">
+                                <div className="text-emerald-700 font-black text-lg mb-2 flex items-center gap-1">
+                                  <Zap className="w-5 h-5 fill-emerald-600" /> ENERGIA
+                                </div>
+                                <div className="opacity-50 blur-[2px] select-none">
+                                  <p>NOME DO CLIENTE FICTÍCIO</p>
+                                  <p>RUA EXEMPLO 123 - CENTRO</p>
+                                  <p>12345-678 CIDADE, MG</p>
+                                  <p>CPF 123.***.***-**</p>
+                                </div>
+                                
+                                <div className="mt-4 border-2 border-yellow-400 rounded-md p-2 text-center bg-yellow-50 relative animate-pulse shadow-[0_0_15px_rgba(250,204,21,0.4)]">
+                                  <p className="font-bold text-[9px] sm:text-[10px] text-zinc-800 tracking-wider">N.º DA UNIDADE CONSUMIDORA</p>
+                                  <p className="font-black text-sm sm:text-base text-black mt-1 tracking-widest">10.123.456.78-90</p>
+                                  
+                                  <div className="absolute -right-2 -top-2 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center animate-bounce">
+                                    <ArrowRight className="w-3 h-3 text-white -rotate-135" />
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold rounded-r-xl"
-                  >
-                    {error}
-                  </motion.div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-4.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-lg hover:shadow-emerald-600/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-95"
-                >
-                  {submitting ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4 fill-current" />
-                      Aderir ao Plano de Energia
-                    </>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
-                </button>
-              </form>
+
+                  {/* Step 4: Cidade */}
+                  {currentStep === 4 && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Cidade *</label>
+                        <input
+                          type="text"
+                          required
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="Ex: Belo Horizonte"
+                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Step 5: Valor Médio */}
+                  {currentStep === 5 && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Valor Médio da Conta *</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">R$</span>
+                          <input
+                            type="text"
+                            required
+                            value={averageBill}
+                            onChange={(e) => handleBillChange(e.target.value)}
+                            placeholder="Ex: 250,00"
+                            className="w-full p-4 pl-10 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-bold placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold rounded-r-xl"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+
+                  <div className="flex gap-4 pt-4">
+                    {currentStep > 1 && (
+                      <button
+                        type="button"
+                        onClick={handlePrevStep}
+                        className="py-4.5 px-6 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-[1.5rem] font-black uppercase tracking-[0.1em] text-[10px] transition-all flex items-center justify-center disabled:opacity-50 hover:scale-[1.01] active:scale-95"
+                      >
+                        Voltar
+                      </button>
+                    )}
+                    
+                    {currentStep < totalSteps ? (
+                      <button
+                        type="button"
+                        onClick={handleNextStep}
+                        className="flex-1 py-4.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-lg hover:shadow-emerald-600/20 flex items-center justify-center gap-3 hover:scale-[1.01] active:scale-95"
+                      >
+                        Próximo <ArrowRight className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="flex-1 py-4.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-lg hover:shadow-emerald-600/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-95"
+                      >
+                        {submitting ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4 fill-current" />
+                            Aderir ao Plano de Energia
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
             </div>
           ) : (
             <motion.div

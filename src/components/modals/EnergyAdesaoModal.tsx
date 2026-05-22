@@ -15,6 +15,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   const { trackEvent } = useEventTracking();
 
   const [name, setName] = useState('');
+  const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [city, setCity] = useState('');
@@ -27,6 +28,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
     if (isOpen) {
       trackEvent('Abrir Modal Adesão Energia', 'view');
       setName('');
+      setCpf('');
       setEmail('');
       setWhatsapp('');
       setCity('');
@@ -45,6 +47,15 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
         .substring(0, 15);
     }
     return numbers.substring(0, 11);
+  };
+
+  const maskCpf = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
   };
 
   const handleBillChange = (value: string) => {
@@ -76,6 +87,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
         .from('energy_leads')
         .insert({
           name,
+          cpf: cpf.replace(/\D/g, ''),
           email,
           whatsapp: whatsapp.replace(/\D/g, ''),
           city,
@@ -161,16 +173,29 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">Nome Completo *</label>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Ex: João Silva Santos"
-                      className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">Nome Completo *</label>
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Ex: João Silva Santos"
+                        className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">CPF *</label>
+                      <input
+                        type="text"
+                        required
+                        value={cpf}
+                        onChange={(e) => setCpf(maskCpf(e.target.value))}
+                        placeholder="Ex: 123.456.789-00"
+                        className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

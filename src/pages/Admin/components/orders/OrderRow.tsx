@@ -12,6 +12,7 @@ import { supabase } from '../../../../lib/supabase';
 import { maskBRL } from '../../../../lib/utils';
 import { OrderEditModal } from './OrderEditModal';
 import { ReasonModal } from '../../../../components/modals/ReasonModal';
+import { ConfirmModal } from '../../../../components/modals/ConfirmModal';
 
 interface OrderRowProps {
   order: any;
@@ -29,6 +30,8 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [status, setStatus] = useState(order?.status || 'pending');
   const [resending, setResending] = useState(false);
+  const [isConfirmingInfinitePay, setIsConfirmingInfinitePay] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   // Sincronizar o estado local com o prop caso ele mude externamente
   React.useEffect(() => {
@@ -41,7 +44,8 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     pending: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
     paid: 'text-green-500 bg-green-500/10 border-green-500/20',
     sent: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-    cancelled: 'text-red-500 bg-red-500/10 border-red-500/20'
+    cancelled: 'text-red-500 bg-red-500/10 border-red-500/20',
+    unconfirmed: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
   };
 
   const handleSaveFromModal = async (data: any) => {
@@ -64,7 +68,23 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
         }
       }
       setIsModalOpen(false);
-      onAlert('Sucesso', 'Pedido atualizado com sucesso.', 'info');
+      
+      const isPaidBefore = order.status === 'paid';
+      const isCancelledNow = data.status === 'cancelled';
+      
+      if (isPaidBefore && isCancelledNow) {
+        onAlert(
+          'Pedido Cancelado & Reembolso Necessário',
+          `Os bilhetes foram liberados no sistema.\n\n` +
+          `Como este pedido já estava PAGO via Pix (InfinitePay), você deve realizar o estorno manual:\n` +
+          `1. Acesse o aplicativo ou painel da InfinitePay.\n` +
+          `2. Localize a transação no valor de ${maskBRL(order.total_price || order.product_price)}.\n` +
+          `3. Clique em "Estornar" para devolver o dinheiro à conta Pix do cliente.`,
+          'warning'
+        );
+      } else {
+        onAlert('Sucesso', 'Pedido atualizado com sucesso.', 'info');
+      }
     } else {
       onAlert('Erro', result.error, 'danger');
     }
@@ -76,6 +96,9 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     setIsAskingReason(false);
     setStatus(pendingStatus);
     setUpdating(true);
+    
+    const isPaidBefore = order.status === 'paid';
+    const isCancelledNow = pendingStatus === 'cancelled';
     
     const result = await onUpdate(order.id, { status: pendingStatus });
     if (result.success) {
@@ -93,7 +116,20 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
       } catch (err) {
         console.error('Erro ao enviar e-mail de status:', err);
       }
-      onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
+      
+      if (isPaidBefore && isCancelledNow) {
+        onAlert(
+          'Pedido Cancelado & Reembolso Necessário',
+          `Os bilhetes foram liberados no sistema.\n\n` +
+          `Como este pedido já estava PAGO via Pix (InfinitePay), você deve realizar o estorno manual:\n` +
+          `1. Acesse o aplicativo ou painel da InfinitePay.\n` +
+          `2. Localize a transação no valor de ${maskBRL(order.total_price || order.product_price)}.\n` +
+          `3. Clique em "Estornar" para devolver o dinheiro à conta Pix do cliente.`,
+          'warning'
+        );
+      } else {
+        onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
+      }
     }
     setUpdating(false);
     setPendingStatus(null);
@@ -287,52 +323,81 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
           </span>
         </td>
         <td className="py-5 px-6">
-          <select 
-            value={status}
-            onClick={(e) => e.stopPropagation()}
-            onChange={async (e) => {
-              const newStatus = e.target.value;
-              if (newStatus === 'cancelled') {
-                setPendingStatus(newStatus);
-                setIsAskingReason(true);
-                return;
-              }
-              
-              const previousStatus = status;
-              setStatus(newStatus);
-              setUpdating(true);
-              
-              const result = await onUpdate(order.id, { status: newStatus });
-              if (result.success) {
-                try {
-                  await supabase.functions.invoke('send-order', {
-                    body: {
-                      type: 'status_update',
-                      order_id: order.id,
-                      customer_name: order.customer_name,
-                      customer_email: order.customer_email,
-                      new_status: newStatus
+          <div className="flex flex-col gap-1 items-start">
+            <select 
+              value={status}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                const newStatus = e.target.value;
+                
+                const proceed = async () => {
+                  if (newStatus === 'cancelled') {
+                    setPendingStatus(newStatus);
+                    setIsAskingReason(true);
+                    return;
+                  }
+                  
+                  const previousStatus = status;
+                  setStatus(newStatus);
+                  setUpdating(true);
+                  
+                  const updates: any = { status: newStatus };
+                  if (newStatus === 'paid') {
+                    updates.payment_origin = order.payment_origin || 'manual';
+                  } else if (newStatus === 'pending' || newStatus === 'unconfirmed' || newStatus === 'cancelled') {
+                    updates.payment_origin = null;
+                  }
+
+                  const result = await onUpdate(order.id, updates);
+                  if (result.success) {
+                    try {
+                      await supabase.functions.invoke('send-order', {
+                        body: {
+                          type: 'status_update',
+                          order_id: order.id,
+                          customer_name: order.customer_name,
+                          customer_email: order.customer_email,
+                          new_status: newStatus
+                        }
+                      });
+                    } catch (err) {
+                      console.error('Erro ao enviar e-mail de status:', err);
                     }
-                  });
-                } catch (err) {
-                  console.error('Erro ao enviar e-mail de status:', err);
+                    onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
+                  } else {
+                    // Se der erro, volta para o status anterior
+                    setStatus(previousStatus);
+                    onAlert('Erro ao Atualizar', result.error || 'Não foi possível salvar o status.', 'danger');
+                  }
+                  setUpdating(false);
+                };
+
+                if (order.payment_origin === 'infinitepay') {
+                  setPendingAction(() => proceed);
+                  setIsConfirmingInfinitePay(true);
+                } else {
+                  proceed();
                 }
-                onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
-              } else {
-                // Se der erro, volta para o status anterior
-                setStatus(previousStatus);
-                onAlert('Erro ao Atualizar', result.error || 'Não foi possível salvar o status.', 'danger');
-              }
-              setUpdating(false);
-            }}
-            disabled={updating}
-            className={`text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-sm outline-none cursor-pointer transition-all ${statusColors[status as keyof typeof statusColors]} border bg-black/40`}
-          >
-            <option value="pending">Pendente</option>
-            <option value="paid">Pago</option>
-            <option value="sent">Enviado</option>
-            <option value="cancelled">Cancelado</option>
-          </select>
+              }}
+              disabled={updating}
+              className={`text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-sm outline-none cursor-pointer transition-all ${statusColors[status as keyof typeof statusColors]} border bg-black/40`}
+            >
+              <option value="pending">Pendente</option>
+              <option value="paid">Pago</option>
+              <option value="sent">Enviado</option>
+              <option value="cancelled">Cancelado</option>
+              <option value="unconfirmed">Pagto Não confirmado</option>
+            </select>
+            {status === 'paid' && (
+              <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-sm mt-1 border ${
+                order.payment_origin === 'infinitepay'
+                  ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+                  : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+              }`}>
+                {order.payment_origin === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
+              </span>
+            )}
+          </div>
         </td>
         <td className="py-5 px-6 text-right">
           <div className="flex items-center justify-end gap-1 sm:gap-2">
@@ -376,6 +441,30 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
         order={order}
         onSave={handleSaveFromModal}
         onAlert={onAlert}
+      />
+
+      <ConfirmModal
+        isOpen={isConfirmingInfinitePay}
+        title="Alterar Pedido Automático"
+        message="Atenção: Este pedido foi pago de forma automática via InfinitePay. Alterar o seu status manualmente pode gerar inconsistências financeiras e de concorrência com o gateway de pagamentos. Deseja prosseguir mesmo assim?"
+        confirmLabel="Sim, Alterar"
+        cancelLabel="Voltar"
+        variant="warning"
+        onConfirm={() => {
+          setIsConfirmingInfinitePay(false);
+          if (pendingAction) {
+            pendingAction();
+            setPendingAction(null);
+          }
+        }}
+        onCancel={() => {
+          setIsConfirmingInfinitePay(false);
+          setPendingAction(null);
+          // Forçar renderização do select a voltar ao estado atual
+          const prevStatus = status;
+          setStatus('');
+          setTimeout(() => setStatus(prevStatus), 50);
+        }}
       />
 
       <ReasonModal

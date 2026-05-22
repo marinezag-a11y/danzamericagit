@@ -310,7 +310,9 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
           {/* List of Raffles as Accordions */}
           <div className="space-y-4 pt-12">
             <div className="flex flex-col gap-2 ml-1 mb-6">
-              <h4 className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-bold">Ações Ativas ({campaigns.length})</h4>
+              <h4 className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-bold">
+                Ações entre Amigos ({campaigns.filter(c => c.is_active).length} ativas, {campaigns.filter(c => !c.is_active).length} pausadas)
+              </h4>
               <div className="h-px w-12 bg-white/5" />
             </div>
             
@@ -456,9 +458,9 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
         ? 'bg-black/30 border-white/10 shadow-2xl' 
         : 'bg-black/10 border-white/5 hover:border-white/20'
     } ${!campaign.is_active ? 'opacity-50 grayscale' : ''}`}>
-      <button 
+      <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-10 flex items-center justify-between group"
+        className="w-full p-10 flex items-center justify-between group cursor-pointer"
       >
         <div className="flex items-center gap-6">
           <div className="text-[10px] font-bold text-white/10 group-hover:text-brand-orange transition-colors font-sans w-6 text-center">
@@ -468,18 +470,53 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
              <img src={campaign.image_url} className="w-full h-full object-cover opacity-60" alt="" />
           </div>
           <div className="text-left">
-            <h3 className={`text-xl font-serif italic transition-all duration-500 ${
-              isOpen ? 'text-white' : 'text-white/40 group-hover:text-white/60'
-            }`}>
-              {campaign.name}
-            </h3>
+            <div className="flex items-center gap-3">
+              <h3 className={`text-xl font-serif italic transition-all duration-500 ${
+                isOpen ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+              }`}>
+                {campaign.name}
+              </h3>
+              <span className={`px-2.5 py-0.5 text-[8px] uppercase tracking-wider font-extrabold rounded-full border ${
+                campaign.is_active
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'
+              }`}>
+                {campaign.is_active ? 'No Ar' : 'Pausada'}
+              </span>
+            </div>
             <p className="text-[9px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">
               {maskBRL(campaign.price_per_number)} • {campaign.total_numbers} números
             </p>
           </div>
         </div>
-        <ChevronDown className={`w-5 h-5 text-white/10 group-hover:text-white/40 transition-all duration-500 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate(campaign.id, { is_active: !campaign.is_active });
+            }}
+            className={`p-3 rounded-xl transition-all border flex items-center gap-2 text-[9px] uppercase tracking-widest font-black ${
+              campaign.is_active
+                ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-white'
+                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white'
+            }`}
+            title={campaign.is_active ? "Pausar Campanha" : "Ativar Campanha"}
+          >
+            {campaign.is_active ? (
+              <>
+                <Pause className="w-3.5 h-3.5" />
+                <span>Pausar</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5" />
+                <span>Ativar</span>
+              </>
+            )}
+          </button>
+          <ChevronDown className={`w-5 h-5 text-white/10 group-hover:text-white/40 transition-all duration-500 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
 
       <AnimatePresence>
         {isOpen && (
@@ -581,14 +618,23 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                   </button>
                   <button 
                     onClick={() => onUpdate(campaign.id, { is_active: !campaign.is_active })}
-                    className={`flex items-center gap-3 px-6 py-4 rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all ${
+                    className={`flex items-center gap-3 px-6 py-4 rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all border ${
                       campaign.is_active 
-                        ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white' 
-                        : 'bg-brand-orange/10 text-brand-orange hover:bg-brand-orange hover:text-white'
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-white' 
+                        : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white'
                     }`}
                   >
-                    <Pause className="w-4 h-4" />
-                    {campaign.is_active ? 'Pausar' : 'Ativar'}
+                    {campaign.is_active ? (
+                      <>
+                        <Pause className="w-4 h-4" />
+                        <span>Pausar Ação</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        <span>Ativar Ação</span>
+                      </>
+                    )}
                   </button>
                 </div>
 

@@ -47,30 +47,31 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const { profiles } = useProfiles();
   const { dancers } = useDancers();
   const [savingEmails, setSavingEmails] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'sent' | 'cancelled'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'sent' | 'cancelled' | 'unconfirmed'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'store' | 'raffle'>('all');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
 
   const duplicateNumbers = React.useMemo(() => {
-    const counts: Record<number, number> = {};
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const counts: Record<string, number> = {};
 
     (orders || []).forEach(o => {
-      if (o.status !== 'cancelled' && o.type === 'raffle') {
-        // Ignorar ordens pendentes com mais de 10 minutos para alinhar com a regra de expiração do banco
+      if (o.status !== 'cancelled' && o.status !== 'unconfirmed' && o.type === 'raffle') {
+        // Ignorar ordens pendentes com mais de 5 minutos para alinhar com a regra de expiração do banco
         if (o.status === 'pending') {
           const createdAtDate = new Date(o.created_at);
-          if (createdAtDate < tenMinutesAgo) {
+          if (createdAtDate < fiveMinutesAgo) {
             return;
           }
         }
 
         (o.selected_numbers || []).forEach((n: number) => {
-          counts[n] = (counts[n] || 0) + 1;
+          const key = `${o.campaign_id}:${n}`;
+          counts[key] = (counts[key] || 0) + 1;
         });
       }
     });
-    return Object.keys(counts).filter(n => counts[Number(n)] > 1).map(Number);
+    return Object.keys(counts).filter(key => counts[key] > 1);
   }, [orders]);
   
   // New Filters
@@ -89,7 +90,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const [isAskingReason, setIsAskingReason] = useState(false);
   const [resendingAll, setResendingAll] = useState(false);
 
-  const failedNotifications = (orders || []).filter(o => !o.notification_sent && o.status !== 'cancelled');
+  const failedNotifications = (orders || []).filter(o => !o.notification_sent && (o.status === 'paid' || o.status === 'sent'));
 
   const handleResendAllFailed = async () => {
     if (failedNotifications.length === 0) return;
@@ -158,65 +159,66 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     setResendingAll(false);
   };
 
-  const filteredOrders = (orders || []).filter(o => {
-    const matchesStatus = filter === 'all' || o?.status === filter;
-    
-    // Se uma campanha específica estiver selecionada, força a exibição apenas de pedidos do tipo 'raffle' (rifa)
-    const matchesType = selectedCampaignId !== 'all'
-      ? o?.type === 'raffle'
-      : (typeFilter === 'all' || o?.type === typeFilter);
+  const filteredOrders = (orders || [])
+    .filter(o => {
+      const matchesStatus = filter === 'all' 
+        ? (o?.status !== 'cancelled' && o?.status !== 'unconfirmed') 
+        : o?.status === filter;
+      
+      // Se uma campanha específica estiver selecionada, força a exibição apenas de pedidos do tipo 'raffle' (rifa)
+      const matchesType = selectedCampaignId !== 'all'
+        ? o?.type === 'raffle'
+        : (typeFilter === 'all' || o?.type === typeFilter);
 
-    const matchesCampaign = selectedCampaignId === 'all' || (o?.type === 'raffle' && o?.campaign_id === selectedCampaignId);
-    
-    const matchesSearch = !searchTerm || 
-      o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.customer_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCampaign = selectedCampaignId === 'all' || (o?.type === 'raffle' && o?.campaign_id === selectedCampaignId);
+      
+      const matchesSearch = !searchTerm || 
+        o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.customer_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesDancer = dancerFilter === 'all' || o.dancer_name === dancerFilter;
+      const matchesDancer = dancerFilter === 'all' || o.dancer_name === dancerFilter;
 
-    const orderDate = new Date(o.created_at).toISOString().split('T')[0];
-    const matchesStartDate = !startDate || orderDate >= startDate;
-    const matchesEndDate = !endDate || orderDate <= endDate;
+      const orderDate = new Date(o.created_at).toISOString().split('T')[0];
+      const matchesStartDate = !startDate || orderDate >= startDate;
+      const matchesEndDate = !endDate || orderDate <= endDate;
 
-    return matchesStatus && matchesType && matchesCampaign && matchesSearch && matchesDancer && matchesStartDate && matchesEndDate;
-  }).sort((a, b) => {
-    let valA: any = a[sortBy as keyof typeof a];
-    let valB: any = b[sortBy as keyof typeof b];
+      return matchesStatus && matchesType && matchesCampaign && matchesSearch && matchesDancer && matchesStartDate && matchesEndDate;
+    }).sort((a, b) => {
+      let valA: any = a[sortBy as keyof typeof a];
+      let valB: any = b[sortBy as keyof typeof b];
 
-    if (sortBy === 'total_price') {
-      valA = a.total_price || a.product_price || 0;
-      valB = b.total_price || b.product_price || 0;
-    } else if (sortBy === 'net_margin') {
-      const getNet = (o: any) => {
-        const price = o.total_price || o.product_price || 0;
-        if (o.type === 'raffle') return price;
-        const totalCost = (o.items || []).reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
-        return price - totalCost;
-      };
-      valA = getNet(a);
-      valB = getNet(b);
-    }
+      if (sortBy === 'total_price') {
+        valA = a.total_price || a.product_price || 0;
+        valB = b.total_price || b.product_price || 0;
+      } else if (sortBy === 'net_margin') {
+        const getNet = (o: any) => {
+          const price = o.total_price || o.product_price || 0;
+          if (o.type === 'raffle') return price;
+          const totalCost = (o.items || []).reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
+          return price - totalCost;
+        };
+        valA = getNet(a);
+        valB = getNet(b);
+      }
 
-    if (valA === undefined || valA === null) return 1;
-    if (valB === undefined || valB === null) return -1;
+      if (valA === undefined || valA === null) return 1;
+      if (valB === undefined || valB === null) return -1;
 
-    if (typeof valA === 'string') {
-      return sortOrder === 'asc' 
-        ? valA.localeCompare(valB) 
-        : valB.localeCompare(valA);
-    }
+      if (typeof valA === 'string') {
+        return sortOrder === 'asc' 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
+      }
 
-    return sortOrder === 'asc' ? valA - valB : valB - valA;
-  });
+      return sortOrder === 'asc' ? valA - valB : valB - valA;
+    });
 
   const stats = {
     total: filteredOrders.length,
-    cancelled: filteredOrders.filter(o => o?.status === 'cancelled').length,
     paid: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').length,
-    pendingValue: filteredOrders.filter(o => o?.status === 'pending').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
     totalValue: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
     totalNetValue: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => {
       const price = o?.total_price || o?.product_price || 0;
@@ -483,13 +485,13 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
         <div className="flex flex-col xl:flex-row items-center justify-between gap-6 bg-white/5 border border-white/10 p-6 rounded-sm shadow-xl">
           <div className="flex flex-col lg:flex-row items-center gap-8">
             <div className="flex flex-wrap gap-2">
-              {(['all', 'pending', 'paid', 'sent', 'cancelled'] as const).map(f => (
+              {(['all', 'pending', 'paid', 'sent', 'cancelled', 'unconfirmed'] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-all rounded-sm ${filter === f ? 'bg-brand-orange text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
                 >
-                  {f === 'all' ? 'Todos Status' : f === 'pending' ? 'Pendentes' : f === 'paid' ? 'Pagos' : f === 'sent' ? 'Enviados' : 'Cancelados'}
+                  {f === 'all' ? 'Todos' : f === 'pending' ? 'Pendentes' : f === 'paid' ? 'Pagos' : f === 'sent' ? 'Enviados' : f === 'cancelled' ? 'Cancelados' : 'Pagto Não confirmado'}
                 </button>
               ))}
             </div>
@@ -620,11 +622,9 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       </div>
 
       {/* Stats Cards (AGORA ABAIXO DOS FILTROS E DINÂMICOS) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard icon={<ShoppingBag className="w-5 h-5 text-white/40" />} label="Pedidos Filtrados" value={stats.total} />
-        <StatCard icon={<XCircle className="w-5 h-5 text-red-500" />} label="Cancelados" value={stats.cancelled} valueClass="text-red-500" />
-        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} label="Pagos / Enviados" value={stats.paid} />
-        <StatCard icon={<Clock className="w-5 h-5 text-yellow-500" />} label="Valor Pendente" value={maskBRL(stats.pendingValue)} valueClass="text-yellow-500" />
+        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} label="Confirmados" value={stats.paid} />
         <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Bruto" value={maskBRL(stats.totalValue)} bgClass="bg-white/5 border-white/10" labelClass="text-white/40" />
         <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Total Líquido" value={maskBRL(stats.totalNetValue)} bgClass="bg-brand-orange border-brand-orange" labelClass="text-white/80" />
       </div>
@@ -683,7 +683,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
                   onUpdate={updateOrder} 
                   onDelete={() => setOrderToDelete(order.id)} 
                   onAlert={onAlert}
-                  hasConflict={order.type === 'raffle' && (order.selected_numbers || []).some((n: number) => duplicateNumbers.includes(n))}
+                  hasConflict={order.type === 'raffle' && (order.selected_numbers || []).some((n: number) => duplicateNumbers.includes(`${order.campaign_id}:${n}`))}
                 />
               ))
             ) : (

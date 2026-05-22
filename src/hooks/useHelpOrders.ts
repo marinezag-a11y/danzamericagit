@@ -17,7 +17,7 @@ export interface HelpOrder {
   product_name: string; 
   product_price?: number; 
   total_price: number;
-  status: 'pending' | 'paid' | 'sent' | 'cancelled';
+  status: 'pending' | 'paid' | 'sent' | 'cancelled' | 'unconfirmed';
   created_at: string;
   updated_at: string;
   // Specific to raffle
@@ -41,6 +41,21 @@ export function useHelpOrders() {
       setIsFetching(true);
       setLoading(true);
       setError(null);
+
+      // Auto-expire pending raffle orders older than 15 minutes
+      try {
+        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        await supabase
+          .from('raffle_orders')
+          .update({ 
+            status: 'unconfirmed', 
+            reason: 'Tempo de reserva esgotado (15 minutos)' 
+          })
+          .eq('status', 'pending')
+          .lt('created_at', fifteenMinutesAgo);
+      } catch (err) {
+        console.error('Error auto-expiring pending raffle orders:', err);
+      }
       
       // Fetch Store Orders
       const { data: storeOrders, error: storeError } = await supabase

@@ -12,6 +12,24 @@ const INFINITEPAY_TAG = Deno.env.get('INFINITEPAY_TAG') || 'marinez-silva' // Fa
 
 const supabase = createClient(SUPABASE_URL || '', SUPABASE_SERVICE_ROLE_KEY || '')
 
+function cleanPhoneNumber(phone: string): string {
+  if (!phone) return "";
+  // Remover tudo que não for dígito ou o sinal de +
+  const cleaned = phone.replace(/[^\d+]/g, '');
+  
+  if (cleaned.startsWith('+')) {
+    return cleaned;
+  }
+  
+  // Se começar com 55 e tiver 12 ou 13 dígitos
+  if (cleaned.startsWith('55') && (cleaned.length === 12 || cleaned.length === 13)) {
+    return `+${cleaned}`;
+  }
+  
+  // Caso contrário, assumir que é do Brasil e adicionar +55
+  return `+55${cleaned}`;
+}
+
 serve(async (req) => {
   // Tratar requisição CORS preflight
   if (req.method === 'OPTIONS') {
@@ -51,6 +69,11 @@ serve(async (req) => {
       redirect_url: defaultRedirectUrl,
       webhook_url: webhookUrl,
       order_nsu: order_id,
+      customer: {
+        name: customer_name || "",
+        email: customer_email || "",
+        phone_number: cleanPhoneNumber(customer_phone)
+      },
       items: [
         {
           description: campaign_name ? `Rifa: ${campaign_name}` : "Apoiador Danzamerica - Ação entre Amigos",

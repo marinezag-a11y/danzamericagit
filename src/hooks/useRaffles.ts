@@ -29,7 +29,7 @@ export interface RaffleOrder {
   total_price: number;
   dancer_name?: string;
   session_id?: string;
-  status: 'pending' | 'paid' | 'cancelled';
+  status: 'pending' | 'paid' | 'cancelled' | 'unconfirmed';
   notification_sent?: boolean;
   created_at: string;
 }

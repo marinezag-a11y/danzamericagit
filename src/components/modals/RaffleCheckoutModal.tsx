@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy, RotateCw, Check, Smartphone, ChevronRight, ChevronDown, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { X, Ticket, ArrowRight, Loader2, CheckCircle, Copy, RotateCw, Check, Smartphone, ChevronRight, ChevronDown, ArrowLeft, AlertTriangle, Lock, ShieldCheck } from 'lucide-react';
 import { RaffleCampaign, useRaffles } from '../../hooks/useRaffles';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { supabase } from '../../lib/supabase';
@@ -188,6 +188,41 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
     };
   }, [step, orderId]);
 
+  // Polling de segurança ativo (consulta ao banco a cada 3 segundos) para redundância e sincronização instantânea
+  useEffect(() => {
+    if (step !== 'infinitepay_checkout' || !orderId) return;
+
+    const checkPaymentStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('raffle_orders')
+          .select('status')
+          .eq('id', orderId)
+          .maybeSingle();
+
+        if (error) {
+          console.error('[Polling] Erro ao consultar status do pedido:', error);
+          return;
+        }
+
+        if (data && data.status === 'paid') {
+          console.log('[Polling] Pagamento confirmado via consulta ativa! Avançando para o sucesso.');
+          setIsConfirmedAutomatic(true);
+          showToast('Pagamento confirmado via Pix com sucesso!', 'success');
+          setStep('success');
+        }
+      } catch (err) {
+        console.error('[Polling] Exceção ao consultar status:', err);
+      }
+    };
+
+    // Consultar imediatamente ao montar/alterar passo e depois a cada 3 segundos
+    checkPaymentStatus();
+    const interval = setInterval(checkPaymentStatus, 3000);
+
+    return () => clearInterval(interval);
+  }, [step, orderId]);
+
   // Timer de 5 minutos com cancelamento automático de ordens expiradas no Supabase
   useEffect(() => {
     if (step !== 'infinitepay_checkout' || !orderId) return;
@@ -199,7 +234,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
           // Cancela o pedido no banco de dados para liberar os números de forma instantânea
           await supabase
             .from('raffle_orders')
-            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .update({ status: 'unconfirmed', updated_at: new Date().toISOString() })
             .eq('id', orderId);
 
           showToast('Tempo limite de 5 minutos excedido. Seus números foram liberados.', 'danger');
@@ -231,9 +266,9 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       // Limpar anterior
       await supabase.from('raffle_reservations').delete().eq('session_id', sessionId);
 
-      // Nova reserva por 1 minuto
+      // Nova reserva por 15 minutos
       const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + 1);
+      expiresAt.setMinutes(expiresAt.getMinutes() + 15);
 
       const { error } = await supabase
         .from('raffle_reservations')
@@ -330,28 +365,8 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
             }
 
             setInfinitePayUrl(ipData.url);
-            setTimeLeft(300);
+            setTimeLeft(900);
             setStep('infinitepay_checkout');
-
-            // Abre a página da InfinitePay em nova aba automaticamente
-            window.open(ipData.url, '_blank', 'noopener,noreferrer');
-
-            // Notificação de reserva em background
-            supabase.functions.invoke('send-order', {
-              body: {
-                ...orderData,
-                order_id: newOrderId,
-                type: 'raffle_order',
-                campaign_name: campaign.name,
-                items: [{ 
-                  name: `Rifa: ${campaign.name}`, 
-                  price: calculatedTotalPrice,
-                  description: `Números: ${selectedNumbers.join(', ')}`
-                }],
-                payment_url: ipData.url,
-                contact_whatsapp: settings?.contact_whatsapp?.value
-              }
-            }).catch(e => console.error('Background send-order error:', e));
 
           } catch (payException) {
             console.error('[InfinitePay] Exceção ao gerar pagamento:', payException);
@@ -362,20 +377,6 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
         } else {
           // Pagamento Pix manual
           setStep('success');
-          supabase.functions.invoke('send-order', {
-            body: {
-              ...orderData,
-              order_id: newOrderId,
-              type: 'raffle_order',
-              campaign_name: campaign.name,
-              items: [{ 
-                name: `Rifa: ${campaign.name}`, 
-                price: calculatedTotalPrice,
-                description: `Números: ${selectedNumbers.join(', ')}`
-              }],
-              contact_whatsapp: settings?.contact_whatsapp?.value
-            }
-          }).catch(e => console.error('Background email error:', e));
         }
       } else {
         // Se houver erro de redundância ou outro erro
@@ -656,11 +657,11 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                   <div className="text-left space-y-1">
                     <p className="text-brand-orange text-[9px] uppercase tracking-[0.2em] font-black flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-                      ⚡ PIX VIA INFINITEPAY
+                      ⚡ PIX AUTOMÁTICO INFINITEPAY
                     </p>
-                    <h3 className="text-lg sm:text-xl font-sans font-black text-brand-dark">Aguardando Pagamento</h3>
-                    <p className="text-[9px] text-brand-dark/50 font-sans leading-tight">
-                      A página de pagamento InfinitePay foi aberta em uma nova aba. Finalize o Pix por lá.
+                    <h3 className="text-lg sm:text-xl font-sans font-black text-brand-dark">Link de Pagamento Gerado</h3>
+                    <p className="text-[10px] text-brand-dark/50 font-sans leading-tight">
+                      Seu pedido foi registrado e os bilhetes foram reservados. Conclua o Pix clicando no botão seguro abaixo.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 px-4 py-2 bg-red-500/5 border border-red-500/10 rounded-full w-full sm:w-auto justify-center">
@@ -697,6 +698,14 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                   </div>
                 </div>
 
+                {/* Lock Info */}
+                <div className="flex items-center gap-3 py-2 px-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-left">
+                  <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+                  <p className="text-[9px] font-medium text-emerald-800 leading-tight">
+                    <strong>Ambiente de Pagamento Criptografado & Seguro:</strong> Processado oficialmente pela InfinitePay, instituição autorizada pelo Banco Central do Brasil.
+                  </p>
+                </div>
+
                 {/* Status e Ações */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Botão re-abrir InfinitePay */}
@@ -704,33 +713,36 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     href={infinitePayUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 py-4 bg-brand-orange text-white rounded-xl text-[11px] uppercase tracking-widest font-black hover:bg-brand-dark transition-all shadow-lg active:scale-95"
+                    className="flex items-center justify-center gap-3 py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[12px] uppercase tracking-widest font-black transition-all shadow-[0_20px_40px_-10px_rgba(16,185,129,0.3)] hover:shadow-[0_20px_40px_-5px_rgba(16,185,129,0.4)] active:scale-95 text-center group"
                   >
-                    <ArrowRight size={14} />
-                    ABRIR PÁGINA DE PAGAMENTO
+                    <Lock size={15} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
+                    EFETUAR PAGAMENTO SEGURO
                   </a>
 
                   {/* Status Realtime */}
-                  <div className="flex items-center gap-3 p-4 bg-black/[0.03] border border-black/5 rounded-xl">
-                    <Loader2 size={18} className="text-brand-orange animate-spin shrink-0" />
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Aguardando confirmação...</p>
-                      <p className="text-[9px] text-brand-dark/50 leading-tight mt-0.5">
-                        Esta tela muda automaticamente assim que o pagamento for confirmado pela InfinitePay.
+                  <div className="flex items-center gap-3.5 p-5 bg-black/[0.02] border border-black/5 rounded-2xl">
+                    <Loader2 size={20} className="text-brand-orange animate-spin shrink-0 animate-duration-1000" />
+                    <div className="text-left">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-ping" />
+                        Aguardando pagamento...
+                      </p>
+                      <p className="text-[9px] text-brand-dark/50 leading-tight mt-1 font-sans">
+                        A confirmação é automática e instantânea. A tela mudará assim que o Pix for pago!
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Instruções */}
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex gap-3 text-left">
-                  <Check size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Como pagar:</p>
-                    <p className="text-[9px] text-brand-dark/60 leading-relaxed">
-                      1. Clique em <strong>"ABRIR PÁGINA DE PAGAMENTO"</strong> acima (ou use a aba já aberta).<br/>
-                      2. Na página da InfinitePay, escolha <strong>Pix</strong> e copie o código ou escaneie o QR Code.<br/>
-                      3. Pague no app do seu banco. A confirmação aparece aqui automaticamente.
+                <div className="bg-black/[0.02] border border-black/5 rounded-2xl p-5 flex gap-4 text-left shadow-sm">
+                  <Check size={20} className="text-brand-orange shrink-0 mt-0.5" />
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Instruções Importantes:</p>
+                    <p className="text-[10px] text-brand-dark/70 leading-relaxed font-sans">
+                      1. Clique no botão verde <strong>"EFETUAR PAGAMENTO SEGURO"</strong> para abrir a página oficial da InfinitePay em uma nova aba.<br/>
+                      2. Na página da InfinitePay, selecione a opção <strong>Pix</strong> para gerar o QR Code ou o Pix Copia e Cola.<br/>
+                      3. Pague no aplicativo do seu banco. Assim que concluído, esta tela será atualizada automaticamente sem precisar de comprovante!
                     </p>
                   </div>
                 </div>
@@ -835,7 +847,12 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                   </>
                 )}
 
-                <button onClick={onClose} className="px-12 py-4 text-[10px] uppercase tracking-widest font-black text-brand-dark/20 hover:text-brand-dark italic">Concluir e Fechar</button>
+                <button 
+                  onClick={onClose} 
+                  className="w-full sm:w-auto px-12 py-5 bg-brand-orange hover:bg-brand-orange/90 text-white rounded-2xl text-[11px] uppercase tracking-[0.2em] font-black transition-all shadow-[0_20px_40px_-10px_rgba(249,115,22,0.3)] hover:shadow-[0_20px_40px_-5px_rgba(249,115,22,0.4)] active:scale-95 text-center cursor-pointer mt-4"
+                >
+                  VOLTAR PARA O SITE
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

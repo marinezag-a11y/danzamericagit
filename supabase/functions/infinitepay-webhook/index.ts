@@ -151,6 +151,111 @@ async function sendPaymentConfirmationEmail(order: any, campaign: any) {
   }
 }
 
+// Envia e-mail de alerta para o administrador informando que ocorreu uma duplicidade/conflito de número reservado
+async function sendPaymentConflictAdminEmail(order: any, campaign: any, conflictDetails: string) {
+  let adminEmails = ['nucleodedanca@yahoo.com.br', 'marinezag@gmail.com']
+  try {
+    const { data: settingData } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'notification_emails_general')
+      .single()
+
+    if (settingData?.value) {
+      adminEmails = settingData.value
+        .split(',')
+        .map((e: string) => e.trim())
+        .filter(Boolean)
+    }
+  } catch (err) {
+    console.error(`[Webhook Email Conflict] Falha ao ler site_settings de e-mails de notificação:`, err)
+  }
+
+  const formattedTotal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total_price)
+  const numbersFormatted = order.selected_numbers
+    .sort((a: number, b: number) => a - b)
+    .map((n: number) => `#${String(n).padStart(3, '0')}`)
+    .join(', ')
+
+  const emailHtml = `
+    <div style="font-family: sans-serif; background-color: #f4f4f4; padding: 40px;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.12); border: 2px solid #FF3B30;">
+        <div style="background-color: #FF3B30; padding: 40px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 900; line-height: 1;">⚠️ ALERTA DE CONFLITO!</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold;">Pagamento Pix Recebido para Números Já Ocupados</p>
+        </div>
+        
+        <div style="padding: 45px; color: #333;">
+          <p style="font-size: 16px; line-height: 1.6; color: #1A1A1A; margin-bottom: 25px;">
+            Olá, Administrador.
+          </p>
+          <p style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 30px;">
+            O sistema detectou um pagamento Pix verificado pela InfinitePay para um pedido que <strong>já havia expirado o tempo limite de 5 minutos</strong> e cujos números foram, nesse meio tempo, comprados ou reservados ativamente por outra pessoa.
+          </p>
+
+          <div style="background: #FFF5F5; border: 1px solid #FF3B3022; border-radius: 20px; padding: 30px; margin-bottom: 35px;">
+            <h3 style="margin: 0 0 15px 0; color: #FF3B30; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">DADOS DO PEDIDO COM CONFLITO</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #666;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1A1A1A; width: 40%;">Nome do Cliente</td>
+                <td style="padding: 8px 0; text-align: right; color: #333;">${order.customer_name}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1A1A1A;">E-mail do Cliente</td>
+                <td style="padding: 8px 0; text-align: right; color: #333;">${order.customer_email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1A1A1A;">Telefone</td>
+                <td style="padding: 8px 0; text-align: right; font-family: monospace; color: #333;">${order.customer_phone}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1A1A1A;">Números Comprados</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #FF3B30;">${numbersFormatted}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1A1A1A;">Valor do Pix Pago</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #1A1A1A;">${formattedTotal}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #1A1A1A;">Ação (Rifa)</td>
+                <td style="padding: 8px 0; text-align: right; font-style: italic; color: #333;">${campaign?.name || 'Rifa'}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="background: #F9F9F9; border-radius: 12px; padding: 20px; margin-bottom: 35px; border-left: 4px solid #999;">
+            <p style="margin: 0; font-size: 13px; font-weight: bold; color: #333;">Detalhes técnicos do bloqueio:</p>
+            <p style="margin: 5px 0 0 0; font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">${conflictDetails}</p>
+          </div>
+
+          <div style="background: #E8F5E9; border-radius: 12px; padding: 20px; margin-bottom: 35px; border-left: 4px solid #4CAF50;">
+            <p style="margin: 0; font-size: 13px; font-weight: bold; color: #2E7D32;">Ação Recomendada:</p>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #388E3C; line-height: 1.5;">
+              O banco de dados <strong>bloqueou a venda dupla com sucesso</strong>, mantendo a integridade do sorteio.
+              Por favor, entre em contato com o cliente para <strong>realizar o reembolso manual do valor de ${formattedTotal}</strong> ou alocar manualmente outros números livres para ele.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+
+  const emailPayload = {
+    from: 'Danzamerica Alerta <alertas@nucleotatianafigueiredo.com.br>',
+    to: adminEmails,
+    subject: `⚠️ URGENTE: Conflito de Pagamento Pix - ${order.customer_name}`,
+    html: emailHtml,
+  }
+
+  console.log(`[Webhook Email Conflict] Sending conflict alert email to admins...`)
+  let result = await sendResendEmail(emailPayload)
+  
+  if (!result.ok) {
+    console.warn(`[Webhook Email Conflict] Resend failed, trying MailerSend fallback...`)
+    await sendMailerSendEmail(emailPayload)
+  }
+}
+
 serve(async (req) => {
   // Tratar requisição CORS preflight
   if (req.method === 'OPTIONS') {
@@ -255,14 +360,62 @@ serve(async (req) => {
         })
       }
 
-      // Atualiza o status do pedido para 'paid'
+      // Atualiza o status do pedido para 'paid' e define a origem como 'infinitepay'
       const { error: updateError } = await supabase
         .from('raffle_orders')
-        .update({ status: 'paid', updated_at: new Date().toISOString() })
+        .update({ status: 'paid', payment_origin: 'infinitepay', updated_at: new Date().toISOString() })
         .eq('id', orderId)
 
       if (updateError) {
         console.error(`[InfinitePay Webhook] Error updating raffle order status:`, updateError)
+
+        // Se o erro for do trigger de conflito de números
+        const isConflict = 
+          updateError.message?.includes('conflict_detected') || 
+          updateError.details?.includes('conflict_detected')
+
+        if (isConflict) {
+          console.warn(`[InfinitePay Webhook Conflict] Conflict detected for order ${orderId}. Cancelling order and alerting admins.`)
+
+          // 1. Mudar o status do pedido para 'cancelled' para ficar claro no painel administrativo
+          const { error: cancelError } = await supabase
+            .from('raffle_orders')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('id', orderId)
+
+          if (cancelError) {
+            console.error(`[InfinitePay Webhook Conflict] Failed to cancel conflict order in DB:`, cancelError)
+          }
+
+          // 2. Buscar detalhes da campanha para compor o e-mail de alerta
+          const { data: campaign } = await supabase
+            .from('raffle_campaigns')
+            .select('*')
+            .eq('id', raffleOrder.campaign_id)
+            .maybeSingle()
+
+          // 3. Enviar o e-mail de alerta urgente para o administrador em segundo plano
+          try {
+            await sendPaymentConflictAdminEmail(
+              raffleOrder,
+              campaign,
+              updateError.message || updateError.details || 'Conflito de número ativo (trigger de integridade).'
+            )
+          } catch (emailErr) {
+            console.error(`[InfinitePay Webhook Conflict] Failed to send conflict email alert:`, emailErr)
+          }
+
+          // Retornamos 200 OK para que a InfinitePay entenda que o webhook foi processado com sucesso (tratado)
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'conflict_detected',
+            message: 'Pagamento recebido mas os números já haviam sido ocupados. O pedido foi cancelado e o administrador foi notificado para reembolso manual.'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          })
+        }
+
         return new Response(JSON.stringify({ error: 'DB Update error' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500
@@ -314,7 +467,7 @@ serve(async (req) => {
 
       const { error: updateHelpError } = await supabase
         .from('help_orders')
-        .update({ status: 'paid', updated_at: new Date().toISOString() })
+        .update({ status: 'paid', payment_origin: 'infinitepay', updated_at: new Date().toISOString() })
         .eq('id', orderId)
 
       if (updateHelpError) {

@@ -46,11 +46,12 @@ export function useRaffleAnalytics() {
     setError(null);
 
     try {
-      // 1. Fetch all raffle orders (excluding cancelled)
+      // 1. Fetch all raffle orders (excluding cancelled and unconfirmed)
       const { data: orders, error: ordersError } = await supabase
         .from('raffle_orders')
         .select('*, raffle_campaigns(id, name, total_numbers, goal_per_dancer, price_per_number, cost)')
-        .neq('status', 'cancelled');
+        .neq('status', 'cancelled')
+        .neq('status', 'unconfirmed');
 
       if (ordersError) throw ordersError;
 
@@ -61,7 +62,7 @@ export function useRaffleAnalytics() {
       let totalTickets = 0;
 
       (orders || []).forEach(order => {
-        const isCounted = order.status !== 'cancelled';
+        const isCounted = order.status !== 'cancelled' && order.status !== 'unconfirmed';
         const price = Number(order.total_price || 0);
         const tickets = (order.selected_numbers || []).length;
         const dancer = order.dancer_name || 'Geral';

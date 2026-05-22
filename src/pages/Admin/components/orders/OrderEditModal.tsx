@@ -18,6 +18,7 @@ import {
   Ticket
 } from 'lucide-react';
 import { ReasonModal } from '../../../../components/modals/ReasonModal';
+import { ConfirmModal } from '../../../../components/modals/ConfirmModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { maskBRL, parseBRL } from '../../../../lib/utils';
 import { useHelpItems } from '../../../../hooks/useHelpItems';
@@ -49,6 +50,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
   const [manualPrice, setManualPrice] = useState(order?.product_price || 0);
   const [isAskingReason, setIsAskingReason] = useState(false);
   const [status, setStatus] = useState('pending');
+  const [isConfirmingInfinitePay, setIsConfirmingInfinitePay] = useState(false);
 
   useEffect(() => {
     if (order && isOpen) {
@@ -110,6 +112,11 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
   };
 
   const handleSave = async () => {
+    if (order?.payment_origin === 'infinitepay' && status !== order?.status) {
+      setIsConfirmingInfinitePay(true);
+      return;
+    }
+
     if (status === 'cancelled' && order.status !== 'cancelled') {
       setIsAskingReason(true);
       return;
@@ -171,6 +178,12 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
       total_price: manualPrice
     };
 
+    if (status === 'paid') {
+      payload.payment_origin = order?.payment_origin || 'manual';
+    } else if (status === 'pending' || status === 'unconfirmed' || status === 'cancelled') {
+      payload.payment_origin = null;
+    }
+
     // Only update items and product_name for store orders
     if (order?.type !== 'raffle') {
       const itemsText = orderItems.map(item => `${item.quantity || 1}x ${item.name}`).join(', ');
@@ -186,7 +199,9 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
   const statusSteps = [
     { id: 'pending', label: 'Pendente', icon: Clock, color: 'text-yellow-500' },
     { id: 'paid', label: 'Pago', icon: CheckCircle2, color: 'text-green-500' },
-    { id: 'sent', label: 'Enviado', icon: Truck, color: 'text-blue-500' }
+    { id: 'sent', label: 'Enviado', icon: Truck, color: 'text-blue-500' },
+    { id: 'unconfirmed', label: 'Não Confirmado', icon: AlertCircle, color: 'text-amber-500' },
+    { id: 'cancelled', label: 'Cancelado', icon: Trash2, color: 'text-red-500' }
   ];
 
   const currentStepIdx = statusSteps.findIndex(s => s.id === status);
@@ -225,7 +240,18 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                 </div>
                 <div>
                   <h2 className="text-3xl font-serif text-brand-dark italic leading-tight">Gestão de Pedido</h2>
-                  <p className="text-[10px] uppercase tracking-[0.4em] text-brand-orange font-bold mt-1">Administrative Suite</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[10px] uppercase tracking-[0.4em] text-brand-orange font-bold">Administrative Suite</p>
+                    {status === 'paid' && (
+                      <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-sm border ${
+                        (order?.payment_origin || 'manual') === 'infinitepay'
+                          ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+                          : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                      }`}>
+                        {(order?.payment_origin || 'manual') === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -616,6 +642,24 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
           </motion.div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={isConfirmingInfinitePay}
+        title="Alterar Pedido Automático"
+        message="Atenção: Este pedido foi pago de forma automática via InfinitePay. Alterar o seu status manualmente pode gerar inconsistências financeiras e de concorrência com o gateway de pagamentos. Deseja prosseguir mesmo assim?"
+        confirmLabel="Sim, Alterar"
+        cancelLabel="Voltar"
+        variant="warning"
+        onConfirm={() => {
+          setIsConfirmingInfinitePay(false);
+          if (status === 'cancelled' && order.status !== 'cancelled') {
+            setIsAskingReason(true);
+          } else {
+            performSave('');
+          }
+        }}
+        onCancel={() => setIsConfirmingInfinitePay(false)}
+      />
 
       <ReasonModal
         isOpen={isAskingReason}

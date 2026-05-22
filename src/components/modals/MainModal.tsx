@@ -185,21 +185,6 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
       if (result.success) {
         setSuccess(true); // Mostra sucesso imediatamente
         trackEvent('Finalizar Pedido', 'conversion', { total: totalPrice });
-
-        // Dispara o e-mail em segundo plano (background)
-        if (supabase) {
-          supabase.functions.invoke('send-order', {
-            body: { 
-              ...orderData, 
-              order_id: newOrderId,
-              pix_key: pixKey,
-              pix_type: pixType,
-              pix_receiver: pixReceiver,
-              pix_bank: pixBank,
-              contact_whatsapp: settings?.contact_whatsapp?.value
-            }
-          }).catch(e => console.error('Background email error:', e));
-        }
       } else {
         setError('Ocorreu um erro ao salvar seu pedido. Por favor, tente novamente ou nos chame no WhatsApp.');
       }

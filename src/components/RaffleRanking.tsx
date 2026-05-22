@@ -4,8 +4,14 @@ import { Rocket, Trophy, Loader2, Check, Copy } from 'lucide-react';
 import { usePublicRanking } from '../hooks/usePublicRanking';
 import { toPng } from 'html-to-image';
 
-export function RaffleRanking() {
-  const { ranking, loading } = usePublicRanking();
+interface RaffleRankingProps {
+  campaignId?: string;
+  title?: string;
+  subtitle?: string;
+}
+
+export function RaffleRanking({ campaignId, title, subtitle }: RaffleRankingProps = {}) {
+  const { ranking, loading } = usePublicRanking(campaignId);
   const rankingRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -102,8 +108,8 @@ export function RaffleRanking() {
             <Trophy className="w-5 h-5 text-brand-orange" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-brand-dark uppercase tracking-[0.2em]">Ranking de Apoio</h3>
-            <p className="text-[10px] text-brand-dark/30 uppercase tracking-widest font-bold">Destaques da Decolagem</p>
+            <h3 className="text-sm font-black text-brand-dark uppercase tracking-[0.2em]">{title || "Ranking de Apoio"}</h3>
+            <p className="text-[10px] text-brand-dark/30 uppercase tracking-widest font-bold">{subtitle || "Destaques da Decolagem"}</p>
           </div>
         </div>
 

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Ticket, Loader2, Share2, Check } from 'lucide-react';
+import { ChevronRight, Ticket, Loader2, Share2, Check, Trophy } from 'lucide-react';
 import { useRaffles, RaffleCampaign } from '../hooks/useRaffles';
 import { DancerSponsorshipModal } from './modals/DancerSponsorshipModal';
 import { Toast } from './ui/Toast';
 import { RaffleRanking } from './RaffleRanking';
+import { RaffleRankingModal } from './modals/RaffleRankingModal';
 
 export function RaffleSection() {
   const { campaigns, loading, fetchTakenTickets } = useRaffles();
   const [selectedCampaign, setSelectedCampaign] = useState<RaffleCampaign | null>(null);
   const [activeSoldOutCampaign, setActiveSoldOutCampaign] = useState<RaffleCampaign | null>(null);
+  const [selectedRankingCampaign, setSelectedRankingCampaign] = useState<RaffleCampaign | null>(null);
   const [soldCounts, setSoldCounts] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
     show: false,
@@ -22,6 +24,7 @@ export function RaffleSection() {
   };
 
   const activeCampaigns = campaigns.filter(c => c.is_active);
+  const pastCampaigns = campaigns.filter(c => !c.is_active);
 
   useEffect(() => {
     const loadProgress = async () => {
@@ -53,7 +56,8 @@ export function RaffleSection() {
   }, [campaigns]);
 
   if (loading && campaigns.length === 0) return null;
-  if (activeCampaigns.length === 0) return null;
+  if (activeCampaigns.length === 0 && pastCampaigns.length === 0) return null;
+
 
   return (
     <section id="rifas" className="py-24 bg-brand-white px-6 lg:px-12 border-t border-black/5 relative overflow-hidden">
@@ -246,26 +250,42 @@ export function RaffleSection() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-4">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const isSoldOut = (soldCounts[campaign.id] || 0) >= campaign.total_numbers;
-                        if (isSoldOut) {
-                          setActiveSoldOutCampaign(campaign);
-                        } else {
-                          setSelectedCampaign(campaign);
-                        }
-                      }}
-                      className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] font-bold ${
-                        (soldCounts[campaign.id] || 0) >= campaign.total_numbers 
-                          ? 'text-emerald-600' 
-                          : 'text-brand-orange'
-                      } hover:gap-4 transition-all`}
-                    >
-                      {(soldCounts[campaign.id] || 0) >= campaign.total_numbers 
-                        ? 'Meta Cumprida! ✨' 
-                        : 'Escolher Números'} <ChevronRight className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-6">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const isSoldOut = (soldCounts[campaign.id] || 0) >= campaign.total_numbers;
+                          if (isSoldOut) {
+                            setActiveSoldOutCampaign(campaign);
+                          } else {
+                            setSelectedCampaign(campaign);
+                          }
+                        }}
+                        className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] font-bold ${
+                          (soldCounts[campaign.id] || 0) >= campaign.total_numbers 
+                            ? 'text-emerald-600' 
+                            : 'text-brand-orange'
+                        } hover:gap-4 transition-all`}
+                      >
+                        {(soldCounts[campaign.id] || 0) >= campaign.total_numbers 
+                          ? 'Meta Cumprida! ✨' 
+                          : 'Escolher Números'} <ChevronRight className="w-4 h-4" />
+                      </button>
+
+                      {activeCampaigns.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRankingCampaign(campaign);
+                          }}
+                          className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] font-bold text-brand-dark hover:text-brand-orange transition-colors"
+                        >
+                          <Trophy className="w-4 h-4 text-brand-orange" /> Ver Ranking
+                        </button>
+                      )}
+                    </div>
+
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -282,12 +302,72 @@ export function RaffleSection() {
                 </div>
               </motion.div>
             ))}
-          </div>
+
+              {pastCampaigns.length > 0 && (
+                <div className="pt-16 border-t border-black/5 mt-16 space-y-8">
+                  <div>
+                    <h3 className="text-sm font-black text-brand-dark uppercase tracking-[0.2em] mb-2">Ações Anteriores</h3>
+                    <p className="text-[10px] text-brand-dark/30 uppercase tracking-widest font-bold">Campanhas Encerradas</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {pastCampaigns.map((campaign) => (
+                      <div 
+                        key={campaign.id} 
+                        className="bg-white rounded-[2.5rem] p-6 border border-black/5 hover:shadow-lg transition-all flex flex-col justify-between group"
+                      >
+                        <div className="flex gap-6 items-start">
+                          <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden bg-black/5 shrink-0 border border-black/5">
+                            <img 
+                              src={campaign.image_url || 'https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?q=80&w=600&auto=format&fit=crop'} 
+                              alt={campaign.name}
+                              className="w-full h-full object-cover grayscale opacity-75 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 pt-1">
+                            <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[9px] uppercase tracking-wider font-bold mb-2">Encerrada</span>
+                            <h4 className="font-serif text-xl text-brand-dark italic leading-tight group-hover:text-brand-orange transition-colors truncate">
+                              {campaign.name}
+                            </h4>
+                            {campaign.description && (
+                              <p className="text-brand-dark/40 text-xs mt-2 font-serif italic line-clamp-2 leading-relaxed">
+                                {campaign.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="mt-6 pt-6 border-t border-black/5 flex items-center justify-between">
+                          <span className="text-[9px] font-black text-brand-dark/30 uppercase tracking-widest">
+                            R$ {Number(campaign.price_per_number).toFixed(2)} por número
+                          </span>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRankingCampaign(campaign)}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-brand-dark hover:bg-brand-orange text-white text-[9px] uppercase tracking-[0.2em] font-black transition-all rounded-xl"
+                          >
+                            <Trophy className="w-3.5 h-3.5" /> Ver Ranking de Apoio
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
           {/* Sidebar: Ranking */}
           <aside className="w-full lg:w-[400px] order-1 lg:order-2">
             <div className="sticky top-32">
-              <RaffleRanking />
+              {activeCampaigns.length > 0 ? (
+                <RaffleRanking 
+                  campaignId={activeCampaigns[0].id} 
+                  title={`Ranking: ${activeCampaigns[0].name}`}
+                />
+              ) : (
+                <RaffleRanking />
+              )}
               
               <div className="mt-8 p-6 bg-brand-orange/5 border border-brand-orange/10 rounded-[2rem] text-center">
                 <p className="text-xs text-brand-dark/40 font-serif italic mb-4">"Cada número adquirido é um passo a mais <br />na realização de um sonho coletivo."</p>
@@ -306,6 +386,16 @@ export function RaffleSection() {
             campaignId={selectedCampaign.id}
             isOpen={!!selectedCampaign}
             onClose={() => setSelectedCampaign(null)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedRankingCampaign && (
+          <RaffleRankingModal
+            campaignId={selectedRankingCampaign.id}
+            campaignName={selectedRankingCampaign.name}
+            isOpen={!!selectedRankingCampaign}
+            onClose={() => setSelectedRankingCampaign(null)}
           />
         )}
       </AnimatePresence>

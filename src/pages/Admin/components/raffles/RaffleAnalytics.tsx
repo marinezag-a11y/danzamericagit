@@ -226,9 +226,10 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
           )}
           <button
             onClick={handleRefresh}
-            className="p-3 bg-white/5 border border-white/10 text-white/40 hover:text-white rounded-full transition-all"
+            className="flex items-center gap-2 px-4 py-3 bg-white/5 border border-white/10 text-white/40 hover:text-white rounded-full transition-all text-[10px] uppercase tracking-widest font-bold"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Atualizar
           </button>
           <button
             onClick={handlePrintReport}

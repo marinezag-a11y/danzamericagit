@@ -522,16 +522,18 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
               <button 
                 onClick={handlePrintHTML}
                 title="Imprimir Relatório"
-                className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/50 hover:text-white transition-all"
+                className="h-10 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/50 hover:text-white transition-all text-sm font-medium"
               >
                 <Printer className="w-4 h-4" />
+                Imprimir
               </button>
               <button 
                 onClick={handleExportExcel}
                 title="Exportar Excel (CSV)"
-                className="w-10 h-10 flex items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all"
+                className="h-10 px-4 flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all text-sm font-medium"
               >
                 <FileSpreadsheet className="w-4 h-4" />
+                Exportar CSV
               </button>
             </div>
 

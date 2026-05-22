@@ -159,22 +159,32 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
                 {periodLabels[p]}
               </button>
             ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-3 border border-white/10 bg-white/5 text-white/40 hover:text-white transition-all rounded-full"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={handlePrintReport}
-              className="flex items-center gap-2 px-6 py-3 border border-brand-orange bg-brand-orange/10 text-brand-orange hover:bg-brand-orange hover:text-white text-[10px] uppercase tracking-widest font-black transition-all rounded-full"
-            >
-              <Printer className="w-4 h-4" />
-              Imprimir Relatório Web
-            </button>
+            {/* Export Buttons */}
+            <div className="flex items-center gap-2 ml-2">
+              <button 
+                onClick={handlePrintHTML}
+                title="Imprimir Relatório"
+                className="h-10 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/50 hover:text-white transition-all text-xs font-medium"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir
+              </button>
+              <button 
+                onClick={handleExportExcel}
+                title="Exportar Excel (CSV)"
+                className="h-10 px-4 flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all text-xs font-medium"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Exportar CSV
+              </button>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="h-10 w-10 flex items-center justify-center border border-white/10 bg-white/5 text-white/40 hover:text-white transition-all rounded-xl"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

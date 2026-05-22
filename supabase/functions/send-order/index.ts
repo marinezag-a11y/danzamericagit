@@ -143,6 +143,19 @@ serve(async (req) => {
       })
     }
 
+    // Garanta que não seja enviado em pagamentos feitos pela integração infinitepay
+    if (dbOrder.payment_origin === 'infinitepay') {
+      console.log(`[Send Order] Ignorando envio para pedido ${finalOrderId} pago via InfinitePay para economizar cota.`)
+      return new Response(JSON.stringify({ 
+        success: true, 
+        ignored: true,
+        message: `Envio ignorado: Pagamentos automáticos via InfinitePay não disparam e-mail do sistema.` 
+      }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      })
+    }
+
     // Buscar detalhes adicionais para compor o HTML premium
     const [campaignRes, dancerRes] = await Promise.all([
       dbOrder.campaign_id ? supabase.from('raffle_campaigns').select('*').eq('id', dbOrder.campaign_id).single() : Promise.resolve({ data: null }),

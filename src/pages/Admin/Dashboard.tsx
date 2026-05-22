@@ -18,6 +18,7 @@ import { HelpItemsManager } from './components/HelpItemsManager';
 import { FinancialManager } from './components/FinancialManager';
 import { RaffleManager } from './components/RaffleManager';
 import { DancersManager } from './components/DancersManager';
+import { EnergyInjectionManager } from './components/EnergyInjectionManager';
 
 export default function Dashboard() {
   const {
@@ -133,6 +134,7 @@ export default function Dashboard() {
                     {item.id === 'financial' && <FinancialManager onAlert={onAlert} userRole={userRole} />}
                     {item.id === 'banners' && <BannerManager onAlert={onAlert} />}
                     {item.id === 'dancers' && <DancersManager onAlert={onAlert} />}
+                    {item.id === 'energy' && <EnergyInjectionManager onAlert={onAlert} userRole={userRole} />}
                     {item.id === 'users' && <UserManager onAlert={onAlert} userRole={userRole} />}
                   </>
                 ) : null}

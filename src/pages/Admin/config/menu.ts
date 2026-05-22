@@ -9,7 +9,8 @@ import {
   User,
   Heart,
   Star,
-  DollarSign
+  DollarSign,
+  Zap
 } from 'lucide-react';
 
 export const ADMIN_MENU_ITEMS = [
@@ -24,5 +25,6 @@ export const ADMIN_MENU_ITEMS = [
   { id: 'financial', label: 'Financeiro', icon: DollarSign },
   { id: 'dancers', label: 'Bailarinos', icon: Users },
   { id: 'banners', label: 'Banners Iniciais', icon: ImageIcon },
+  { id: 'energy', label: 'Injeção de Energia', icon: Zap },
   { id: 'users', label: 'Administradores', icon: Settings },
 ];

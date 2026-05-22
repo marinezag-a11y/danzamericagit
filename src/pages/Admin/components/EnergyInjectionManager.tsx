@@ -68,9 +68,12 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
   const [campaignImageUrl, setCampaignImageUrl] = useState('/solar_energy_illustration.png');
   const [savingCampaign, setSavingCampaign] = useState(false);
 
-  // Search & Filter state
+  // Smart Filters State
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'launched' | 'approved'>('all');
+  const [periodFilter, setPeriodFilter] = useState('all');
+  const [cityFilter, setCityFilter] = useState('all');
+  const [billRangeFilter, setBillRangeFilter] = useState('all');
   
   // Transition state
   const [transitioningLead, setTransitioningLead] = useState<Lead | null>(null);
@@ -232,6 +235,9 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
   const launchedCount = leads.filter(l => l.status === 'launched').length;
   const approvedCount = leads.filter(l => l.status === 'approved').length;
 
+  // Unique cities for filter
+  const uniqueCities = Array.from(new Set(leads.map(l => l.city).filter(Boolean))).sort();
+
   // Filter & Search application
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -239,7 +245,33 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
                           lead.email.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    const matchesCity = cityFilter === 'all' || lead.city === cityFilter;
+    
+    let matchesBill = true;
+    if (billRangeFilter === '0-200') matchesBill = lead.average_bill <= 200;
+    else if (billRangeFilter === '201-500') matchesBill = lead.average_bill > 200 && lead.average_bill <= 500;
+    else if (billRangeFilter === '501-1000') matchesBill = lead.average_bill > 500 && lead.average_bill <= 1000;
+    else if (billRangeFilter === '1000+') matchesBill = lead.average_bill > 1000;
+    
+    let matchesPeriod = true;
+    if (periodFilter !== 'all') {
+      const leadDate = new Date(lead.created_at);
+      const now = new Date();
+      if (periodFilter === 'today') {
+        matchesPeriod = leadDate.toDateString() === now.toDateString();
+      } else if (periodFilter === '7d') {
+        const diff = (now.getTime() - leadDate.getTime()) / (1000 * 3600 * 24);
+        matchesPeriod = diff <= 7;
+      } else if (periodFilter === '30d') {
+        const diff = (now.getTime() - leadDate.getTime()) / (1000 * 3600 * 24);
+        matchesPeriod = diff <= 30;
+      } else if (periodFilter === 'this_month') {
+        matchesPeriod = leadDate.getMonth() === now.getMonth() && leadDate.getFullYear() === now.getFullYear();
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesCity && matchesBill && matchesPeriod;
   });
 
   const getStatusLabel = (status: 'pending' | 'launched' | 'approved') => {
@@ -508,61 +540,121 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
       {/* Seção C: Lista de Controle e Gestão de Status */}
       <div className="space-y-6">
         {/* Header Tabela e Busca */}
-        <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between px-4">
-          <div className="flex flex-col gap-1">
-            <p className="text-white/20 text-[9px] uppercase tracking-[0.4em] font-black italic">LISTA GERAL</p>
-            <h4 className="text-2xl font-serif italic text-white/40">Gestão de Adesões</h4>
-            <div className="h-1 w-12 bg-emerald-500/40 rounded-full mt-1" />
+        <div className="flex flex-col gap-4 px-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-white/20 text-[9px] uppercase tracking-[0.4em] font-black italic">LISTA GERAL</p>
+              <h4 className="text-2xl font-serif italic text-white/40">Gestão de Adesões</h4>
+              <div className="h-1 w-12 bg-emerald-500/40 rounded-full mt-1" />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch md:items-center">
+              {/* Export Buttons */}
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={handlePrintHTML}
+                  title="Imprimir Relatório"
+                  className="h-10 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/50 hover:text-white transition-all text-sm font-medium"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimir
+                </button>
+                <button 
+                  onClick={handleExportExcel}
+                  title="Exportar Excel (CSV)"
+                  className="h-10 px-4 flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all text-sm font-medium"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Exportar CSV
+                </button>
+              </div>
+
+              {/* Search Input */}
+              <div className="relative flex items-center">
+                <Search className="absolute left-4 w-4 h-4 text-white/30" />
+                <input 
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Busca por nome, cidade ou e-mail..."
+                  className="pl-11 pr-6 py-2.5 h-10 bg-white/5 border border-white/5 rounded-xl text-xs text-white placeholder:text-white/20 outline-none w-full sm:w-64 focus:bg-white/10 transition-all font-medium"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-stretch md:items-center">
+          {/* Smart Filters Row */}
+          <div className="flex flex-wrap items-center gap-3 py-2 border-t border-white/5">
+            <div className="flex items-center gap-2 text-white/40 text-[10px] uppercase tracking-widest font-bold mr-2">
+              <Filter className="w-3 h-3" />
+              Filtros Inteligentes:
+            </div>
+
+            {/* Status Filter */}
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer transition-colors"
+            >
+              <option value="all" className="bg-brand-dark text-white">Todos os Status</option>
+              <option value="pending" className="bg-brand-dark text-white">Pendente</option>
+              <option value="launched" className="bg-brand-dark text-white">Lançado</option>
+              <option value="approved" className="bg-brand-dark text-white">Aprovado</option>
+            </select>
+
+            {/* Period Filter */}
+            <select 
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value)}
+              className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer transition-colors"
+            >
+              <option value="all" className="bg-brand-dark text-white">Todo o Período</option>
+              <option value="today" className="bg-brand-dark text-white">Hoje</option>
+              <option value="7d" className="bg-brand-dark text-white">Últimos 7 dias</option>
+              <option value="30d" className="bg-brand-dark text-white">Últimos 30 dias</option>
+              <option value="this_month" className="bg-brand-dark text-white">Este Mês</option>
+            </select>
+
+            {/* City Filter */}
+            <select 
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer transition-colors max-w-[150px] truncate"
+            >
+              <option value="all" className="bg-brand-dark text-white">Todas as Cidades</option>
+              {uniqueCities.map(city => (
+                <option key={city} value={city} className="bg-brand-dark text-white">{city}</option>
+              ))}
+            </select>
+
+            {/* Bill Range Filter */}
+            <select 
+              value={billRangeFilter}
+              onChange={(e) => setBillRangeFilter(e.target.value)}
+              className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer transition-colors"
+            >
+              <option value="all" className="bg-brand-dark text-white">Qualquer Valor</option>
+              <option value="0-200" className="bg-brand-dark text-white">Até R$ 200</option>
+              <option value="201-500" className="bg-brand-dark text-white">R$ 201 a R$ 500</option>
+              <option value="501-1000" className="bg-brand-dark text-white">R$ 501 a R$ 1.000</option>
+              <option value="1000+" className="bg-brand-dark text-white">Acima de R$ 1.000</option>
+            </select>
             
-            {/* Export Buttons */}
-            <div className="flex items-center gap-2 mr-2">
+            {/* Clear Filters Button (only show if any filter is active) */}
+            {(statusFilter !== 'all' || periodFilter !== 'all' || cityFilter !== 'all' || billRangeFilter !== 'all' || searchTerm !== '') && (
               <button 
-                onClick={handlePrintHTML}
-                title="Imprimir Relatório"
-                className="h-10 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/50 hover:text-white transition-all text-sm font-medium"
+                onClick={() => {
+                  setStatusFilter('all');
+                  setPeriodFilter('all');
+                  setCityFilter('all');
+                  setBillRangeFilter('all');
+                  setSearchTerm('');
+                }}
+                className="text-[10px] text-white/30 hover:text-white uppercase tracking-widest font-bold ml-2 transition-colors"
               >
-                <Printer className="w-4 h-4" />
-                Imprimir
+                Limpar Filtros
               </button>
-              <button 
-                onClick={handleExportExcel}
-                title="Exportar Excel (CSV)"
-                className="h-10 px-4 flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all text-sm font-medium"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                Exportar CSV
-              </button>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative flex items-center">
-              <Search className="absolute left-4 w-4 h-4 text-white/30" />
-              <input 
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Busca por nome, cidade ou e-mail..."
-                className="pl-11 pr-6 py-3.5 bg-white/5 border border-white/5 rounded-2xl text-xs text-white placeholder:text-white/20 outline-none w-full sm:w-64 focus:bg-white/10 transition-all font-medium"
-              />
-            </div>
-
-            {/* Quick Status Select */}
-            <div className="relative flex items-center bg-white/5 border border-white/5 rounded-2xl px-4 py-3">
-              <Filter className="w-3.5 h-3.5 text-white/30 mr-2" />
-              <select 
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="bg-transparent border-none text-xs text-white outline-none font-semibold pr-2 cursor-pointer"
-              >
-                <option value="all" className="bg-brand-dark text-white">Todos os Status</option>
-                <option value="pending" className="bg-brand-dark text-white">Pendente</option>
-                <option value="launched" className="bg-brand-dark text-white">Lançado</option>
-                <option value="approved" className="bg-brand-dark text-white">Aprovado</option>
-              </select>
-            </div>
+            )}
           </div>
         </div>
 

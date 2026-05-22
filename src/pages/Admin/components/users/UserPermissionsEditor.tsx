@@ -18,6 +18,7 @@ const ALL_PERMISSIONS = [
   { id: 'banners', label: 'Banners' },
   { id: 'dancers', label: 'Bailarinos' },
   { id: 'users', label: 'Administradores' },
+  { id: 'energy', label: 'Injeção de Energia' },
 ];
 
 interface UserPermissionsEditorProps {

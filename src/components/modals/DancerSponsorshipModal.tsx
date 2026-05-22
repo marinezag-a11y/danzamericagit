@@ -253,7 +253,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
 
     // Consultar imediatamente ao montar/alterar passo e depois a cada 3 segundos
     checkPaymentStatus();
-    const interval = setInterval(checkPaymentStatus, 3000);
+    const interval = setInterval(checkPaymentStatus, 1000);
 
     return () => clearInterval(interval);
   }, [step, orderId]);

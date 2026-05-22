@@ -213,7 +213,11 @@ serve(async (req) => {
                 </tr>
                 <tr>
                   <td style="padding: 10px 0;">Método de Pagamento</td>
-                  <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #25D366;">Pix (${paymentOrigin})</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #1A1A1A;">Pix (${paymentOrigin})</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0;">Status do Pedido</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #25D366; text-transform: uppercase;">PAGO</td>
                 </tr>
               </table>
             </div>

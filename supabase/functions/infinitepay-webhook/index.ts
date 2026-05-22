@@ -103,7 +103,7 @@ async function sendPaymentConfirmationEmail(order: any, campaign: any) {
                 <span style="display: inline-block; background: #1A1A1A; color: #ffffff; font-family: monospace; font-size: 16px; font-weight: bold; padding: 8px 12px; border-radius: 8px; margin: 4px;">#${String(n).padStart(3, '0')}</span>
               `).join('')}
             </div>
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #666; border-t: 1px solid #f0f0f0; margin-top: 15px; padding-top: 15px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #666; border-top: 1px solid #f0f0f0; margin-top: 15px; padding-top: 15px;">
               <tr>
                 <td style="padding: 10px 0;">Valor da Doação</td>
                 <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #1A1A1A;">${formattedTotal}</td>
@@ -114,7 +114,11 @@ async function sendPaymentConfirmationEmail(order: any, campaign: any) {
               </tr>
               <tr>
                 <td style="padding: 10px 0;">Método de Pagamento</td>
-                <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #25D366;">Pix (InfinitePay)</td>
+                <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #1A1A1A;">Pix (InfinitePay)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0;">Status do Pedido</td>
+                <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #25D366; text-transform: uppercase;">PAGO</td>
               </tr>
             </table>
           </div>

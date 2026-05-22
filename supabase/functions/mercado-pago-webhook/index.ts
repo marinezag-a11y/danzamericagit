@@ -210,20 +210,18 @@ serve(async (req) => {
 
     const orderId = externalReference;
 
-    // Atraso intencional para garantir que o pedido foi salvo no banco antes de tentarmos atualizá-lo
-    await new Promise(r => setTimeout(r, 800));
-
     // Verificar e atualizar raffle_orders
     let raffleOrder: any = null;
     let fetchRaffleError: any = null;
-    const firstFetch = await supabase.from('raffle_orders').select('*').eq('id', orderId).maybeSingle();
-    raffleOrder = firstFetch.data;
-    fetchRaffleError = firstFetch.error;
-
-    if (!raffleOrder && !fetchRaffleError) {
-      await new Promise(r => setTimeout(r, 1000));
-      const retryFetch = await supabase.from('raffle_orders').select('*').eq('id', orderId).maybeSingle();
-      raffleOrder = retryFetch.data;
+    
+    // Tenta buscar no banco até 3 vezes com um pequeno intervalo se não encontrar de primeira
+    for (let i = 0; i < 3; i++) {
+      const result = await supabase.from('raffle_orders').select('*').eq('id', orderId).maybeSingle();
+      if (result.data) {
+        raffleOrder = result.data;
+        break;
+      }
+      if (i < 2) await new Promise(r => setTimeout(r, 400));
     }
 
     if (raffleOrder) {
@@ -243,21 +241,23 @@ serve(async (req) => {
 
       console.log(`[MercadoPago Webhook] Raffle order ${orderId} successfully set to PAID!`)
 
-      const { data: campaign } = await supabase
+      // Dispara o envio de email mas NÃO trava a resposta ao Mercado Pago aguardando
+      supabase
         .from('raffle_campaigns')
         .select('*')
         .eq('id', raffleOrder.campaign_id)
         .maybeSingle()
-
-      try {
-        const sent = await sendPaymentConfirmationEmail(raffleOrder, campaign)
-        await supabase
-          .from('raffle_orders')
-          .update({ notification_sent: sent })
-          .eq('id', orderId)
-      } catch (emailErr) {
-        console.error(`[MercadoPago Webhook] Failed to send email:`, emailErr)
-      }
+        .then(async ({ data: campaign }) => {
+          try {
+            const sent = await sendPaymentConfirmationEmail(raffleOrder, campaign)
+            await supabase
+              .from('raffle_orders')
+              .update({ notification_sent: sent })
+              .eq('id', orderId)
+          } catch (emailErr) {
+            console.error(`[MercadoPago Webhook] Failed to send email:`, emailErr)
+          }
+        });
 
       return new Response(JSON.stringify({ success: true, message: 'Raffle order successfully processed.' }), { headers: corsHeaders, status: 200 })
     }

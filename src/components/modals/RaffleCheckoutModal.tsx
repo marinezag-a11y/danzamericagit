@@ -95,7 +95,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   const [sessionId] = useState(() => Math.random().toString(36).substring(2, 15));
   
   // Estados para integração com Mercado Pago
-  const [mpPaymentData, setMpPaymentData] = useState<{qr_code?: string, qr_code_base64?: string, ticket_url?: string} | null>(null);
+  const [mpPaymentData, setMpPaymentData] = useState<{qr_code?: string, qr_code_base64?: string, ticket_url?: string, payment_id?: string} | null>(null);
   const [pixCode, setPixCode] = useState('');
   const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
   const [orderId, setOrderId] = useState('');
@@ -216,12 +216,34 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       }
     };
 
+    const pollMercadoPagoAPI = async () => {
+      if (!mpPaymentData?.payment_id) return;
+      try {
+        const { data, error } = await supabase.functions.invoke('check-mercado-pago-payment', {
+          body: { payment_id: mpPaymentData.payment_id, order_id: orderId }
+        });
+        if (data?.status === 'approved') {
+          console.log('[Active Polling] API do Mercado Pago retornou APPROVED! Avançando.');
+          setIsConfirmedAutomatic(true);
+          showToast('Pagamento confirmado via Pix com sucesso!', 'success');
+          setStep('success');
+        }
+      } catch (err) {
+        // Ignorar erros de polling ativo para não flodar console
+      }
+    };
+
     // Consultar imediatamente ao montar/alterar passo e depois a cada 3 segundos
     checkPaymentStatus();
-    const interval = setInterval(checkPaymentStatus, 3000);
+    pollMercadoPagoAPI();
+    
+    const interval = setInterval(() => {
+      checkPaymentStatus();
+      pollMercadoPagoAPI();
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, [step, orderId]);
+  }, [step, orderId, mpPaymentData?.payment_id]);
 
   // Timer de 5 minutos com cancelamento automático de ordens expiradas no Supabase
   useEffect(() => {
@@ -366,7 +388,8 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
             setMpPaymentData({
               qr_code: mpData.qr_code,
               qr_code_base64: mpData.qr_code_base64,
-              ticket_url: mpData.ticket_url
+              ticket_url: mpData.ticket_url,
+              payment_id: mpData.payment_id
             });
             setTimeLeft(900);
             setStep('infinitepay_checkout');
@@ -685,6 +708,19 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                   />
                 </div>
 
+                {/* Banner de Aguardando (Topo e bem visível) */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-5 bg-brand-orange/5 border border-brand-orange/20 rounded-2xl sm:hidden animate-pulse">
+                  <Loader2 size={24} className="text-brand-orange animate-spin shrink-0 animate-duration-1000" />
+                  <div className="text-center sm:text-left">
+                    <p className="text-sm font-black uppercase tracking-wider text-brand-dark">
+                      Aguardando pagamento...
+                    </p>
+                    <p className="text-[10px] text-brand-dark/60 leading-tight mt-1 font-sans font-medium">
+                      Assim que você pagar no app do banco, esta tela atualizará automaticamente na mesma hora!
+                    </p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {/* QR Code and Copy Paste */}
                   <div className="bg-black/[0.02] border border-black/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4">
@@ -753,14 +789,14 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3.5 p-4 bg-black/[0.02] border border-black/5 rounded-xl">
+                    <div className="hidden sm:flex items-center gap-3.5 p-4 bg-brand-orange/5 border border-brand-orange/20 rounded-xl">
                       <Loader2 size={20} className="text-brand-orange animate-spin shrink-0 animate-duration-1000" />
                       <div className="text-left">
                         <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark flex items-center gap-1.5">
                           Aguardando pagamento...
                         </p>
-                        <p className="text-[9px] text-brand-dark/50 leading-tight mt-1 font-sans">
-                          A tela atualizará automaticamente assim que o Pix for pago.
+                        <p className="text-[9px] text-brand-dark/60 leading-tight mt-1 font-sans">
+                          A tela atualizará automaticamente na mesma hora em que o Pix for pago.
                         </p>
                       </div>
                     </div>

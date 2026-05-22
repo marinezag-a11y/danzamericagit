@@ -208,8 +208,24 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle scrolling to hash anchor (like #energia) on initial load after data loading is finished
   useEffect(() => {
-    const sections = ['essencia', 'jornada', 'desafio', 'galeria', 'ajudar', 'rifas', 'patrocinio'];
+    const isLoading = settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading || sponsorBrandsLoading || financialLoading;
+    if (!isLoading && window.location.hash) {
+      const hash = window.location.hash;
+      const id = hash.replace('#', '');
+      const timer = setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [settingsLoading, bannersLoading, galleryLoading, tiersLoading, phrasesLoading, journeyLoading, helpLoading, sponsorBrandsLoading, financialLoading]);
+
+  useEffect(() => {
+    const sections = ['essencia', 'jornada', 'desafio', 'galeria', 'ajudar', 'rifas', 'energia', 'patrocinio'];
     const observerOptions = {
       root: null,
       rootMargin: '-40% 0px -40% 0px',
@@ -230,7 +246,7 @@ export default function Home() {
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [settingsLoading, bannersLoading, galleryLoading, tiersLoading, phrasesLoading, journeyLoading, helpLoading, sponsorBrandsLoading, financialLoading]);
   
   if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading || sponsorBrandsLoading || financialLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">

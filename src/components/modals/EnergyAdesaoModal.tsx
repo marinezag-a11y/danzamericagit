@@ -7,9 +7,10 @@ import { useEventTracking } from '../../hooks/useEventTracking';
 interface EnergyAdesaoModalProps {
   isOpen: boolean;
   onClose: () => void;
+  campaignId?: string | null;
 }
 
-export function EnergyAdesaoModal({ isOpen, onClose }: EnergyAdesaoModalProps) {
+export function EnergyAdesaoModal({ isOpen, onClose, campaignId }: EnergyAdesaoModalProps) {
   const { trackEvent } = useEventTracking();
 
   const [name, setName] = useState('');
@@ -78,7 +79,8 @@ export function EnergyAdesaoModal({ isOpen, onClose }: EnergyAdesaoModalProps) {
           whatsapp: whatsapp.replace(/\D/g, ''),
           city,
           average_bill: numericBill,
-          status: 'pending'
+          status: 'pending',
+          campaign_id: campaignId || null
         });
 
       if (insertError) {

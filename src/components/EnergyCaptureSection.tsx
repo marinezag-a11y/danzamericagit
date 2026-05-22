@@ -1,10 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, ChevronRight, ArrowRight, ShieldCheck, CheckCircle2, Sparkles } from 'lucide-react';
+import { Zap, ChevronRight, ArrowRight, ShieldCheck, CheckCircle2, Sparkles, Share2, Check } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { EnergyAdesaoModal } from './modals/EnergyAdesaoModal';
+
+interface Campaign {
+  id: string;
+  name: string;
+  description: string;
+  percentage?: number;
+  image_url?: string;
+  created_at: string;
+}
 
 export function EnergyCaptureSection() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadActiveCampaign() {
+      try {
+        if (!supabase) return;
+        const { data, error } = await supabase
+          .from('energy_campaigns')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data) {
+          setCampaign(data);
+        }
+      } catch (err) {
+        console.error('Error loading active energy campaign:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadActiveCampaign();
+  }, []);
+
+  const handleShare = () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}#energia`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }).catch(err => {
+      console.error('Erro ao copiar link:', err);
+    });
+  };
+
+  const renderTitle = (name: string, percentage: number) => {
+    const pctString = `${percentage}%`;
+    if (name.includes(pctString)) {
+      const parts = name.split(pctString);
+      return (
+        <>
+          {parts[0]}
+          <span className="italic text-emerald-400">{pctString}</span>
+          {parts[1]}
+        </>
+      );
+    }
+
+    const regex = /(\d+%)/g;
+    if (regex.test(name)) {
+      const parts = name.split(regex);
+      return parts.map((part, index) => {
+        if (part.match(regex)) {
+          return <span key={index} className="italic text-emerald-400">{part}</span>;
+        }
+        return part;
+      });
+    }
+
+    return name;
+  };
 
   return (
     <section id="energia" className="py-32 bg-brand-dark px-6 lg:px-12 border-t border-white/5 relative overflow-hidden">
@@ -23,11 +98,17 @@ export function EnergyCaptureSection() {
             </div>
 
             <h2 className="text-4xl sm:text-5xl lg:text-5xl text-white font-serif tracking-tight leading-[1.1] mb-6">
-              Reduza sua conta de luz em até <span className="italic text-emerald-400">20%</span> sem investimento<span className="text-brand-orange">.</span>
+              {campaign ? (
+                renderTitle(campaign.name, campaign.percentage || 20)
+              ) : (
+                <>
+                  Reduza sua conta de luz em até <span className="italic text-emerald-400">20%</span> sem investimento<span className="text-brand-orange">.</span>
+                </>
+              )}
             </h2>
 
             <p className="text-white/60 text-sm sm:text-base max-w-2xl font-serif leading-relaxed italic">
-              Conecte-se ao nosso Plano de Injeção de Energia. Você economiza mensalmente apoiando a transição para fontes limpas e renováveis, sem nenhuma obra ou custo de instalação na sua residência ou empresa.
+              {campaign?.description || "Conecte-se ao nosso Plano de Injeção de Energia. Você economiza mensalmente apoiando a transição para fontes limpas e renováveis, sem nenhuma obra ou custo de instalação na sua residência ou empresa."}
             </p>
 
             {/* Feature Bullets */}
@@ -62,13 +143,13 @@ export function EnergyCaptureSection() {
             >
               <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/40 to-transparent z-10 pointer-events-none" />
               <img 
-                src="/solar_energy_illustration.png" 
-                alt="Injeção de Energia Limpa"
+                src={campaign?.image_url || "/solar_energy_illustration.png"} 
+                alt={campaign?.name || "Injeção de Energia Limpa"}
                 className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-700"
               />
               <div className="absolute bottom-6 left-6 z-20 hidden lg:block">
                 <span className="px-3 py-1 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 rounded-full text-emerald-400 text-[8px] font-black uppercase tracking-widest">
-                  Tecnologia Solar
+                  {campaign?.percentage ? `Economia de até ${campaign.percentage}%` : "Tecnologia Solar"}
                 </span>
               </div>
             </motion.div>
@@ -105,7 +186,7 @@ export function EnergyCaptureSection() {
                 </div>
               </div>
 
-              <div className="space-y-6 pt-10">
+              <div className="space-y-4 pt-10">
                 <button
                   onClick={() => setModalOpen(true)}
                   className="w-full py-4.5 bg-emerald-500 hover:bg-emerald-600 text-brand-dark hover:text-white rounded-[1.8rem] text-[10px] uppercase tracking-[0.3em] font-black transition-all shadow-xl hover:shadow-emerald-500/25 flex items-center justify-center gap-3 font-display hover:scale-[1.02] active:scale-95 cursor-pointer"
@@ -113,7 +194,22 @@ export function EnergyCaptureSection() {
                   Aderir ao Plano <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
                 </button>
 
-                <div className="flex items-center justify-center gap-2 text-[9px] text-white/30 uppercase tracking-[0.2em] font-black font-display">
+                <button
+                  onClick={handleShare}
+                  className="w-full py-4 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 hover:border-emerald-500/20 rounded-[1.8rem] text-[10px] uppercase tracking-[0.3em] font-black transition-all flex items-center justify-center gap-3 font-display hover:scale-[1.02] active:scale-95 cursor-pointer"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-400" /> Link Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4" /> Compartilhar Ação
+                    </>
+                  )}
+                </button>
+
+                <div className="flex items-center justify-center gap-2 text-[9px] text-white/30 uppercase tracking-[0.2em] font-black font-display pt-2">
                   <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
                   Injeção de créditos garantida
                 </div>
@@ -130,6 +226,7 @@ export function EnergyCaptureSection() {
           <EnergyAdesaoModal
             isOpen={modalOpen}
             onClose={() => setModalOpen(false)}
+            campaignId={campaign?.id || null}
           />
         )}
       </AnimatePresence>

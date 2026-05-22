@@ -262,6 +262,11 @@ async function sendPaymentConflictAdminEmail(order: any, campaign: any, conflict
 }
 
 serve(async (req) => {
+  // Health check endpoint for debugging
+  if (req.method === 'GET') {
+    return new Response(JSON.stringify({ status: 'alive' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
+  }
+
   // Tratar requisição CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -295,26 +300,32 @@ serve(async (req) => {
     const status = (body.status || body.event || body.type || body.state || '').toLowerCase()
     
     // Verificamos se o status indica pagamento bem-sucedido
-    const isSuccess = 
-      status === 'paid' || 
-      status === 'approved' || 
-      status === 'captured' || 
-      status === 'success' || 
-      status === 'payment.success' ||
-      status === 'payment.captured'
+    const isSuccess =
+      ['paid','approved','captured','success','payment.success','payment.captured','completed','payment.completed'].some(s=>status.includes(s))
+
 
     console.log(`[InfinitePay Webhook] Normalized status: ${status}. Is Success: ${isSuccess}`)
 
     // 2. Extrair o ID do pedido (order_nsu ou merchant_order_id)
     // Para ser robusto a variações de payload
-    const orderId = body.order_nsu || 
-                    body.merchant_order_id || 
-                    body.order_id || 
-                    body.reference || 
-                    body.client_reference ||
-                    body.data?.order_nsu || 
-                    body.data?.merchant_order_id || 
-                    body.data?.id
+    const orderId =
+      body.order_nsu ||
+      body.merchant_order_id ||
+      body.order_id ||
+      body.reference ||
+      body.client_reference ||
+      body.id ||
+      body.payment?.id ||
+      body.data?.order_nsu ||
+      body.data?.merchant_order_id ||
+      body.data?.order_id ||
+      body.data?.id ||
+      body.transaction?.order_nsu ||
+      // Busca genérica por campo que contenha "order" ou "nsu"
+      Object.values(body).find((v) => typeof v === 'string' && (v.includes('order') || v.includes('nsu'))) ||
+      null;
+    // Pequena pausa para garantir que o registro do pedido já esteja persistido no banco
+    await new Promise(r => setTimeout(r, 800));
 
     if (!orderId) {
       console.warn(`[InfinitePay Webhook] Could not find order reference in payload:`, body)
@@ -340,11 +351,27 @@ serve(async (req) => {
     // primeiro vamos tentar atualizar as rifas. Se der certo, notificamos.
     
     // Procuramos o pedido na tabela raffle_orders
-    const { data: raffleOrder, error: fetchRaffleError } = await supabase
-      .from('raffle_orders')
-      .select('*')
-      .eq('id', orderId)
-      .maybeSingle()
+    let raffleOrder: any = null;
+      let fetchRaffleError: any = null;
+      // Primeiro tente buscar o pedido
+      const firstFetch = await supabase
+        .from('raffle_orders')
+        .select('*')
+        .eq('id', orderId)
+        .maybeSingle();
+      raffleOrder = firstFetch.data;
+      fetchRaffleError = firstFetch.error;
+      // Se não encontrar (pedido ainda não foi inserido), aguarda 500 ms e tenta novamente
+      if (!raffleOrder && !fetchRaffleError) {
+        await new Promise(r => setTimeout(r, 1000));
+        const retryFetch = await supabase
+          .from('raffle_orders')
+          .select('*')
+          .eq('id', orderId)
+          .maybeSingle();
+        raffleOrder = retryFetch.data;
+        fetchRaffleError = retryFetch.error;
+      }
 
     if (fetchRaffleError) {
       console.error(`[InfinitePay Webhook] Error fetching raffle order:`, fetchRaffleError)
@@ -382,10 +409,10 @@ serve(async (req) => {
         if (isConflict) {
           console.warn(`[InfinitePay Webhook Conflict] Conflict detected for order ${orderId}. Cancelling order and alerting admins.`)
 
-          // 1. Mudar o status do pedido para 'cancelled' para ficar claro no painel administrativo
+          // 1. Mudar o status do pedido para 'unconfirmed' para permitir revisão manual
           const { error: cancelError } = await supabase
             .from('raffle_orders')
-            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .update({ status: 'unconfirmed', updated_at: new Date().toISOString() })
             .eq('id', orderId)
 
           if (cancelError) {
@@ -414,7 +441,7 @@ serve(async (req) => {
           return new Response(JSON.stringify({ 
             success: false, 
             error: 'conflict_detected',
-            message: 'Pagamento recebido mas os números já haviam sido ocupados. O pedido foi cancelado e o administrador foi notificado para reembolso manual.'
+            message: 'Pagamento recebido mas os números já haviam sido ocupados. O pedido foi marcado como não confirmado e o administrador foi notificado para confirmação manual.'
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200

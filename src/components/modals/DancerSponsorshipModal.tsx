@@ -110,8 +110,8 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   const [sessionId] = useState(() => Math.random().toString(36).substring(2, 15));
   const [lastReservedNumbers, setLastReservedNumbers] = useState<number[]>([]);
 
-  // Estados para integração com InfinitePay
-  const [infinitePayUrl, setInfinitePayUrl] = useState('');
+  // Estados para integração com Mercado Pago
+  const [mpPaymentData, setMpPaymentData] = useState<{qr_code?: string, qr_code_base64?: string, ticket_url?: string} | null>(null);
   const [pixCode, setPixCode] = useState('');
   const [orderId, setOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'automatic' | 'manual'>('automatic');
@@ -403,35 +403,38 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         const contactWhatsapp = settings?.contact_whatsapp?.value || '31992127292';
 
         if (paymentMethod === 'automatic') {
-          console.log('[InfinitePay] Criando cobrança via Edge Function...');
+          console.log('[MercadoPago] Criando cobrança via Edge Function...');
           setIsGeneratingPayment(true);
           try {
-            const { data: ipData, error: ipError } = await supabase.functions.invoke('create-infinitepay-payment', {
+            const { data: mpData, error: mpError } = await supabase.functions.invoke('create-mercado-pago-payment', {
               body: {
                 order_id: newOrderId,
                 total_price: calculatedTotalPrice,
                 customer_name: customerName,
                 customer_email: customerEmail,
                 customer_phone: customerPhone,
-                campaign_name: `${activeCampaign.name}${selectedDancer ? ` - ${selectedDancer.name}` : ''}`,
-                redirect_url: window.location.href
+                campaign_name: `${activeCampaign.name}${selectedDancer ? ` - ${selectedDancer.name}` : ''}`
               }
             });
 
-            if (ipError || !ipData?.url) {
-              console.error('[InfinitePay] Erro ao criar link de pagamento:', ipError || ipData);
-              showToast('Não foi possível gerar o link de pagamento. Tente novamente.', 'danger');
+            if (mpError || !mpData?.payment_id) {
+              console.error('[MercadoPago] Erro ao criar PIX:', mpError || mpData);
+              showToast('Não foi possível gerar o código Pix. Tente novamente.', 'danger');
               setIsSubmitting(false);
               setIsGeneratingPayment(false);
               return;
             }
 
-            setInfinitePayUrl(ipData.url);
+            setMpPaymentData({
+              qr_code: mpData.qr_code,
+              qr_code_base64: mpData.qr_code_base64,
+              ticket_url: mpData.ticket_url
+            });
             setTimeLeft(900);
             setStep('infinitepay_checkout');
 
           } catch (payException) {
-            console.error('[InfinitePay] Exceção ao gerar pagamento:', payException);
+            console.error('[MercadoPago] Exceção ao gerar pagamento:', payException);
             showToast('Erro inesperado ao gerar pagamento. Por favor, tente novamente.', 'danger');
           } finally {
             setIsGeneratingPayment(false);
@@ -919,11 +922,11 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     <div className="text-left space-y-1">
                       <p className="text-brand-orange text-[9px] uppercase tracking-[0.2em] font-black flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-                        ⚡ PIX AUTOMÁTICO INFINITEPAY
+                        ⚡ PIX AUTOMÁTICO MERCADO PAGO
                       </p>
-                      <h3 className="text-lg sm:text-xl font-sans font-black text-brand-dark">Link de Pagamento Gerado</h3>
+                      <h3 className="text-lg sm:text-xl font-sans font-black text-brand-dark">Pagamento via Pix</h3>
                       <p className="text-[10px] text-brand-dark/50 font-sans leading-tight">
-                        Seu pedido foi registrado e os bilhetes foram reservados. Conclua o Pix clicando no botão seguro abaixo.
+                        Escaneie o QR Code ou copie o código abaixo para pagar no aplicativo do seu banco. A confirmação é automática!
                       </p>
                     </div>
                     <div className="flex items-center gap-2 px-4 py-2 bg-red-500/5 border border-red-500/10 rounded-full w-full sm:w-auto justify-center">
@@ -939,83 +942,103 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     <motion.div 
                       className="h-full bg-brand-orange"
                       initial={{ width: '100%' }}
-                      animate={{ width: `${(timeLeft / 300) * 100}%` }}
+                      animate={{ width: `${(timeLeft / 900) * 100}%` }}
                       transition={{ duration: 1, ease: 'linear' }}
                     />
                   </div>
 
-                  {/* Resumo do Pedido */}
-                  <div className="bg-brand-dark text-white p-5 rounded-xl space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg overflow-hidden border border-white/15 bg-white shrink-0">
-                        {selectedDancer?.photo_url ? (
-                          <img src={selectedDancer.photo_url} className="w-full h-full object-cover scale-[1.8]" alt="" />
-                        ) : (
-                          <div className="w-full h-full bg-white/5 flex items-center justify-center"><User className="w-4 h-4 text-white/10" /></div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-brand-orange text-[7px] uppercase tracking-[0.2em] font-black">APOIO DIRECIONADO</p>
-                        <h4 className="text-xs font-sans font-bold text-white/95">{selectedDancer?.name || 'Geral'}</h4>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* QR Code and Copy Paste */}
+                    <div className="bg-black/[0.02] border border-black/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4">
+                      {mpPaymentData?.qr_code_base64 ? (
+                        <div className="w-48 h-48 bg-white p-2 rounded-xl shadow-sm border border-black/5">
+                          <img src={`data:image/jpeg;base64,${mpPaymentData.qr_code_base64}`} alt="QR Code Pix" className="w-full h-full object-contain" />
+                        </div>
+                      ) : (
+                        <div className="w-48 h-48 bg-white p-2 rounded-xl shadow-sm border border-black/5 flex items-center justify-center">
+                          <Loader2 className="w-8 h-8 text-brand-orange animate-spin" />
+                        </div>
+                      )}
+                      
+                      {mpPaymentData?.qr_code && (
+                        <div className="w-full space-y-2">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Pix Copia e Cola:</p>
+                          <div className="flex items-center gap-2 w-full">
+                            <input 
+                              type="text" 
+                              value={mpPaymentData.qr_code} 
+                              readOnly 
+                              className="flex-1 bg-white border border-black/10 rounded-lg p-3 text-xs text-brand-dark/70 font-mono outline-none"
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(mpPaymentData.qr_code!);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                              }}
+                              className="bg-brand-dark hover:bg-brand-orange text-white p-3 rounded-lg transition-colors flex-shrink-0"
+                            >
+                              {copied ? <Check size={16} /> : <Copy size={16} />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {mpPaymentData?.ticket_url && (
+                        <a href={mpPaymentData.ticket_url} target="_blank" rel="noopener noreferrer" className="text-[10px] uppercase font-black tracking-widest text-brand-orange hover:underline">
+                          Abrir fatura externa
+                        </a>
+                      )}
                     </div>
-                    <div className="space-y-2 pt-2 border-t border-white/10">
-                      <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">SEUS NÚMEROS DA SORTE:</p>
-                      <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto pr-1">
-                        {selectedNumbers.sort((a, b) => a - b).map(n => (
-                          <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/5 rounded text-[9px] font-bold text-white/95">#{String(n).padStart(3, '0')}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between items-center">
-                      <span className="text-[9px] uppercase tracking-widest text-white/40 font-black">TOTAL:</span>
-                      <span className="text-2xl font-sans font-black text-brand-orange">R$ {activeCampaign ? (selectedNumbers.length * activeCampaign.price_per_number).toFixed(2) : '0.00'}</span>
-                    </div>
-                  </div>
 
-                  {/* Lock Info */}
-                  <div className="flex items-center gap-3 py-2 px-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-left">
-                    <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
-                    <p className="text-[9px] font-medium text-emerald-800 leading-tight">
-                      <strong>Ambiente de Pagamento Criptografado & Seguro:</strong> Processado oficialmente pela InfinitePay, instituição autorizada pelo Banco Central do Brasil.
-                    </p>
-                  </div>
+                    {/* Resumo e Status */}
+                    <div className="space-y-4 flex flex-col">
+                      <div className="bg-brand-dark text-white p-5 rounded-xl space-y-4 flex-1">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg overflow-hidden border border-white/15 bg-white shrink-0">
+                            {selectedDancer?.photo_url ? (
+                              <img src={selectedDancer.photo_url} className="w-full h-full object-cover scale-[1.8]" alt="" />
+                            ) : (
+                              <div className="w-full h-full bg-white/5 flex items-center justify-center"><User className="w-4 h-4 text-white/10" /></div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-brand-orange text-[7px] uppercase tracking-[0.2em] font-black">APOIO DIRECIONADO</p>
+                            <h4 className="text-xs font-sans font-bold text-white/95">{selectedDancer?.name || 'Geral'}</h4>
+                          </div>
+                        </div>
+                        <div className="space-y-2 pt-2 border-t border-white/10">
+                          <p className="text-[8px] uppercase tracking-widest text-white/30 font-black">SEUS NÚMEROS DA SORTE:</p>
+                          <div className="flex flex-wrap gap-1 max-h-[60px] overflow-y-auto pr-1">
+                            {selectedNumbers.sort((a, b) => a - b).map(n => (
+                              <span key={n} className="px-2 py-0.5 bg-white/15 border border-white/5 rounded text-[9px] font-bold text-white/95">#{String(n).padStart(3, '0')}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="pt-2 border-t border-white/10 flex justify-between items-center mt-auto">
+                          <span className="text-[9px] uppercase tracking-widest text-white/40 font-black">TOTAL A PAGAR:</span>
+                          <span className="text-2xl font-sans font-black text-brand-orange">R$ {activeCampaign ? (selectedNumbers.length * activeCampaign.price_per_number).toFixed(2) : '0.00'}</span>
+                        </div>
+                      </div>
 
-                  {/* Status e Ações */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <a
-                      href={infinitePayUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-3 py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[12px] uppercase tracking-widest font-black transition-all shadow-[0_20px_40px_-10px_rgba(16,185,129,0.3)] hover:shadow-[0_20px_40px_-5px_rgba(16,185,129,0.4)] active:scale-95 text-center group"
-                    >
-                      <Lock size={15} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
-                      EFETUAR PAGAMENTO SEGURO
-                    </a>
-                    <div className="flex items-center gap-3.5 p-5 bg-black/[0.02] border border-black/5 rounded-2xl">
-                      <Loader2 size={20} className="text-brand-orange animate-spin shrink-0 animate-duration-1000" />
-                      <div className="text-left">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-ping" />
-                          Aguardando pagamento...
+                      <div className="flex items-center gap-3 py-3 px-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-left">
+                        <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+                        <p className="text-[9px] font-medium text-emerald-800 leading-tight">
+                          <strong>Transação Segura:</strong> Processado oficialmente pelo Mercado Pago.
                         </p>
-                        <p className="text-[9px] text-brand-dark/50 leading-tight mt-1 font-sans">
-                          A confirmação é automática e instantânea. A tela mudará assim que o Pix for pago!
-                        </p>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Instruções */}
-                  <div className="bg-black/[0.02] border border-black/5 rounded-2xl p-5 flex gap-4 text-left shadow-sm">
-                    <Check size={20} className="text-brand-orange shrink-0 mt-0.5" />
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark">Instruções Importantes:</p>
-                      <p className="text-[10px] text-brand-dark/70 leading-relaxed font-sans">
-                        1. Clique no botão verde <strong>"EFETUAR PAGAMENTO SEGURO"</strong> para abrir a página oficial da InfinitePay em uma nova aba.<br/>
-                        2. Na página da InfinitePay, selecione a opção <strong>Pix</strong> para gerar o QR Code ou o Pix Copia e Cola.<br/>
-                        3. Pague no aplicativo do seu banco. Assim que concluído, esta tela será atualizada automaticamente sem precisar de comprovante!
-                      </p>
+                      <div className="flex items-center gap-3.5 p-4 bg-black/[0.02] border border-black/5 rounded-xl">
+                        <Loader2 size={20} className="text-brand-orange animate-spin shrink-0 animate-duration-1000" />
+                        <div className="text-left">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark flex items-center gap-1.5">
+                            Aguardando pagamento...
+                          </p>
+                          <p className="text-[9px] text-brand-dark/50 leading-tight mt-1 font-sans">
+                            A tela atualizará automaticamente assim que o Pix for pago.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </motion.div>

@@ -248,7 +248,7 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                           ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
                           : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
                       }`}>
-                        {(order?.payment_origin || 'manual') === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
+                        {(order?.payment_origin || 'manual') === 'mercadopago' ? '🤝 Mercado Pago' : (order?.payment_origin || 'manual') === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
                       </span>
                     )}
                   </div>

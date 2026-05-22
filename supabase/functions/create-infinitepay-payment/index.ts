@@ -57,11 +57,11 @@ serve(async (req) => {
 
     console.log(`[InfinitePay] Generating checkout for Order: ${order_id}, Price: R$ ${total_price}`)
 
-    // 1. Definir URL de Webhook dinâmica apontando para este mesmo projeto do Supabase
-    // O Supabase URL já está nas variáveis de ambiente do Deno, ex: https://xxxx.supabase.co
-    const webhookUrl = `${SUPABASE_URL}/functions/v1/infinitepay-webhook`
+    // 1. Definir URL de Webhook dinâmica, permitindo sobrescrita via variável de ambiente
+    const customWebhookUrl = Deno.env.get('INFINITEPAY_WEBHOOK_URL');
+    const webhookUrl = customWebhookUrl ? customWebhookUrl : `${SUPABASE_URL}/functions/v1/infinitepay-webhook`;
     const defaultRedirectUrl = redirect_url || `${req.headers.get('origin') || 'https://danzamerica.nucleotatianafigueiredo.com.br'}`
-
+    
     // 2. Montar o payload da InfinitePay conforme especificações
     // O preço é em centavos (Math.round(total_price * 100))
     const payload = {

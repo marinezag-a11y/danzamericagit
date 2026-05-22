@@ -162,7 +162,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const filteredOrders = (orders || [])
     .filter(o => {
       const matchesStatus = filter === 'all' 
-        ? (o?.status !== 'cancelled' && o?.status !== 'unconfirmed') 
+        ? (o?.status !== 'cancelled') 
         : o?.status === filter;
       
       // Se uma campanha específica estiver selecionada, força a exibição apenas de pedidos do tipo 'raffle' (rifa)
@@ -631,7 +631,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
 
       {/* Orders Table */}
       <div className="overflow-x-auto bg-white/5 border border-white/10 rounded-sm shadow-2xl">
-        <table className="w-full min-w-[1000px] border-collapse">
+        <table className="w-full min-w-[700px] border-collapse">
           <thead>
             <tr className="border-b border-white/10 text-left bg-white/5">
               <th 

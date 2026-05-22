@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { href: '#galeria', label: 'Galeria', id: 'galeria' },
   { href: '#ajudar', label: 'Compre um sonho', id: 'ajudar' },
   { href: '#rifas', label: 'Ação entre amigos', id: 'rifas' },
+  { href: '#energia', label: 'Injeção de Energia', id: 'energia' },
   { href: '#patrocinio', label: 'Patrocínio', id: 'patrocinio' },
 ];
 

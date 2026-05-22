@@ -32,6 +32,8 @@ interface Campaign {
   start_date: string;
   end_date: string;
   target_meta: number;
+  percentage?: number;
+  image_url?: string;
   created_at: string;
 }
 
@@ -60,6 +62,8 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
   const [campaignStart, setCampaignStart] = useState('');
   const [campaignEnd, setCampaignEnd] = useState('');
   const [campaignMeta, setCampaignMeta] = useState('');
+  const [campaignPercentage, setCampaignPercentage] = useState('20');
+  const [campaignImageUrl, setCampaignImageUrl] = useState('/solar_energy_illustration.png');
   const [savingCampaign, setSavingCampaign] = useState(false);
 
   // Search & Filter state
@@ -124,7 +128,9 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
           description: campaignDescription || null,
           start_date: campaignStart ? new Date(campaignStart).toISOString() : null,
           end_date: campaignEnd ? new Date(campaignEnd).toISOString() : null,
-          target_meta: campaignMeta ? parseFloat(campaignMeta) : null
+          target_meta: campaignMeta ? parseFloat(campaignMeta) : null,
+          percentage: campaignPercentage ? parseInt(campaignPercentage, 10) : 20,
+          image_url: campaignImageUrl || '/solar_energy_illustration.png'
         })
         .select()
         .single();
@@ -140,6 +146,8 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
       setCampaignStart('');
       setCampaignEnd('');
       setCampaignMeta('');
+      setCampaignPercentage('20');
+      setCampaignImageUrl('/solar_energy_illustration.png');
       setIsAddingCampaign(false);
     } catch (err: any) {
       console.error('Error creating campaign:', err);
@@ -307,6 +315,28 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
                           onChange={(e) => setCampaignMeta(e.target.value)}
                           className="w-full bg-white/5 border border-white/5 p-4 rounded-xl text-sm text-white focus:bg-white/10 focus:border-emerald-500/40 outline-none transition-all placeholder:text-white/10 font-semibold"
                           placeholder="Ex: 50 (leads ou faturas)"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <label className="text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-black ml-2 block">Percentual de Desconto/Economia (%) *</label>
+                        <input 
+                          type="number" min="0" max="100" required value={campaignPercentage}
+                          onChange={(e) => setCampaignPercentage(e.target.value)}
+                          className="w-full bg-white/5 border border-white/5 p-4 rounded-xl text-sm text-white focus:bg-white/10 focus:border-emerald-500/40 outline-none transition-all placeholder:text-white/10 font-semibold"
+                          placeholder="Ex: 20"
+                        />
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <label className="text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-black ml-2 block">URL da Imagem Ilustrativa *</label>
+                        <input 
+                          type="text" required value={campaignImageUrl}
+                          onChange={(e) => setCampaignImageUrl(e.target.value)}
+                          className="w-full bg-white/5 border border-white/5 p-4 rounded-xl text-sm text-white focus:bg-white/10 focus:border-emerald-500/40 outline-none transition-all placeholder:text-white/10 font-semibold"
+                          placeholder="Ex: /solar_energy_illustration.png"
                         />
                       </div>
                     </div>

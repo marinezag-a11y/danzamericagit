@@ -135,6 +135,18 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     setPendingStatus(null);
   };
 
+  const handleConfirmPayment = async () => {
+    setUpdating(true);
+    const result = await onUpdate(order.id, { status: 'paid', payment_origin: 'manual' });
+    if (result.success) {
+      setStatus('paid');
+      onAlert('Sucesso', 'Pagamento confirmado com sucesso.', 'info');
+    } else {
+      onAlert('Erro', result.error || 'Erro ao confirmar pagamento', 'danger');
+    }
+    setUpdating(false);
+  };
+
   const handleResendEmail = async () => {
     if (!order) return;
     setResending(true);
@@ -398,7 +410,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
                   ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
                   : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
               }`}>
-                {order.payment_origin === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
+                {order.payment_origin === 'mercadopago' ? '🤝 Mercado Pago' : order.payment_origin === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
               </span>
             )}
           </div>
@@ -425,16 +437,30 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
             >
               <Pencil className="w-5 h-5 sm:w-4 sm:h-4 group-hover/btn:scale-110 transition-transform" />
             </button>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="p-3 sm:p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-sm group/btn relative"
-              data-tooltip="Excluir Pedido"
-            >
-              <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 group-hover/btn:scale-110 transition-transform" />
-            </button>
+            {order.status !== 'unconfirmed' && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="p-3 sm:p-2 text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all rounded-sm group/btn relative"
+                data-tooltip="Excluir Pedido"
+              >
+                <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 group-hover/btn:scale-110 transition-transform" />
+              </button>
+            )}
+            {order.status === 'unconfirmed' && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmPayment();
+                }}
+                disabled={updating}
+                className="ml-2 p-2 bg-emerald-600 text-white rounded-sm text-xs"
+              >
+                Confirmar Pagamento
+              </button>
+            )}
           </div>
         </td>
       </tr>

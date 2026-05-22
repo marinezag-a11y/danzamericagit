@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, CheckCircle, HelpCircle, Sparkles, Zap, Award } from 'lucide-react';
+import { X, Loader2, CheckCircle, HelpCircle, Sparkles, Zap, Award, ArrowRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useEventTracking } from '../../hooks/useEventTracking';
 
@@ -16,10 +16,12 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
 
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
+  const [consumerUnit, setConsumerUnit] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [city, setCity] = useState('');
   const [averageBill, setAverageBill] = useState(initialBillValue);
+  const [showHelper, setShowHelper] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
       trackEvent('Abrir Modal Adesão Energia', 'view');
       setName('');
       setCpf('');
+      setConsumerUnit('');
       setEmail('');
       setWhatsapp('');
       setCity('');
@@ -88,6 +91,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
         .insert({
           name,
           cpf: cpf.replace(/\D/g, ''),
+          consumer_unit: consumerUnit.replace(/\D/g, ''),
           email,
           whatsapp: whatsapp.replace(/\D/g, ''),
           city,
@@ -200,56 +204,99 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">E-mail *</label>
+                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">E-mail *</label>
                       <input
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Ex: joao@email.com"
-                        className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
+                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">WhatsApp *</label>
+                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">WhatsApp *</label>
                       <input
                         type="tel"
                         required
                         value={whatsapp}
                         onChange={(e) => setWhatsapp(maskPhone(e.target.value))}
                         placeholder="Ex: (31) 98888-8888"
-                        className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
+                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">Cidade *</label>
+                      <div className="flex justify-between items-center mb-2 px-1">
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block">Nº da Unidade *</label>
+                        <button type="button" onClick={() => setShowHelper(!showHelper)} className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1 hover:underline">
+                          <HelpCircle className="w-3 h-3" /> Onde achar?
+                        </button>
+                      </div>
                       <input
                         type="text"
                         required
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="Ex: Belo Horizonte"
-                        className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
+                        value={consumerUnit}
+                        onChange={(e) => setConsumerUnit(e.target.value)}
+                        placeholder="Ex: 1020739601"
+                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">Valor Médio da Conta *</label>
+                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Valor Médio da Conta *</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-brand-dark/40">R$</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">R$</span>
                         <input
                           type="text"
                           required
                           value={averageBill}
                           onChange={(e) => handleBillChange(e.target.value)}
                           placeholder="Ex: 250,00"
-                          className="w-full p-4 pl-10 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-semibold placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
+                          className="w-full p-4 pl-10 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-bold placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                         />
                       </div>
                     </div>
                   </div>
+
+                  {/* Helper Graphic para Unidade Consumidora */}
+                  <AnimatePresence>
+                    {showHelper && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 mt-2 space-y-3">
+                          <p className="text-xs text-zinc-600 font-medium">Você encontra o <strong>N.º DA UNIDADE CONSUMIDORA</strong> na parte superior direita da sua conta de luz (Cemig), logo abaixo do seu nome e endereço, destacado em um quadro amarelo:</p>
+                          
+                          {/* Fictitious Bill Graphic */}
+                          <div className="bg-white border-2 border-zinc-200 rounded-lg p-3 shadow-sm font-mono text-[10px] sm:text-xs text-zinc-800 relative">
+                            <div className="text-emerald-700 font-black text-lg mb-2 flex items-center gap-1">
+                              <Zap className="w-5 h-5 fill-emerald-600" /> ENERGIA
+                            </div>
+                            <div className="opacity-50 blur-[2px] select-none">
+                              <p>NOME DO CLIENTE FICTÍCIO</p>
+                              <p>RUA EXEMPLO 123 - CENTRO</p>
+                              <p>12345-678 CIDADE, MG</p>
+                              <p>CPF 123.***.***-**</p>
+                            </div>
+                            
+                            <div className="mt-4 border-2 border-yellow-400 rounded-md p-2 text-center bg-yellow-50 relative animate-pulse shadow-[0_0_15px_rgba(250,204,21,0.4)]">
+                              <p className="font-bold text-[9px] sm:text-[10px] text-zinc-800 tracking-wider">N.º DA UNIDADE CONSUMIDORA</p>
+                              <p className="font-black text-sm sm:text-base text-black mt-1 tracking-widest">10.123.456.78-90</p>
+                              
+                              <div className="absolute -right-2 -top-2 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center animate-bounce">
+                                <ArrowRight className="w-3 h-3 text-white -rotate-135" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {error && (

@@ -159,13 +159,19 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   }, [campaign.id]);
 
   // Escutar a confirmação do pagamento via Pix automático em tempo real
+  // Supabase Realtime (WebSocket/Push) - notificação imediata do backend ao frontend
   useEffect(() => {
     if (step !== 'infinitepay_checkout' || !orderId) return;
 
     console.log(`[Realtime] Subscrevendo ao status do pedido ${orderId}`);
     
     const channel = supabase
-      .channel(`order_payment_status:${orderId}`)
+      .channel(`order_payment_status:${orderId}`, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: orderId }
+        }
+      })
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
@@ -174,13 +180,15 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       }, (payload) => {
         console.log('[Realtime] Payload de atualização do pedido:', payload);
         if (payload.new && payload.new.status === 'paid') {
-          console.log('[Realtime] Pagamento confirmado! Avançando para a tela de sucesso.');
+          console.log('[Realtime] Pagamento confirmado via Push/WebSocket! Avançando para a tela de sucesso.');
           setIsConfirmedAutomatic(true);
           showToast('Pagamento confirmado via Pix com sucesso!', 'success');
           setStep('success');
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[Realtime] Status da conexão WebSocket: ${status}`);
+      });
 
     return () => {
       console.log(`[Realtime] Removendo subscrição do pedido ${orderId}`);
@@ -188,61 +196,66 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
     };
   }, [step, orderId]);
 
-  // Polling de segurança ativo (consulta ao banco a cada 3 segundos) para redundância e sincronização instantânea
+  // Polling de segurança: banco a cada 1s (leve), API do MP a cada 5s (pesado)
   useEffect(() => {
     if (step !== 'infinitepay_checkout' || !orderId) return;
 
+    let alreadyConfirmed = false;
+
+    const handleConfirmed = () => {
+      if (alreadyConfirmed) return;
+      alreadyConfirmed = true;
+      setIsConfirmedAutomatic(true);
+      showToast('Pagamento confirmado via Pix com sucesso!', 'success');
+      setStep('success');
+    };
+
+    // Polling rápido no banco de dados (1 segundo) - leve
     const checkPaymentStatus = async () => {
+      if (alreadyConfirmed) return;
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('raffle_orders')
           .select('status')
           .eq('id', orderId)
           .maybeSingle();
 
-        if (error) {
-          console.error('[Polling] Erro ao consultar status do pedido:', error);
-          return;
-        }
-
-        if (data && data.status === 'paid') {
-          console.log('[Polling] Pagamento confirmado via consulta ativa! Avançando para o sucesso.');
-          setIsConfirmedAutomatic(true);
-          showToast('Pagamento confirmado via Pix com sucesso!', 'success');
-          setStep('success');
+        if (data?.status === 'paid') {
+          console.log('[Polling 1s] Banco confirmou PAID! Atualizando frontend.');
+          handleConfirmed();
         }
       } catch (err) {
-        console.error('[Polling] Exceção ao consultar status:', err);
+        // silencioso
       }
     };
 
+    // Polling direto na API do MP (5 segundos) - mais pesado, só como último recurso
     const pollMercadoPagoAPI = async () => {
-      if (!mpPaymentData?.payment_id) return;
+      if (alreadyConfirmed || !mpPaymentData?.payment_id) return;
       try {
-        const { data, error } = await supabase.functions.invoke('check-mercado-pago-payment', {
+        const { data } = await supabase.functions.invoke('check-mercado-pago-payment', {
           body: { payment_id: mpPaymentData.payment_id, order_id: orderId }
         });
         if (data?.status === 'approved') {
-          console.log('[Active Polling] API do Mercado Pago retornou APPROVED! Avançando.');
-          setIsConfirmedAutomatic(true);
-          showToast('Pagamento confirmado via Pix com sucesso!', 'success');
-          setStep('success');
+          console.log('[Active Polling MP] API do Mercado Pago retornou APPROVED!');
+          handleConfirmed();
         }
       } catch (err) {
-        // Ignorar erros de polling ativo para não flodar console
+        // silencioso
       }
     };
 
-    // Consultar imediatamente ao montar/alterar passo e depois a cada 3 segundos
+    // Inicia imediatamente e depois a cada 1 segundo
     checkPaymentStatus();
     pollMercadoPagoAPI();
     
-    const interval = setInterval(() => {
-      checkPaymentStatus();
-      pollMercadoPagoAPI();
-    }, 3000);
+    const fastInterval = setInterval(checkPaymentStatus, 1000); // 1s - banco de dados
+    const slowInterval = setInterval(pollMercadoPagoAPI, 5000);  // 5s - API Mercado Pago
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(fastInterval);
+      clearInterval(slowInterval);
+    };
   }, [step, orderId, mpPaymentData?.payment_id]);
 
   // Timer de 5 minutos com cancelamento automático de ordens expiradas no Supabase

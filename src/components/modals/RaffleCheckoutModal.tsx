@@ -712,7 +712,7 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full h-1 bg-black/[0.04] rounded-full overflow-hidden">
+                <div className="w-full h-1 bg-black/[0.04] rounded-full overflow-hidden mb-2">
                   <motion.div 
                     className="h-full bg-brand-orange"
                     initial={{ width: '100%' }}
@@ -721,20 +721,20 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                   />
                 </div>
 
-                {/* Banner de Aguardando (Topo e bem visível) */}
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-5 bg-brand-orange/5 border border-brand-orange/20 rounded-2xl sm:hidden animate-pulse">
-                  <Loader2 size={24} className="text-brand-orange animate-spin shrink-0 animate-duration-1000" />
-                  <div className="text-center sm:text-left">
-                    <p className="text-sm font-black uppercase tracking-wider text-brand-dark">
-                      Aguardando pagamento...
+                {/* PROMINENT WAITING BANNER */}
+                <div className="flex items-center gap-4 p-5 sm:p-6 bg-brand-orange/10 border-2 border-brand-orange/50 rounded-2xl shadow-lg animate-pulse">
+                  <Loader2 size={32} className="text-brand-orange animate-spin shrink-0" />
+                  <div className="text-left">
+                    <p className="text-sm sm:text-base font-black uppercase tracking-wider text-brand-dark">
+                      Aguardando confirmação do pagamento...
                     </p>
-                    <p className="text-[10px] text-brand-dark/60 leading-tight mt-1 font-sans font-medium">
-                      Assim que você pagar no app do banco, esta tela atualizará automaticamente na mesma hora!
+                    <p className="text-xs sm:text-sm text-brand-dark/70 mt-1 font-medium leading-tight">
+                      Deixe esta tela aberta. Ela atualizará automaticamente na mesma hora em que você pagar o Pix no seu banco!
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2">
                   {/* QR Code and Copy Paste */}
                   <div className="bg-black/[0.02] border border-black/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4">
                     {mpPaymentData?.qr_code_base64 ? (
@@ -802,17 +802,6 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                       </p>
                     </div>
 
-                    <div className="hidden sm:flex items-center gap-3.5 p-4 bg-brand-orange/5 border border-brand-orange/20 rounded-xl">
-                      <Loader2 size={20} className="text-brand-orange animate-spin shrink-0 animate-duration-1000" />
-                      <div className="text-left">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark flex items-center gap-1.5">
-                          Aguardando pagamento...
-                        </p>
-                        <p className="text-[9px] text-brand-dark/60 leading-tight mt-1 font-sans">
-                          A tela atualizará automaticamente na mesma hora em que o Pix for pago.
-                        </p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </motion.div>

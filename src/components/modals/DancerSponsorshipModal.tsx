@@ -938,7 +938,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="w-full h-1 bg-black/[0.04] rounded-full overflow-hidden">
+                  <div className="w-full h-1 bg-black/[0.04] rounded-full overflow-hidden mb-2">
                     <motion.div 
                       className="h-full bg-brand-orange"
                       initial={{ width: '100%' }}
@@ -947,7 +947,20 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* PROMINENT WAITING BANNER */}
+                  <div className="flex items-center gap-4 p-5 sm:p-6 bg-brand-orange/10 border-2 border-brand-orange/50 rounded-2xl shadow-lg animate-pulse">
+                    <Loader2 size={32} className="text-brand-orange animate-spin shrink-0" />
+                    <div className="text-left">
+                      <p className="text-sm sm:text-base font-black uppercase tracking-wider text-brand-dark">
+                        Aguardando confirmação do pagamento...
+                      </p>
+                      <p className="text-xs sm:text-sm text-brand-dark/70 mt-1 font-medium leading-tight">
+                        Deixe esta tela aberta. Ela atualizará automaticamente na mesma hora em que você pagar o Pix no seu banco!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2">
                     {/* QR Code and Copy Paste */}
                     <div className="bg-black/[0.02] border border-black/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4">
                       {mpPaymentData?.qr_code_base64 ? (
@@ -1028,17 +1041,6 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3.5 p-4 bg-black/[0.02] border border-black/5 rounded-xl">
-                        <Loader2 size={20} className="text-brand-orange animate-spin shrink-0 animate-duration-1000" />
-                        <div className="text-left">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark flex items-center gap-1.5">
-                            Aguardando pagamento...
-                          </p>
-                          <p className="text-[9px] text-brand-dark/50 leading-tight mt-1 font-sans">
-                            A tela atualizará automaticamente assim que o Pix for pago.
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </motion.div>

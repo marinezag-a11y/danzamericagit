@@ -156,6 +156,9 @@ serve(async (req) => {
       } catch(e) {}
     }
 
+    const receivedTimestamp = new Date().toISOString();
+    console.log(`[DIAGNÓSTICO MP] 1. Webhook Recebido no Servidor às: ${receivedTimestamp}`);
+    
     console.log(`[MercadoPago Webhook] Request received:`, {
       method: req.method,
       url: req.url,
@@ -193,7 +196,9 @@ serve(async (req) => {
     const paymentInfo = await mpRes.json();
     const status = paymentInfo.status;
     const externalReference = paymentInfo.external_reference; // This is our order_id
+    const mpApprovedTimestamp = paymentInfo.date_approved;
 
+    console.log(`[DIAGNÓSTICO MP] 2. Pagamento ${paymentId} aprovado no painel MP às: ${mpApprovedTimestamp || 'N/A'}`);
     console.log(`[MercadoPago Webhook] Payment ${paymentId} status: ${status}, order_id: ${externalReference}`);
 
     if (status !== 'approved') {
@@ -239,6 +244,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: 'DB Update error' }), { headers: corsHeaders, status: 500 })
       }
 
+      const pushedTimestamp = new Date().toISOString();
+      console.log(`[DIAGNÓSTICO MP] 3. Status atualizado no banco de dados (push pro frontend) às: ${pushedTimestamp}`);
       console.log(`[MercadoPago Webhook] Raffle order ${orderId} successfully set to PAID!`)
 
       // Dispara o envio de email mas NÃO trava a resposta ao Mercado Pago aguardando

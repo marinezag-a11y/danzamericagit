@@ -39,6 +39,10 @@ serve(async (req) => {
 
     // 2. Check if approved
     if (mpData.status === 'approved') {
+      const mpApprovedTimestamp = mpData.date_approved;
+      const pollingTimestamp = new Date().toISOString();
+      console.log(`[DIAGNÓSTICO MP POLLING] Pagamento Aprovado no MP às: ${mpApprovedTimestamp} | Polling detectou às: ${pollingTimestamp}`);
+
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       const supabase = createClient(supabaseUrl, supabaseServiceKey)

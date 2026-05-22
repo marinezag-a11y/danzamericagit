@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, CheckCircle, HelpCircle, Sparkles, Zap, Award, ArrowRight } from 'lucide-react';
+import { X, Loader2, CheckCircle, HelpCircle, Sparkles, Zap, Award, ArrowRight, Building2, User } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useEventTracking } from '../../hooks/useEventTracking';
 
@@ -14,8 +14,10 @@ interface EnergyAdesaoModalProps {
 export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValue = '' }: EnergyAdesaoModalProps) {
   const { trackEvent } = useEventTracking();
 
+  const [personType, setPersonType] = useState<'fisica' | 'juridica'>('fisica');
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
+  const [cnpj, setCnpj] = useState('');
   const [consumerUnit, setConsumerUnit] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -29,8 +31,10 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   useEffect(() => {
     if (isOpen) {
       trackEvent('Abrir Modal Adesão Energia', 'view');
+      setPersonType('fisica');
       setName('');
       setCpf('');
+      setCnpj('');
       setConsumerUnit('');
       setEmail('');
       setWhatsapp('');
@@ -58,6 +62,16 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const maskCnpj = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1/$2')
+      .replace(/(\d{4})(\d{1,2})/, '$1-$2')
       .replace(/(-\d{2})\d+?$/, '$1');
   };
 
@@ -89,8 +103,10 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
       const { error: insertError } = await supabase
         .from('energy_leads')
         .insert({
+          person_type: personType,
           name,
-          cpf: cpf.replace(/\D/g, ''),
+          cpf: personType === 'fisica' ? cpf.replace(/\D/g, '') : null,
+          cnpj: personType === 'juridica' ? cnpj.replace(/\D/g, '') : null,
           consumer_unit: consumerUnit.replace(/\D/g, ''),
           email,
           whatsapp: whatsapp.replace(/\D/g, ''),
@@ -176,29 +192,71 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-6">
+                
+                {/* Person Type Toggle */}
+                <div className="flex bg-zinc-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setPersonType('fisica')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-xs font-bold rounded-lg transition-all ${
+                      personType === 'fisica' 
+                        ? 'bg-white text-emerald-600 shadow-sm' 
+                        : 'text-zinc-500 hover:text-zinc-700'
+                    }`}
+                  >
+                    <User className="w-4 h-4" /> Pessoa Física
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPersonType('juridica')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-xs font-bold rounded-lg transition-all ${
+                      personType === 'juridica' 
+                        ? 'bg-white text-emerald-600 shadow-sm' 
+                        : 'text-zinc-500 hover:text-zinc-700'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4" /> Pessoa Jurídica
+                  </button>
+                </div>
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">Nome Completo *</label>
+                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">
+                        {personType === 'fisica' ? 'Nome Completo *' : 'Razão Social *'}
+                      </label>
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Ex: João Silva Santos"
-                        className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
+                        placeholder={personType === 'fisica' ? "Ex: João Silva Santos" : "Ex: Empresa Silva Ltda"}
+                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-brand-dark/40 block mb-2 px-1">CPF *</label>
-                      <input
-                        type="text"
-                        required
-                        value={cpf}
-                        onChange={(e) => setCpf(maskCpf(e.target.value))}
-                        placeholder="Ex: 123.456.789-00"
-                        className="w-full p-4 bg-black/5 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-brand-dark/20 text-brand-dark shadow-sm"
-                      />
+                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">
+                        {personType === 'fisica' ? 'CPF *' : 'CNPJ *'}
+                      </label>
+                      {personType === 'fisica' ? (
+                        <input
+                          type="text"
+                          required
+                          value={cpf}
+                          onChange={(e) => setCpf(maskCpf(e.target.value))}
+                          placeholder="Ex: 123.456.789-00"
+                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          required
+                          value={cnpj}
+                          onChange={(e) => setCnpj(maskCnpj(e.target.value))}
+                          placeholder="Ex: 12.345.678/0001-90"
+                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                        />
+                      )}
                     </div>
                   </div>
 

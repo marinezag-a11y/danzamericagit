@@ -13,10 +13,11 @@ import {
   Coins, 
   CheckCircle, 
   Send,
-  AlertCircle,
   Calendar,
   Filter,
-  Trash2
+  Trash2,
+  FileSpreadsheet,
+  Printer
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
@@ -257,6 +258,85 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
     }
   };
 
+  const handleExportExcel = () => {
+    const headers = ['Data', 'Nome', 'Cidade', 'Telefone', 'E-mail', 'Conta (R$)', 'Status'];
+    const csvContent = [
+      headers.join(';'),
+      ...filteredLeads.map(lead => [
+        new Date(lead.created_at).toLocaleDateString('pt-BR'),
+        lead.name,
+        lead.city,
+        lead.whatsapp,
+        lead.email,
+        lead.average_bill.toString().replace('.', ','),
+        getStatusLabel(lead.status)
+      ].map(v => `"${v}"`).join(';'))
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Relatorio_Energia_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const handlePrintHTML = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Relatório de Adesões - Energia</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            h1 { color: #059669; font-size: 24px; margin-bottom: 5px; }
+            p { color: #666; font-size: 14px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background-color: #f9fafb; font-weight: bold; }
+            tr:nth-child(even) { background-color: #f9fafb; }
+          </style>
+        </head>
+        <body>
+          <h1>Relatório de Adesões - Tati Energy</h1>
+          <p>Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Nome</th>
+                <th>Cidade</th>
+                <th>Telefone</th>
+                <th>Conta (R$)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredLeads.map(lead => `
+                <tr>
+                  <td>${new Date(lead.created_at).toLocaleDateString('pt-BR')}</td>
+                  <td>${lead.name}</td>
+                  <td>${lead.city}</td>
+                  <td>${formatPhone(lead.whatsapp)}</td>
+                  <td>R$ ${lead.average_bill.toFixed(2).replace('.', ',')}</td>
+                  <td>${getStatusLabel(lead.status)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <script>
+            window.onload = () => window.print();
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   const formatPhone = (phone: string) => {
     const raw = phone.replace(/\D/g, '');
     if (raw.length === 11) {
@@ -436,6 +516,25 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 items-stretch md:items-center">
+            
+            {/* Export Buttons */}
+            <div className="flex items-center gap-2 mr-2">
+              <button 
+                onClick={handlePrintHTML}
+                title="Imprimir Relatório"
+                className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/50 hover:text-white transition-all"
+              >
+                <Printer className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={handleExportExcel}
+                title="Exportar Excel (CSV)"
+                className="w-10 h-10 flex items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+              </button>
+            </div>
+
             {/* Search Input */}
             <div className="relative flex items-center">
               <Search className="absolute left-4 w-4 h-4 text-white/30" />

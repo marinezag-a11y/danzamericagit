@@ -49,12 +49,17 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
     }
   }, [isOpen, initialBillValue]);
 
-  // Carrega cidades do IBGE (apenas ao chegar no passo 4) para evitar pesar o DB e acelerar o frontend
   useEffect(() => {
     if (isOpen && currentStep === 4 && cities.length === 0) {
       fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
         .then(res => res.json())
-        .then(data => setCities(data))
+        .then(data => {
+          if (Array.isArray(data)) {
+            setCities(data);
+          } else {
+            console.error('Dados de cidades inválidos:', data);
+          }
+        })
         .catch(err => console.error('Erro ao buscar cidades do IBGE', err));
     }
   }, [isOpen, currentStep, cities.length]);
@@ -481,8 +486,8 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
                           className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                         />
                         <datalist id="cities-list">
-                          {cities.map((c) => (
-                            <option key={c.id} value={`${c.nome} - ${c.microrregiao.mesorregiao.UF.sigla}`} />
+                          {Array.isArray(cities) && cities.map((c) => (
+                            <option key={c?.id} value={`${c?.nome} - ${c?.microrregiao?.mesorregiao?.UF?.sigla}`} />
                           ))}
                         </datalist>
                       </div>

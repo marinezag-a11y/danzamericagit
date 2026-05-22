@@ -121,6 +121,13 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Se apertar Enter antes do último passo, apenas avança
+    if (currentStep !== totalSteps) {
+      handleNextStep();
+      return;
+    }
+
     if (!supabase) {
       setError('Erro de inicialização do banco de dados.');
       return;
@@ -524,6 +531,11 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
                   <li>Sem cobrança de taxa de adesão ou fidelidade.</li>
                   <li>Aviso e novidades via e-mail e WhatsApp informados.</li>
                 </ul>
+                <div className="mt-4 p-3 bg-emerald-100/50 rounded-xl border border-emerald-200/50">
+                  <p className="text-xs text-emerald-800 font-medium text-center">
+                    Próximo passo: <strong>Um especialista da nossa equipe entrará em contato em breve</strong> pelo seu WhatsApp para finalizar o processo de ativação.
+                  </p>
+                </div>
               </div>
 
               <button

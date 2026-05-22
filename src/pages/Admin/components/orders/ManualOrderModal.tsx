@@ -79,20 +79,8 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
     const result = await onSave(orderData);
     
     if (result.success) {
-      try {
-        await supabase.functions.invoke('send-order', {
-          body: {
-            ...orderData,
-            pix_key: settings?.pix_key_checkout?.value || settings?.pix_key?.value || 'ballettatianafigueiredo@gmail.com',
-            pix_bank: settings?.pix_checkout_bank?.value || 'SICOOB',
-            pix_receiver: settings?.pix_checkout_receiver?.value || 'NUCLEO DE DANCA TATIANA FIGUEIREDO'
-          }
-        });
-      } catch (err) {
-        console.error('Erro ao enviar e-mail do pedido manual:', err);
-      }
       setShowSuccess(true);
-      onAlert('Sucesso', 'Pedido manual incluído e e-mail enviado.', 'info');
+      onAlert('Sucesso', 'Pedido manual incluído com sucesso.', 'info');
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -220,7 +208,7 @@ export function ManualOrderModal({ onClose, onSave, onAlert }: ManualOrderModalP
               )}
             </button>
             <p className="text-center text-[8px] uppercase tracking-widest font-black text-white/10 mt-6 italic">
-              UMA NOTIFICAÇÃO POR E-MAIL SERÁ ENVIADA AO CLIENTE
+              O CLIENTE RECEBERÁ O E-MAIL PREMIUM APENAS QUANDO O STATUS FOR ALTERADO PARA PAGO
             </p>
           </div>
         </form>

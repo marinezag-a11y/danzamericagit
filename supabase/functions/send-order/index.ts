@@ -78,118 +78,148 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
-    const { 
-      customer_name = 'Cliente', 
-      customer_email, 
-      items = [], 
-      selected_numbers = [], 
-      total_price, 
-      campaign_id,
-      dancer_name,
-      order_id,
-      id,
-      pix_key,
-      pix_bank,
-      pix_receiver,
-    } = body
-
+    const { order_id, id } = body
     const finalOrderId = order_id || id
 
-    if (!customer_email) {
-      return new Response(JSON.stringify({ error: 'Customer email is required' }), { 
+    if (!finalOrderId) {
+      return new Response(JSON.stringify({ error: 'Order ID is required' }), { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
       })
     }
 
-    // Fetch details for HTML
+    // Buscar dados reais diretamente no banco de dados para segurança absoluta e integridade
+    let dbOrder = null
+    let isRaffle = true
+
+    const { data: raffleOrder, error: raffleErr } = await supabase
+      .from('raffle_orders')
+      .select('*')
+      .eq('id', finalOrderId)
+      .maybeSingle()
+
+    if (raffleErr) {
+      console.error('[Send Order] Error querying raffle_orders:', raffleErr)
+    }
+
+    if (raffleOrder) {
+      dbOrder = raffleOrder
+      isRaffle = true
+    } else {
+      const { data: helpOrder, error: helpErr } = await supabase
+        .from('help_orders')
+        .select('*')
+        .eq('id', finalOrderId)
+        .maybeSingle()
+
+      if (helpErr) {
+        console.error('[Send Order] Error querying help_orders:', helpErr)
+      }
+
+      if (helpOrder) {
+        dbOrder = helpOrder
+        isRaffle = false
+      }
+    }
+
+    if (!dbOrder) {
+      console.error(`[Send Order] Order not found: ${finalOrderId}`)
+      return new Response(JSON.stringify({ error: `Pedido ${finalOrderId} não encontrado no banco de dados.` }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404 
+      })
+    }
+
+    // Economizar cota: Bloquear envios se o pedido não estiver pago ('paid')
+    if (dbOrder.status !== 'paid') {
+      console.log(`[Send Order] Ignorando envio para pedido ${finalOrderId} com status '${dbOrder.status}' para economizar cota.`)
+      return new Response(JSON.stringify({ 
+        success: false, 
+        ignored: true,
+        message: `Envio ignorado: O e-mail automático é restrito a pedidos pagos. Status atual: ${dbOrder.status}` 
+      }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      })
+    }
+
+    // Buscar detalhes adicionais para compor o HTML premium
     const [campaignRes, dancerRes] = await Promise.all([
-      campaign_id ? supabase.from('raffle_campaigns').select('*').eq('id', campaign_id).single() : Promise.resolve({ data: null }),
-      (dancer_name && dancer_name !== 'Geral') ? supabase.from('dancers').select('photo_url, name').eq('name', dancer_name).maybeSingle() : Promise.resolve({ data: null })
+      dbOrder.campaign_id ? supabase.from('raffle_campaigns').select('*').eq('id', dbOrder.campaign_id).single() : Promise.resolve({ data: null }),
+      (dbOrder.dancer_name && dbOrder.dancer_name !== 'Geral') ? supabase.from('dancers').select('photo_url, name').eq('name', dbOrder.dancer_name).maybeSingle() : Promise.resolve({ data: null })
     ])
 
     const campaignDetails = campaignRes.data
     const dancerDetails = dancerRes.data
-    const isRaffle = (selected_numbers && selected_numbers.length > 0) || campaign_id
 
-    const safeTotalPrice = Number(total_price || 0)
+    const safeTotalPrice = Number(dbOrder.total_price || dbOrder.product_price || 0)
     const formattedTotal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safeTotalPrice)
+    const paymentOrigin = dbOrder.payment_origin === 'infinitepay' ? 'InfinitePay' : 'Avulso'
     
-    // Build Customer Email HTML (Same professional look)
-    let itemsHtml = ''
+    // Montagem do Resumo do Pedido Premium
+    let summaryHtml = ''
     if (isRaffle) {
-      itemsHtml = `
-        <tr>
-          <td colspan="2" style="padding: 0;">
-            <div style="background: #ffffff; border: 1px solid #FF5A1F22; border-radius: 20px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-              ${campaignDetails?.image_url ? `<img src="${campaignDetails.image_url}" style="width: 100%; height: auto; max-height: 240px; object-fit: cover; display: block;" />` : ''}
-              <div style="padding: 30px;">
-                <div style="color: #FF5A1F; font-weight: 900; text-transform: uppercase; font-size: 10px; letter-spacing: 3px; margin-bottom: 15px;">Ação Entre Amigos • Danzamerica 2026</div>
-                <h2 style="margin: 0 0 25px 0; font-size: 28px; color: #1A1A1A; font-family: serif;">${campaignDetails?.name || 'Rifa Danzamerica'}</h2>
-                <div style="padding: 20px; background: #FFF5F2; border-radius: 16px; border-left: 6px solid #FF5A1F; margin-bottom: 30px; display: table; width: 100%; box-sizing: border-box;">
-                  <div style="display: table-row;">
-                    ${dancerDetails?.photo_url ? `
-                      <div style="display: table-cell; width: 80px; vertical-align: middle;">
-                        <img src="${dancerDetails.photo_url}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #ffffff;" />
-                      </div>
-                    ` : ''}
-                    <div style="display: table-cell; vertical-align: middle; padding-left: 15px;">
-                      <span style="font-size: 11px; color: #FF5A1F; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; display: block; margin-bottom: 4px;">Bailarina(o) Apoiada(o):</span>
-                      <strong style="font-size: 22px; color: #1A1A1A; display: block; font-family: serif; italic;">${dancer_name || 'Apoio Geral'}</strong>
-                    </div>
-                  </div>
-                </div>
-                <div style="margin-bottom: 30px;">
-                  <span style="font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; display: block; margin-bottom: 15px;">Seus Números Reservados:</span>
-                  <div style="display: block;">
-                    ${selected_numbers.sort((a: number, b: number) => a - b).map(n => `
-                      <span style="display: inline-block; background: #1A1A1A; color: #ffffff; font-family: monospace; font-size: 16px; font-weight: bold; padding: 10px 14px; border-radius: 8px; margin: 4px;">#${String(n).padStart(3, '0')}</span>
-                    `).join('')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </td>
-        </tr>
+      summaryHtml = `
+        <h3 style="margin: 0 0 15px 0; color: #FF5A1F; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">RESUMO DOS NÚMEROS ADQUIRIDOS</h3>
+        <div style="display: block; margin-bottom: 20px;">
+          ${(dbOrder.selected_numbers || []).sort((a: number, b: number) => a - b).map((n: number) => `
+            <span style="display: inline-block; background: #1A1A1A; color: #ffffff; font-family: monospace; font-size: 16px; font-weight: bold; padding: 8px 12px; border-radius: 8px; margin: 4px;">#${String(n).padStart(3, '0')}</span>
+          `).join('')}
+        </div>
       `
     } else {
-      itemsHtml = items.map((item: any) => `
-        <tr style="border-bottom: 1px solid #f0f0f0;">
-          <td style="padding: 18px 0; color: #1A1A1A; font-size: 16px;">
-            <div style="font-weight: bold;">${item.name || 'Item'}</div>
-          </td>
-          <td style="padding: 18px 0; text-align: right; color: #FF5A1F; font-weight: bold; font-size: 17px;">R$ ${Number(item.price || 0).toFixed(2)}</td>
-        </tr>
-      `).join('')
+      summaryHtml = `
+        <h3 style="margin: 0 0 15px 0; color: #FF5A1F; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">ITENS ADQUIRIDOS</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          ${(dbOrder.items || []).map((item: any) => `
+            <tr style="border-bottom: 1px solid #eee;">
+              <td style="padding: 10px 0; font-size: 14px; color: #1A1A1A; font-weight: bold;">${item.name || 'Doação'}</td>
+              <td style="padding: 10px 0; font-size: 14px; text-align: right; color: #FF5A1F; font-weight: bold;">R$ ${Number(item.price || 0).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </table>
+      `
     }
 
     const customerEmailHtml = `
       <div style="font-family: sans-serif; background-color: #f4f4f4; padding: 40px;">
         <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.12);">
-          <div style="background-color: #FF5A1F; padding: 60px 40px; text-align: center; color: white;">
-            <h1 style="margin: 0; font-size: 36px; font-weight: 900; letter-spacing: -1.5px; line-height: 1;">Pedido Recebido!</h1>
-            <p style="margin: 18px 0 0 0; opacity: 0.9; font-size: 14px; text-transform: uppercase; letter-spacing: 4px; font-weight: bold;">Danzamerica 2026 • Argentina</p>
-          </div>
-          <div style="padding: 45px; color: #333;">
-            <p style="font-size: 22px; margin-bottom: 35px; color: #1A1A1A;">Olá, <strong>${customer_name}</strong>!</p>
-            <table style="width: 100%; border-collapse: collapse;">
-              ${itemsHtml}
-              <tr>
-                <td style="padding: 30px 0 0 0; font-weight: bold; font-size: 20px; color: #1A1A1A;">VALOR TOTAL</td>
-                <td style="padding: 30px 0 0 0; text-align: right; font-weight: bold; color: #FF5A1F; font-size: 32px; letter-spacing: -1.5px;">${formattedTotal}</td>
-              </tr>
-            </table>
-            <div style="background-color: #1A1A1A; border-radius: 24px; padding: 45px; text-align: center; color: white; margin-top: 40px;">
-              <h3 style="margin: 0 0 12px 0; color: #FF5A1F; font-size: 12px; text-transform: uppercase; letter-spacing: 4px;">PAGAMENTO VIA PIX</h3>
-              <div style="font-family: monospace; font-size: 19px; font-weight: bold; color: #FF5A1F; margin: 15px 0; background: rgba(255,255,255,0.08); padding: 25px; border-radius: 16px; border: 1px dashed rgba(255,90,31,0.6); word-break: break-all;">
-                ${pix_key || 'ballettatianafigueiredo@gmail.com'}
-              </div>
-              <p style="font-size: 12px; opacity: 0.6; margin-top: 20px;">Banco: ${pix_bank || 'SICOOB'} | Recebedor: ${pix_receiver || 'Tatiana Aparecida Figueiredo'}</p>
+          <div style="background-color: #25D366; padding: 60px 40px; text-align: center; color: white;">
+            <div style="background: rgba(255, 255, 255, 0.2); width: 80px; height: 80px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+              <svg style="width: 40px; height: 40px; fill: none; stroke: currentColor; stroke-width: 4;" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-            <div style="margin-top: 50px; text-align: center;">
-              <a href="https://wa.me/5531992127292" style="display: inline-block; background-color: #25D366; color: white; padding: 25px 45px; border-radius: 20px; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 14px; letter-spacing: 3px;">
-                ENVIAR COMPROVANTE AGORA
-              </a>
+            <h1 style="margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -1px; line-height: 1;">Pagamento Confirmado!</h1>
+            <p style="margin: 12px 0 0 0; opacity: 0.9; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; font-weight: bold;">Sua participação está oficializada</p>
+          </div>
+          
+          <div style="padding: 45px; color: #333;">
+            <p style="font-size: 20px; margin-bottom: 25px; color: #1A1A1A;">Olá, <strong>${dbOrder.customer_name}</strong>!</p>
+            <p style="font-size: 15px; line-height: 1.6; color: #666; margin-bottom: 30px;">
+              Recebemos a confirmação do seu pagamento e sua participação na ação <strong>"${campaignDetails?.name || 'Danzamerica 2026'}"</strong> foi concluída com sucesso!
+            </p>
+
+            <div style="background: #FFF9F5; border: 1px solid #FF5A1F22; border-radius: 20px; padding: 30px; margin-bottom: 35px;">
+              ${summaryHtml}
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #666; border-top: 1px solid #f0f0f0; margin-top: 15px; padding-top: 15px;">
+                <tr>
+                  <td style="padding: 10px 0;">Valor Pago</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #1A1A1A;">${formattedTotal}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0;">Dançarino Apoiado</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #1A1A1A;">${dbOrder.dancer_name || 'Apoio Geral'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0;">Método de Pagamento</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: bold; color: #25D366;">Pix (${paymentOrigin})</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="text-align: center; border-top: 1px solid #eee; padding-top: 35px; margin-top: 15px;">
+              <p style="font-size: 13px; color: #999; margin-bottom: 0;">Muito obrigado por apoiar o Núcleo de Dança Tatiana Figueiredo rumo à Argentina 2026! Boa sorte no sorteio!</p>
             </div>
           </div>
         </div>
@@ -199,40 +229,44 @@ serve(async (req) => {
     // --- EMAIL SENDING FLOW (RESEND WITH MAILERSEND FAILOVER) ---
     const emailPayload = {
       from: 'Danzamerica 2026 <pedidos@nucleotatianafigueiredo.com.br>',
-      to: [customer_email],
-      subject: `Confirmamos seu pedido! - Danzamerica 2026`,
+      to: [dbOrder.customer_email],
+      subject: `Confirmamos seu pagamento! - Danzamerica 2026`,
       html: customerEmailHtml,
     }
 
-    console.log(`[Flow] Attempting Resend...`)
+    console.log(`[Send Order] Attempting Resend...`)
     let result = await sendResendEmail(emailPayload)
     let mailersendError = null
 
-    // Failover if Resend fails (especially 429 - too many requests or 403/400 quota)
+    // Failover se o Resend falhar
     if (!result.ok) {
-      console.warn(`[Flow] Resend failed, trying MailerSend fallback...`)
+      console.warn(`[Send Order] Resend failed, trying MailerSend fallback...`)
       const mailerSendResult = await sendMailerSendEmail(emailPayload)
       if (mailerSendResult.ok) {
-        console.log(`[Flow] MailerSend success!`)
+        console.log(`[Send Order] MailerSend success!`)
         result = { ok: true, data: 'sent_via_mailersend' }
       } else {
-        console.error(`[Flow] Both email providers failed.`)
+        console.error(`[Send Order] Both email providers failed.`)
         mailersendError = mailerSendResult.error
       }
     } else {
-      console.log(`[Flow] Resend success!`)
+      console.log(`[Send Order] Resend success!`)
     }
 
     const finalSuccess = result.ok
     const errorDetail = !finalSuccess ? `Resend: ${JSON.stringify(result.error || 'Timeout')}. MailerSend: ${JSON.stringify(mailersendError || 'Unknown')}` : null
 
     // --- DATABASE UPDATE ---
-    if (finalOrderId) {
-      const table = isRaffle ? 'raffle_orders' : 'help_orders'
-      await supabase.from(table).update({ 
-        notification_sent: finalSuccess,
-        reason: finalSuccess ? null : `Erro no envio: ${errorDetail}`
-      }).eq('id', finalOrderId)
+    const table = isRaffle ? 'raffle_orders' : 'help_orders'
+    const { error: dbUpdateErr } = await supabase.from(table).update({ 
+      notification_sent: finalSuccess,
+      reason: finalSuccess ? null : `Erro no envio: ${errorDetail}`
+    }).eq('id', finalOrderId)
+
+    if (dbUpdateErr) {
+      console.error(`[Send Order] Error updating database notification_sent state:`, dbUpdateErr)
+    } else {
+      console.log(`[Send Order] Database successfully updated with notification_sent = ${finalSuccess}`)
     }
 
     return new Response(JSON.stringify({ success: finalSuccess, error: errorDetail, providerData: result.data }), { 

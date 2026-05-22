@@ -128,7 +128,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
           'warning'
         );
       } else {
-        onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
+        onAlert('Status Atualizado', 'Pedido cancelado com sucesso.', 'info');
       }
     }
     setUpdating(false);
@@ -363,7 +363,11 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
                     } catch (err) {
                       console.error('Erro ao enviar e-mail de status:', err);
                     }
-                    onAlert('Status Atualizado', 'Notificação enviada ao cliente.', 'info');
+                    if (newStatus === 'paid') {
+                      onAlert('Status Atualizado', 'Notificação de pagamento enviada ao cliente.', 'info');
+                    } else {
+                      onAlert('Status Atualizado', 'Status do pedido atualizado com sucesso.', 'info');
+                    }
                   } else {
                     // Se der erro, volta para o status anterior
                     setStatus(previousStatus);

@@ -149,6 +149,7 @@ async function sendPaymentConfirmationEmail(order: any, campaign: any) {
   } else {
     console.log(`[Webhook Email] Resend success!`)
   }
+  return !!result?.ok;
 }
 
 // Envia e-mail de alerta para o administrador informando que ocorreu uma duplicidade/conflito de número reservado
@@ -433,7 +434,21 @@ serve(async (req) => {
 
       // Envia o e-mail premium de pagamento confirmado em segundo plano
       try {
-        await sendPaymentConfirmationEmail(raffleOrder, campaign)
+        const sent = await sendPaymentConfirmationEmail(raffleOrder, campaign)
+        console.log(`[InfinitePay Webhook] Email send result: ${sent}`)
+        // Atualiza a coluna notification_sent no banco de dados se o envio tiver sucesso
+        const { error: notifyError } = await supabase
+          .from('raffle_orders')
+          .update({ 
+            notification_sent: sent,
+            reason: sent ? null : 'Erro no envio automático via Webhook (Resend e MailerSend falharam)'
+          })
+          .eq('id', orderId)
+        if (notifyError) {
+          console.error(`[InfinitePay Webhook] Error updating notification_sent status:`, notifyError)
+        } else {
+          console.log(`[InfinitePay Webhook] notification_sent status successfully updated to: ${sent}`)
+        }
       } catch (emailErr) {
         console.error(`[InfinitePay Webhook] Failed to send payment confirmation email:`, emailErr)
       }

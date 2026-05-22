@@ -23,6 +23,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   const [whatsapp, setWhatsapp] = useState('');
   const [city, setCity] = useState('');
   const [cities, setCities] = useState<{ id: string; nome: string; microrregiao: { mesorregiao: { UF: { sigla: string } } } }[]>([]);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [averageBill, setAverageBill] = useState(initialBillValue);
   const [showHelper, setShowHelper] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -474,22 +475,51 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
                   {/* Step 4: Cidade */}
                   {currentStep === 4 && (
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                      <div>
+                      <div className="relative">
                         <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Cidade *</label>
                         <input
                           type="text"
                           required
-                          list="cities-list"
                           value={city}
-                          onChange={(e) => setCity(e.target.value)}
+                          onChange={(e) => {
+                            setCity(e.target.value);
+                            setShowCityDropdown(true);
+                          }}
+                          onFocus={() => setShowCityDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
                           placeholder="Ex: Belo Horizonte - MG"
                           className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                         />
-                        <datalist id="cities-list">
-                          {Array.isArray(cities) && cities.map((c) => (
-                            <option key={c?.id} value={`${c?.nome} - ${c?.microrregiao?.mesorregiao?.UF?.sigla}`} />
-                          ))}
-                        </datalist>
+                        <AnimatePresence>
+                          {showCityDropdown && city.length >= 2 && Array.isArray(cities) && (
+                            <motion.ul
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              className="absolute z-50 w-full mt-2 bg-white border border-zinc-100 rounded-xl shadow-xl max-h-60 overflow-y-auto"
+                            >
+                              {cities
+                                .map(c => `${c?.nome} - ${c?.microrregiao?.mesorregiao?.UF?.sigla}`)
+                                .filter(name => name.toLowerCase().includes(city.toLowerCase()))
+                                .slice(0, 50)
+                                .map((cityName, idx) => (
+                                  <li
+                                    key={idx}
+                                    onClick={() => {
+                                      setCity(cityName);
+                                      setShowCityDropdown(false);
+                                    }}
+                                    className="px-4 py-3 text-sm text-zinc-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors border-b border-zinc-50 last:border-0"
+                                  >
+                                    {cityName}
+                                  </li>
+                                ))}
+                              {cities.filter(c => `${c?.nome} - ${c?.microrregiao?.mesorregiao?.UF?.sigla}`.toLowerCase().includes(city.toLowerCase())).length === 0 && (
+                                <li className="px-4 py-3 text-sm text-zinc-400 italic text-center">Nenhuma cidade encontrada</li>
+                              )}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </motion.div>
                   )}

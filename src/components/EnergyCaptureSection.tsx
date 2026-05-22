@@ -13,25 +13,25 @@ export function EnergyCaptureSection() {
       <div className="absolute top-1/3 right-1/4 -translate-y-1/2 w-[30rem] h-[30rem] bg-brand-orange/5 rounded-full blur-[8rem] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
           
           {/* Text and Copy */}
-          <div className="lg:col-span-7 space-y-8 text-left">
+          <div className="lg:col-span-5 space-y-8 text-left">
             <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] font-display">
               <Zap className="w-3.5 h-3.5 fill-current" />
               Sustentabilidade & Economia
             </div>
 
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl text-white font-serif tracking-tight leading-[1.1] mb-6">
+            <h2 className="text-4xl sm:text-5xl lg:text-5xl text-white font-serif tracking-tight leading-[1.1] mb-6">
               Reduza sua conta de luz em até <span className="italic text-emerald-400">20%</span> sem investimento<span className="text-brand-orange">.</span>
             </h2>
 
-            <p className="text-white/60 text-base sm:text-lg max-w-2xl font-serif leading-relaxed italic">
+            <p className="text-white/60 text-sm sm:text-base max-w-2xl font-serif leading-relaxed italic">
               Conecte-se ao nosso Plano de Injeção de Energia. Você economiza mensalmente apoiando a transição para fontes limpas e renováveis, sem nenhuma obra ou custo de instalação na sua residência ou empresa.
             </p>
 
             {/* Feature Bullets */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6 pt-4">
               {[
                 { title: 'Zero Taxa de Adesão', desc: 'Sem custos de entrada ou taxas escondidas.' },
                 { title: 'Sem Obras ou Alterações', desc: 'Tudo é feito de forma digital e automática.' },
@@ -51,8 +51,31 @@ export function EnergyCaptureSection() {
             </div>
           </div>
 
+          {/* New Image Column (Balanced between Mobile and Desktop) */}
+          <div className="lg:col-span-3 flex justify-center items-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="relative w-full max-w-[320px] sm:max-w-[380px] lg:max-w-none aspect-[4/3] sm:aspect-square lg:aspect-[4/5] overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.02] shadow-2xl group/img"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/40 to-transparent z-10 pointer-events-none" />
+              <img 
+                src="/solar_energy_illustration.png" 
+                alt="Injeção de Energia Limpa"
+                className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute bottom-6 left-6 z-20 hidden lg:block">
+                <span className="px-3 py-1 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 rounded-full text-emerald-400 text-[8px] font-black uppercase tracking-widest">
+                  Tecnologia Solar
+                </span>
+              </div>
+            </motion.div>
+          </div>
+
           {/* Glowing CTA Card */}
-          <div className="lg:col-span-5 flex justify-center">
+          <div className="lg:col-span-4 flex justify-center w-full">
             <motion.div 
               whileHover={{ y: -5 }}
               transition={{ duration: 0.3 }}

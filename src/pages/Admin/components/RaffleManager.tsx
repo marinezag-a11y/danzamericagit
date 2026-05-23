@@ -11,7 +11,9 @@ import {
   Calendar,
   DollarSign,
   Pause,
-  Play
+  Play,
+  FlaskConical,
+  RotateCcw
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useRaffles, RaffleCampaign, RaffleOrder } from '../../../hooks/useRaffles';
@@ -402,6 +404,9 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
   const [localCost, setLocalCost] = useState(campaign.cost || 0);
   const [localCompletionText, setLocalCompletionText] = useState(campaign.completion_text || '');
   const [itemToDelete, setItemToDelete] = useState<boolean>(false);
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [originalPrice, setOriginalPrice] = useState<number | null>(null);
+  const [togglingTest, setTogglingTest] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -424,7 +429,35 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
     return Number(numeric) / 100;
   };
 
+  const handleToggleTestMode = async () => {
+    setTogglingTest(true);
+    if (!isTestMode) {
+      // Ativar modo teste: salvar preço atual e setar R$0,01
+      setOriginalPrice(campaign.price_per_number);
+      const res = await onUpdate(campaign.id, { price_per_number: 0.01 });
+      if (res.success) {
+        setIsTestMode(true);
+        onAlert('Modo Teste Ativado', `Preço alterado para R$0,01. Clique em "Restaurar" após o teste para voltar ao preço real.`, 'warning');
+      } else {
+        onAlert('Erro', 'Não foi possível ativar o modo teste.', 'danger');
+      }
+    } else {
+      // Desativar modo teste: restaurar preço original
+      const priceToRestore = originalPrice ?? campaign.price_per_number;
+      const res = await onUpdate(campaign.id, { price_per_number: priceToRestore });
+      if (res.success) {
+        setIsTestMode(false);
+        setOriginalPrice(null);
+        onAlert('Modo Teste Desativado', `Preço restaurado para ${maskBRL(priceToRestore)}.`, 'info');
+      } else {
+        onAlert('Erro', 'Não foi possível restaurar o preço.', 'danger');
+      }
+    }
+    setTogglingTest(false);
+  };
+
   const handleSave = async () => {
+
     setSaving(true);
     const updates: any = {
       name: localName,
@@ -616,6 +649,28 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                     <Users className="w-4 h-4" />
                     Ver Pedidos
                   </button>
+
+                  {/* BOTÃO MODO TESTE */}
+                  <button 
+                    onClick={handleToggleTestMode}
+                    disabled={togglingTest}
+                    className={`flex items-center gap-3 px-6 py-4 rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all border ${
+                      isTestMode
+                        ? 'bg-purple-500/20 border-purple-500/40 text-purple-300 hover:bg-purple-500 hover:text-white animate-pulse'
+                        : 'bg-white/5 border-white/10 text-white/40 hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-purple-300'
+                    }`}
+                    title={isTestMode ? `Desativar — restaurar preço para ${maskBRL(originalPrice ?? 0)}` : 'Ativar Modo Teste (preço R$0,01)'}
+                  >
+                    {togglingTest ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : isTestMode ? (
+                      <RotateCcw className="w-4 h-4" />
+                    ) : (
+                      <FlaskConical className="w-4 h-4" />
+                    )}
+                    {isTestMode ? `Restaurar ${maskBRL(originalPrice ?? 0)}` : 'Modo Teste (R$0,01)'}
+                  </button>
+
                   <button 
                     onClick={() => onUpdate(campaign.id, { is_active: !campaign.is_active })}
                     className={`flex items-center gap-3 px-6 py-4 rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all border ${

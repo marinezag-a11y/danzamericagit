@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, CheckCircle, HelpCircle, Sparkles, Zap, Award, ArrowRight, Building2, User } from 'lucide-react';
+import { X, Loader2, CheckCircle, HelpCircle, Sparkles, Zap, Award, ArrowRight, Building2, User, ChevronDown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useEventTracking } from '../../hooks/useEventTracking';
 
@@ -31,6 +31,30 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+
+  const checkScrollability = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const hasScrollbar = container.scrollHeight > container.clientHeight + 10;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 30;
+    setShowScrollIndicator(hasScrollbar && !isNearBottom);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        checkScrollability();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, currentStep, success]);
+
+  useEffect(() => {
+    window.addEventListener('resize', checkScrollability);
+    return () => window.removeEventListener('resize', checkScrollability);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -237,7 +261,11 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div 
+      ref={scrollContainerRef}
+      onScroll={checkScrollability}
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+    >
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -641,6 +669,22 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
           )}
         </div>
       </motion.div>
+      <AnimatePresence>
+        {showScrollIndicator && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className="fixed bottom-6 left-1/2 z-[10005] flex items-center gap-2 bg-brand-orange text-white px-5 py-2.5 rounded-full shadow-[0_20px_50px_rgba(204,0,0,0.3)] pointer-events-none border border-white/20 select-none animate-pulse"
+            style={{ transform: 'translateX(-50%)' }}
+          >
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider font-sans">
+              Role para ver mais conteúdo
+            </span>
+            <ChevronDown size={14} className="animate-bounce" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

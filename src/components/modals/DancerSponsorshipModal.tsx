@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, ChevronDown, ArrowRight, Ticket, Loader2, Smartphone, Mail, User, RotateCw, Check, Copy, AlertTriangle, Lock, ShieldCheck } from 'lucide-react';
 import { WheelPicker } from '../ui/WheelPicker';
@@ -119,13 +119,30 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   const [iframeLoading, setIframeLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(300);
   const [copied, setCopied] = useState(false);
-  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+
+  const checkScrollability = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const hasScrollbar = container.scrollHeight > container.clientHeight + 10;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 30;
+    setShowScrollIndicator(hasScrollbar && !isNearBottom);
+  };
 
   useEffect(() => {
-    if (step === 'checkout') {
-      setShowScrollIndicator(true);
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        checkScrollability();
+      }, 150);
+      return () => clearTimeout(timer);
     }
-  }, [step]);
+  }, [isOpen, step, mpPaymentData]);
+
+  useEffect(() => {
+    window.addEventListener('resize', checkScrollability);
+    return () => window.removeEventListener('resize', checkScrollability);
+  }, []);
 
   const [toast, setToast] = useState<{ show: boolean, message: string, variant: 'success' | 'danger' | 'warning' | 'info' }>({
     show: false,
@@ -503,7 +520,11 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div 
+      ref={scrollContainerRef}
+      onScroll={checkScrollability}
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+    >
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -1046,6 +1067,11 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
                               {copied ? <Check size={16} /> : <Copy size={16} />}
                             </button>
                           </div>
+                          <div className="w-full bg-white border border-brand-orange/10 rounded-xl p-3 flex flex-col items-center gap-1 mt-3 shadow-sm">
+                            <span className="text-[9px] uppercase tracking-widest font-black text-brand-dark/40">Recebedor do PIX / Beneficiário</span>
+                            <span className="text-sm font-black text-brand-orange uppercase tracking-wide">James M. Rizo</span>
+                            <span className="text-[9px] text-brand-dark/50 leading-none">Intermediado por Mercado Pago</span>
+                          </div>
                         </div>
                       )}
                       {mpPaymentData?.ticket_url && (
@@ -1257,6 +1283,22 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
         variant={toast.variant} 
         onClose={() => setToast(prev => ({ ...prev, show: false }))} 
       />
+      <AnimatePresence>
+        {showScrollIndicator && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className="fixed bottom-6 left-1/2 z-[10005] flex items-center gap-2 bg-brand-orange text-white px-5 py-2.5 rounded-full shadow-[0_20px_50px_rgba(204,0,0,0.3)] pointer-events-none border border-white/20 select-none animate-pulse"
+            style={{ transform: 'translateX(-50%)' }}
+          >
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider font-sans">
+              Role para ver mais conteúdo
+            </span>
+            <ChevronDown size={14} className="animate-bounce" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

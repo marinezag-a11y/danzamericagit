@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin, Plus, Minus, Copy } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin, Plus, Minus, Copy, ChevronDown } from 'lucide-react';
 import { useHelpOrders } from '../../hooks/useHelpOrders';
 import { HelpItem } from '../../hooks/useHelpItems';
 import { usePageTracking } from '../../hooks/usePageTracking';
@@ -39,6 +39,30 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+
+  const checkScrollability = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const hasScrollbar = container.scrollHeight > container.clientHeight + 10;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 30;
+    setShowScrollIndicator(hasScrollbar && !isNearBottom);
+  };
+
+  useEffect(() => {
+    if (activeModal) {
+      const timer = setTimeout(() => {
+        checkScrollability();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [activeModal, quantities, success]);
+
+  useEffect(() => {
+    window.addEventListener('resize', checkScrollability);
+    return () => window.removeEventListener('resize', checkScrollability);
+  }, []);
 
   useEffect(() => {
     if (activeModal === 'store') {
@@ -199,7 +223,12 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   if (!activeModal) return null;
 
   return (
-    <div key="modal-container" className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div 
+      key="modal-container" 
+      ref={scrollContainerRef}
+      onScroll={checkScrollability}
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+    >
       <motion.div 
         key="modal-backdrop"
         initial={{ opacity: 0 }} 
@@ -561,6 +590,22 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
           )}
         </div>
       </motion.div>
+      <AnimatePresence>
+        {showScrollIndicator && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className="fixed bottom-6 left-1/2 z-[10005] flex items-center gap-2 bg-brand-orange text-white px-5 py-2.5 rounded-full shadow-[0_20px_50px_rgba(204,0,0,0.3)] pointer-events-none border border-white/20 select-none animate-pulse"
+            style={{ transform: 'translateX(-50%)' }}
+          >
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider font-sans">
+              Role para ver mais conteúdo
+            </span>
+            <ChevronDown size={14} className="animate-bounce" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

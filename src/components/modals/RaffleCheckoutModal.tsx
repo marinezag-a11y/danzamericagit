@@ -229,19 +229,27 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
       }
     };
 
-    // Polling direto na API do MP (5 segundos) - mais pesado, só como último recurso
+    // Polling direto na API do MP (2 segundos) - mais pesado, só como último recurso
     const pollMercadoPagoAPI = async () => {
       if (alreadyConfirmed || !mpPaymentData?.payment_id) return;
       try {
-        const { data } = await supabase.functions.invoke('check-mercado-pago-payment', {
+        const { data, error } = await supabase.functions.invoke('check-mercado-pago-payment', {
           body: { payment_id: mpPaymentData.payment_id, order_id: orderId }
         });
+        
+        if (error) {
+          console.error('[Active Polling MP] Erro da Edge Function:', error);
+          showToast(`Erro de comunicação: ${error.message || 'tente novamente'}`, 'warning');
+          return;
+        }
+
         if (data?.status === 'approved') {
           console.log('[Active Polling MP] API do Mercado Pago retornou APPROVED!');
           handleConfirmed();
         }
-      } catch (err) {
-        // silencioso
+      } catch (err: any) {
+        console.error('[Active Polling MP] Exceção:', err);
+        showToast(`Erro na consulta: ${err.message}`, 'warning');
       }
     };
 

@@ -430,15 +430,24 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
   const handleToggleTestMode = async () => {
     setTogglingTest(true);
     const newTestMode = !campaign.is_test_mode;
-    const res = await onUpdate(campaign.id, { is_test_mode: newTestMode });
-    if (res.success) {
-      if (newTestMode) {
-        onAlert('Modo Teste Ativado', 'Uma tarja de aviso será exibida para os clientes informando que compras não serão validadas.', 'warning');
+    try {
+      const { data, error } = await supabase.functions.invoke('toggle-test-mode', {
+        body: { campaign_id: campaign.id, is_test_mode: newTestMode }
+      });
+      if (error) throw error;
+      if (data?.success) {
+        // Update local state immediately
+        onUpdate(campaign.id, { is_test_mode: newTestMode });
+        if (newTestMode) {
+          onAlert('Modo Teste Ativado', 'A tarja de aviso está visível para os clientes. Desative após o teste.', 'warning');
+        } else {
+          onAlert('Modo Teste Desativado', 'A campanha voltou ao normal.', 'info');
+        }
       } else {
-        onAlert('Modo Teste Desativado', 'A tarja de aviso foi removida. A campanha voltou ao normal.', 'info');
+        onAlert('Erro', data?.error || 'Não foi possível alterar o modo teste.', 'danger');
       }
-    } else {
-      onAlert('Erro', 'Não foi possível alterar o modo teste.', 'danger');
+    } catch (err: any) {
+      onAlert('Erro', err.message || 'Falha ao comunicar com o servidor.', 'danger');
     }
     setTogglingTest(false);
   };

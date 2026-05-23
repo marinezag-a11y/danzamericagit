@@ -40,6 +40,27 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     }
   }, [order?.status]);
 
+  const getElapsedTime = () => {
+    if (!order.created_at || !order.updated_at || order.status === 'pending' || order.status === 'unconfirmed') return null;
+    const created = new Date(order.created_at).getTime();
+    const updated = new Date(order.updated_at).getTime();
+    const diffMs = updated - created;
+    if (diffMs <= 1000) return null; // Ignora diferenças insignificantes (ex: 0s ou 1s)
+    
+    const diffSecs = Math.round(diffMs / 1000);
+    const hours = Math.floor(diffSecs / 3600);
+    const min = Math.floor((diffSecs % 3600) / 60);
+    const sec = diffSecs % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${min}m`;
+    }
+    if (min > 0) {
+      return `${min}m ${sec}s`;
+    }
+    return `${sec}s`;
+  };
+
   const statusColors = {
     pending: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
     paid: 'text-green-500 bg-green-500/10 border-green-500/20',
@@ -238,6 +259,11 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
             <span className="text-[10px] text-white/40 font-mono">
               {new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </span>
+            {getElapsedTime() && (
+              <span className="text-[9px] text-emerald-400 font-mono mt-1.5 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 w-max" title="Tempo gasto para confirmação">
+                ⏱️ {getElapsedTime()}
+              </span>
+            )}
           </div>
         </td>
         <td className="py-5 px-6">

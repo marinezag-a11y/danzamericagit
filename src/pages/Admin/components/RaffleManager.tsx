@@ -404,8 +404,6 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
   const [localCost, setLocalCost] = useState(campaign.cost || 0);
   const [localCompletionText, setLocalCompletionText] = useState(campaign.completion_text || '');
   const [itemToDelete, setItemToDelete] = useState<boolean>(false);
-  const [isTestMode, setIsTestMode] = useState(false);
-  const [originalPrice, setOriginalPrice] = useState<number | null>(null);
   const [togglingTest, setTogglingTest] = useState(false);
 
   useEffect(() => {
@@ -431,27 +429,16 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
 
   const handleToggleTestMode = async () => {
     setTogglingTest(true);
-    if (!isTestMode) {
-      // Ativar modo teste: salvar preço atual e setar R$0,01
-      setOriginalPrice(campaign.price_per_number);
-      const res = await onUpdate(campaign.id, { price_per_number: 0.01 });
-      if (res.success) {
-        setIsTestMode(true);
-        onAlert('Modo Teste Ativado', `Preço alterado para R$0,01. Clique em "Restaurar" após o teste para voltar ao preço real.`, 'warning');
+    const newTestMode = !campaign.is_test_mode;
+    const res = await onUpdate(campaign.id, { is_test_mode: newTestMode });
+    if (res.success) {
+      if (newTestMode) {
+        onAlert('Modo Teste Ativado', 'Uma tarja de aviso será exibida para os clientes informando que compras não serão validadas.', 'warning');
       } else {
-        onAlert('Erro', 'Não foi possível ativar o modo teste.', 'danger');
+        onAlert('Modo Teste Desativado', 'A tarja de aviso foi removida. A campanha voltou ao normal.', 'info');
       }
     } else {
-      // Desativar modo teste: restaurar preço original
-      const priceToRestore = originalPrice ?? campaign.price_per_number;
-      const res = await onUpdate(campaign.id, { price_per_number: priceToRestore });
-      if (res.success) {
-        setIsTestMode(false);
-        setOriginalPrice(null);
-        onAlert('Modo Teste Desativado', `Preço restaurado para ${maskBRL(priceToRestore)}.`, 'info');
-      } else {
-        onAlert('Erro', 'Não foi possível restaurar o preço.', 'danger');
-      }
+      onAlert('Erro', 'Não foi possível alterar o modo teste.', 'danger');
     }
     setTogglingTest(false);
   };
@@ -655,21 +642,22 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                     onClick={handleToggleTestMode}
                     disabled={togglingTest}
                     className={`flex items-center gap-3 px-6 py-4 rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all border ${
-                      isTestMode
+                      campaign.is_test_mode
                         ? 'bg-purple-500/20 border-purple-500/40 text-purple-300 hover:bg-purple-500 hover:text-white animate-pulse'
                         : 'bg-white/5 border-white/10 text-white/40 hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-purple-300'
                     }`}
-                    title={isTestMode ? `Desativar — restaurar preço para ${maskBRL(originalPrice ?? 0)}` : 'Ativar Modo Teste (preço R$0,01)'}
+                    title={campaign.is_test_mode ? 'Desativar Modo Teste' : 'Ativar Modo Teste — exibe tarja de aviso para clientes'}
                   >
                     {togglingTest ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : isTestMode ? (
+                    ) : campaign.is_test_mode ? (
                       <RotateCcw className="w-4 h-4" />
                     ) : (
                       <FlaskConical className="w-4 h-4" />
                     )}
-                    {isTestMode ? `Restaurar ${maskBRL(originalPrice ?? 0)}` : 'Modo Teste (R$0,01)'}
+                    {campaign.is_test_mode ? 'Desativar Modo Teste' : 'Ativar Modo Teste'}
                   </button>
+
 
                   <button 
                     onClick={() => onUpdate(campaign.id, { is_active: !campaign.is_active })}

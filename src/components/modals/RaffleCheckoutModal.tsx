@@ -486,6 +486,21 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
             }
           }}
         >
+          {/* TARJA DE MODO TESTE — visível para o cliente */}
+          {campaign.is_test_mode && (
+            <div className="flex items-center gap-3 mb-4 p-4 bg-yellow-400 rounded-2xl shadow-lg border-2 border-yellow-500">
+              <span className="text-2xl flex-shrink-0">⚠️</span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-yellow-900">
+                  Sistema em Testes — Compras não serão validadas
+                </p>
+                <p className="text-[10px] text-yellow-800 font-medium mt-0.5">
+                  Esta campanha está temporariamente em modo de teste. Não efetue pagamentos reais.
+                </p>
+              </div>
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
             {step === 'quantity' && (
               <motion.div 

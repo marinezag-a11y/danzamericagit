@@ -111,7 +111,7 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
   const [lastReservedNumbers, setLastReservedNumbers] = useState<number[]>([]);
 
   // Estados para integração com Mercado Pago
-  const [mpPaymentData, setMpPaymentData] = useState<{qr_code?: string, qr_code_base64?: string, ticket_url?: string} | null>(null);
+  const [mpPaymentData, setMpPaymentData] = useState<{qr_code?: string, qr_code_base64?: string, ticket_url?: string, payment_id?: string} | null>(null);
   const [pixCode, setPixCode] = useState('');
   const [orderId, setOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'automatic' | 'manual'>('automatic');
@@ -223,40 +223,75 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
     };
   }, [step, orderId]);
 
-  // Polling de segurança ativo (consulta ao banco a cada 3 segundos) para redundância e sincronização instantânea
+  // Polling de segurança ativo (consulta ao banco a cada 1 segundo e ao MP a cada 2 segundos)
   useEffect(() => {
     if (step !== 'infinitepay_checkout' || !orderId) return;
 
+    let alreadyConfirmed = false;
+
+    const handleConfirmed = () => {
+      if (alreadyConfirmed) return;
+      alreadyConfirmed = true;
+      setIsConfirmedAutomatic(true);
+      showToast('Pagamento confirmado via Pix com sucesso!', 'success');
+      setStep('success');
+    };
+
+    // Polling rápido no banco de dados (1 segundo)
     const checkPaymentStatus = async () => {
+      if (alreadyConfirmed) return;
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('raffle_orders')
           .select('status')
           .eq('id', orderId)
           .maybeSingle();
 
-        if (error) {
-          console.error('[Polling] Erro ao consultar status do pedido:', error);
-          return;
-        }
-
-        if (data && data.status === 'paid') {
-          console.log('[Polling] Pagamento confirmado via consulta ativa! Avançando para o sucesso.');
-          setIsConfirmedAutomatic(true);
-          showToast('Pagamento confirmado via Pix com sucesso!', 'success');
-          setStep('success');
+        if (data?.status === 'paid') {
+          console.log('[Polling 1s] Banco confirmou PAID! Atualizando frontend.');
+          handleConfirmed();
         }
       } catch (err) {
-        console.error('[Polling] Exceção ao consultar status:', err);
+        // silencioso
       }
     };
 
-    // Consultar imediatamente ao montar/alterar passo e depois a cada 3 segundos
-    checkPaymentStatus();
-    const interval = setInterval(checkPaymentStatus, 1000);
+    // Polling direto na API do MP (2 segundos) - para contornar lentidão do webhook
+    const pollMercadoPagoAPI = async () => {
+      if (alreadyConfirmed || !mpPaymentData?.payment_id) return;
+      try {
+        const { data, error } = await supabase.functions.invoke('check-mercado-pago-payment', {
+          body: { payment_id: mpPaymentData.payment_id, order_id: orderId }
+        });
 
-    return () => clearInterval(interval);
-  }, [step, orderId]);
+        if (error) {
+          console.error('[Active Polling MP] Erro da Edge Function:', error);
+          showToast(`Erro de comunicação: ${error.message || 'tente novamente'}`, 'warning');
+          return;
+        }
+
+        if (data?.status === 'approved') {
+          console.log('[Active Polling MP] API do Mercado Pago retornou APPROVED!');
+          handleConfirmed();
+        }
+      } catch (err: any) {
+        console.error('[Active Polling MP] Exceção:', err);
+        showToast(`Erro na consulta: ${err.message}`, 'warning');
+      }
+    };
+
+    // Consultar imediatamente e depois iniciar os intervalos
+    checkPaymentStatus();
+    pollMercadoPagoAPI();
+
+    const fastInterval = setInterval(checkPaymentStatus, 1000);
+    const slowInterval = setInterval(pollMercadoPagoAPI, 2000);
+
+    return () => {
+      clearInterval(fastInterval);
+      clearInterval(slowInterval);
+    };
+  }, [step, orderId, mpPaymentData?.payment_id]);
 
   // Timer de 60 segundos com cancelamento automático de ordens expiradas no Supabase
   useEffect(() => {
@@ -428,7 +463,8 @@ export function DancerSponsorshipModal({ isOpen, onClose, campaignId }: DancerSp
             setMpPaymentData({
               qr_code: mpData.qr_code,
               qr_code_base64: mpData.qr_code_base64,
-              ticket_url: mpData.ticket_url
+              ticket_url: mpData.ticket_url,
+              payment_id: mpData.payment_id
             });
             setTimeLeft(900);
             setStep('infinitepay_checkout');

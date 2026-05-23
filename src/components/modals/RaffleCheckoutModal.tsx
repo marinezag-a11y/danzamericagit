@@ -817,15 +817,28 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                         <span className="text-[9px] uppercase tracking-widest text-white/40 font-black">TOTAL A PAGAR:</span>
                         <span className="text-2xl font-sans font-black text-brand-orange">R$ {(selectedNumbers.length * campaign.price_per_number).toFixed(2)}</span>
                       </div>
-                    </div>
+                  </div>
 
-                    <div className="flex items-center gap-3 py-3 px-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-left">
-                      <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
-                      <p className="text-[9px] font-medium text-emerald-800 leading-tight">
-                        <strong>Transação Segura:</strong> Processado oficialmente pelo Mercado Pago.
-                      </p>
+                  {/* Mercado Pago Security Banner */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 mt-2 bg-slate-50 border border-slate-200/80 rounded-2xl text-left shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck size={24} className="text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 leading-snug">
+                          Compra 100% Protegida & Criptografada
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-normal">
+                          Seu pagamento é processado com a tecnologia de segurança e proteção do <strong>Mercado Pago</strong>.
+                        </p>
+                      </div>
                     </div>
-
+                    <div className="flex items-center gap-2 shrink-0 bg-white px-3 py-1.5 border border-slate-200 rounded-lg shadow-sm">
+                      <span className="text-[8px] tracking-widest font-black uppercase text-slate-400">Garantia</span>
+                      <span className="text-[10px] font-black text-brand-dark flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        MERCADO PAGO
+                      </span>
+                    </div>
                   </div>
                 </div>
               </motion.div>

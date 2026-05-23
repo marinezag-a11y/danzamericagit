@@ -23,32 +23,43 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'MP_ACCESS_TOKEN not configured' }), { headers: corsHeaders, status: 500 })
     }
 
-    // 1. Fetch payment from Mercado Pago
+    const pollingTimestamp = new Date().toISOString()
+
+    // 1. Consulta o status do pagamento na API do Mercado Pago
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${payment_id}`, {
-      headers: {
-        Authorization: `Bearer ${MP_ACCESS_TOKEN}`
-      }
+      headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` }
     })
 
     if (!mpRes.ok) {
       const errorText = await mpRes.text()
+      console.error(`[MP Polling] Erro ao consultar payment ${payment_id}: ${mpRes.status} ${errorText}`)
       return new Response(JSON.stringify({ error: 'Failed to fetch from Mercado Pago', details: errorText }), { headers: corsHeaders, status: 400 })
     }
 
     const mpData = await mpRes.json()
 
-    // 2. Check if approved
+    // Log com timestamps para evidência ao suporte do MP
+    console.log(`[MP Polling] payment_id=${payment_id} order_id=${order_id} mp_status=${mpData.status} date_approved=${mpData.date_approved ?? 'N/A'} polling_at=${pollingTimestamp}`)
+
+    // 2. Se aprovado: atualizar banco e retornar
     if (mpData.status === 'approved') {
-      const mpApprovedTimestamp = mpData.date_approved;
-      const pollingTimestamp = new Date().toISOString();
-      console.log(`[DIAGNÓSTICO MP POLLING] Pagamento Aprovado no MP às: ${mpApprovedTimestamp} | Polling detectou às: ${pollingTimestamp}`);
+      const approvedAt = mpData.date_approved
+      const nowTs = new Date().toISOString()
+      const delaySecs = approvedAt ? Math.round((Date.now() - new Date(approvedAt).getTime()) / 1000) : null
 
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+      console.log(`[MP Polling APROVADO] payment_id=${payment_id} aprovado_mp=${approvedAt} detectado=${nowTs} delay=${delaySecs !== null ? delaySecs + 's' : 'N/A'}`)
 
-      // 3. Update the database order if it is not already paid
-      const { data: order } = await supabase.from('raffle_orders').select('status').eq('id', order_id).single()
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      )
+
+      // Atualiza somente se ainda não estiver pago (idempotente)
+      const { data: order } = await supabase
+        .from('raffle_orders')
+        .select('status')
+        .eq('id', order_id)
+        .single()
 
       if (order && order.status !== 'paid') {
         const { error: updateError } = await supabase
@@ -57,13 +68,13 @@ serve(async (req) => {
             status: 'paid', 
             payment_origin: 'mercadopago', 
             mp_payment_id: String(payment_id), 
-            updated_at: new Date().toISOString() 
+            updated_at: nowTs
           })
           .eq('id', order_id)
 
-        if (updateError) {
-          throw updateError
-        }
+        if (updateError) throw updateError
+
+        console.log(`[MP Polling] Banco atualizado para PAID via polling ativo (webhook não chegou). order_id=${order_id}`)
       }
 
       return new Response(JSON.stringify({ status: 'approved' }), { headers: corsHeaders, status: 200 })
@@ -71,7 +82,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ status: mpData.status }), { headers: corsHeaders, status: 200 })
 
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[MP Polling] Exceção:', error.message)
     return new Response(JSON.stringify({ error: error.message }), { headers: corsHeaders, status: 500 })
   }
 })

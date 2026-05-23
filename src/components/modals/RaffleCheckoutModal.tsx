@@ -250,7 +250,8 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
     pollMercadoPagoAPI();
     
     const fastInterval = setInterval(checkPaymentStatus, 1000); // 1s - banco de dados
-    const slowInterval = setInterval(pollMercadoPagoAPI, 5000);  // 5s - API Mercado Pago
+    const slowInterval = setInterval(pollMercadoPagoAPI, 2000);  // 2s - API Mercado Pago (recomendado pelo suporte MP)
+
 
     return () => {
       clearInterval(fastInterval);

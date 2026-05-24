@@ -70,7 +70,20 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
   };
 
   const handleSaveFromModal = async (data: any) => {
-    const result = await onUpdate(order.id, data);
+    const isStatusChanged = data.status !== order.status;
+    let finalData = { ...data };
+    
+    if (isStatusChanged) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        finalData.status_updated_by = user?.email || 'Sistema';
+        finalData.status_updated_at = new Date().toISOString();
+      } catch (err) {
+        console.error('Erro ao buscar usuário logado para auditoria:', err);
+      }
+    }
+
+    const result = await onUpdate(order.id, finalData);
     if (result.success) {
       if (data.status !== order.status) {
         try {
@@ -121,7 +134,20 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     const isPaidBefore = order.status === 'paid';
     const isCancelledNow = pendingStatus === 'cancelled';
     
-    const result = await onUpdate(order.id, { status: pendingStatus });
+    let updatedBy = 'Sistema';
+    const updatedAt = new Date().toISOString();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      updatedBy = user?.email || 'Sistema';
+    } catch (err) {
+      console.error('Erro ao buscar usuário logado para auditoria:', err);
+    }
+    
+    const result = await onUpdate(order.id, { 
+      status: pendingStatus,
+      status_updated_by: updatedBy,
+      status_updated_at: updatedAt
+    });
     if (result.success) {
       try {
         await supabase.functions.invoke('send-order', {
@@ -158,7 +184,21 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
 
   const handleConfirmPayment = async () => {
     setUpdating(true);
-    const result = await onUpdate(order.id, { status: 'paid', payment_origin: 'manual' });
+    let updatedBy = 'Sistema';
+    const updatedAt = new Date().toISOString();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      updatedBy = user?.email || 'Sistema';
+    } catch (err) {
+      console.error('Erro ao buscar usuário logado para auditoria:', err);
+    }
+    
+    const result = await onUpdate(order.id, { 
+      status: 'paid', 
+      payment_origin: 'manual',
+      status_updated_by: updatedBy,
+      status_updated_at: updatedAt
+    });
     if (result.success) {
       setStatus('paid');
       onAlert('Sucesso', 'Pagamento confirmado com sucesso.', 'info');
@@ -396,7 +436,20 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
                   setStatus(newStatus);
                   setUpdating(true);
                   
-                  const updates: any = { status: newStatus };
+                  let updatedBy = 'Sistema';
+                  const updatedAt = new Date().toISOString();
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    updatedBy = user?.email || 'Sistema';
+                  } catch (err) {
+                    console.error('Erro ao buscar usuário logado para auditoria:', err);
+                  }
+                  
+                  const updates: any = { 
+                    status: newStatus,
+                    status_updated_by: updatedBy,
+                    status_updated_at: updatedAt
+                  };
                   if (newStatus === 'paid') {
                     updates.payment_origin = order.payment_origin || 'manual';
                   } else if (newStatus === 'pending' || newStatus === 'unconfirmed' || newStatus === 'cancelled') {
@@ -455,6 +508,18 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
               }`}>
                 {order.payment_origin === 'mercadopago' ? '🤝 Mercado Pago' : order.payment_origin === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
               </span>
+            )}
+            {order.status_updated_by && (
+              <div className="mt-1.5 pt-1 border-t border-white/5 w-full text-left space-y-0.5">
+                <p className="text-[8px] text-white/40 font-mono tracking-tight truncate max-w-[120px]" title={order.status_updated_by}>
+                  Alt: {order.status_updated_by.split('@')[0]}
+                </p>
+                {order.status_updated_at && (
+                  <p className="text-[7.5px] text-white/30 font-mono leading-none">
+                    {new Date(order.status_updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(order.status_updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </td>

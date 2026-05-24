@@ -138,6 +138,27 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
 
   useEffect(() => {
     loadData();
+
+    if (!supabase) return;
+    const subscription = supabase
+      .channel('energy_leads_admin_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'energy_leads' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setLeads(prev => {
+            if (prev.some(l => l.id === payload.new.id)) return prev;
+            return [payload.new, ...prev];
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          setLeads(prev => prev.map(l => l.id === payload.new.id ? { ...l, ...payload.new } : l));
+        } else if (payload.eventType === 'DELETE') {
+          setLeads(prev => prev.filter(l => l.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Check role permission for campaigns accordion

@@ -54,6 +54,8 @@ interface Lead {
   notification_sent: boolean;
   created_at: string;
   dancer_name?: string | null;
+  status_updated_by?: string | null;
+  status_updated_at?: string | null;
 }
 
 export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionManagerProps) {
@@ -214,10 +216,19 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
 
     setUpdatingStatus(true);
     try {
+      // Obter e-mail do usuário autenticado para rastreamento
+      const { data: { user } } = await supabase.auth.getUser();
+      const updatedBy = user?.email || 'Sistema';
+      const updatedAt = new Date().toISOString();
+
       // 1. Update in Supabase
       const { error: updateErr } = await supabase
         .from('energy_leads')
-        .update({ status: targetStatus })
+        .update({ 
+          status: targetStatus,
+          status_updated_by: updatedBy,
+          status_updated_at: updatedAt
+        })
         .eq('id', transitioningLead.id);
 
       if (updateErr) throw updateErr;
@@ -225,7 +236,12 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
       onAlert('Sucesso', `Status atualizado para ${getStatusLabel(targetStatus)} com sucesso.`, 'info');
       
       // Update local state
-      setLeads(prev => prev.map(l => l.id === transitioningLead.id ? { ...l, status: targetStatus } : l));
+      setLeads(prev => prev.map(l => l.id === transitioningLead.id ? { 
+        ...l, 
+        status: targetStatus,
+        status_updated_by: updatedBy,
+        status_updated_at: updatedAt
+      } : l));
 
       // 2. Invoke Edge Function for email dispatch
       // Pass a non-blocking invoke to avoid waiting in UI if the email provider takes a second
@@ -1048,6 +1064,18 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
                             <span className="text-[8px] text-white/20 font-bold uppercase tracking-wider flex items-center gap-1">
                               <Clock className="w-2.5 h-2.5" /> Não enviado
                             </span>
+                          )}
+                          {lead.status_updated_by && (
+                            <div className="mt-1 pt-1 border-t border-white/5 w-full text-center space-y-0.5">
+                              <p className="text-[8px] text-white/40 font-mono tracking-tight truncate max-w-[100px] mx-auto" title={lead.status_updated_by}>
+                                Alt: {lead.status_updated_by.split('@')[0]}
+                              </p>
+                              {lead.status_updated_at && (
+                                <p className="text-[7.5px] text-white/30 font-mono leading-none">
+                                  {new Date(lead.status_updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(lead.status_updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>

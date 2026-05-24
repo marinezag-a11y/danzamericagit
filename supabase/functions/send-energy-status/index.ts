@@ -149,8 +149,9 @@ serve(async (req) => {
               <h3 style="color: #FFFFFF; font-size: 16px; margin: 30px 0 10px 0; font-family: serif; font-style: italic;">O que acontece a partir de agora?</h3>
               <ul style="padding-left: 20px; margin: 0 0 30px 0; space-y: 8px;">
                 <li style="margin-bottom: 10px;"><strong>Análise da Concessionária:</strong> A distribuidora de energia revisará a homologação técnica para alocação dos créditos de energia solar limpa.</li>
+                <li style="margin-bottom: 10px;"><strong>Contato do Especialista:</strong> Um de nossos especialistas entrará em contato via WhatsApp para alinhar os últimos detalhes do fechamento da sua injeção de créditos de forma rápida e segura.</li>
                 <li style="margin-bottom: 10px;"><strong>Ativação Automática:</strong> Assim que concluído este prazo de análise, seu plano será ativado e você receberá uma confirmação oficial de desconto ativo.</li>
-                <li><strong>Redução na Próxima Fatura:</strong> A partir da homologação, sua economia será aplicada de forma 100% digital e sem custos extras.</li>
+                <li><strong>Redução na Fatura:</strong> A partir da homologação técnica, sua economia começará a ser aplicada em até 90 dias de forma 100% digital e sem custos extras.</li>
               </ul>
 
               <p style="margin-bottom: 0; font-size: 13px; color: #9CA3AF; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 25px;">
@@ -211,12 +212,12 @@ serve(async (req) => {
               
               <p>Temos a melhor notícia possível: a concessionária de energia <strong>homologou e aprovou</strong> com sucesso a sua adesão ao Plano de Injeção de Energia Solar!</p>
               
-              <p>Isso significa que a injeção de créditos foi ativada na sua titularidade e você passará a economizar na sua conta de luz a partir da próxima fatura.</p>
+              <p>Isso significa que a injeção de créditos foi ativada na sua titularidade e você passará a economizar na sua conta de luz em até 90 dias.</p>
               
               <!-- Desconto Highlight Box -->
               <div style="background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(4,120,87,0.15) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 25px; margin: 30px 0; text-align: center;">
                 <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #34D399; font-weight: bold; display: block; margin-bottom: 5px;">Seu Novo Desconto Estimado:</span>
-                <span style="font-size: 40px; font-weight: 800; color: #FFFFFF; font-family: serif; font-style: italic; display: block; margin-bottom: 5px;">Até 20%</span>
+                <span style="font-size: 40px; font-weight: 800; color: #FFFFFF; font-family: serif; font-style: italic; display: block; margin-bottom: 5px;">Até 15%</span>
                 <span style="font-size: 12px; color: #A7F3D0; display: block;">Redução líquida real direto na sua conta de luz!</span>
               </div>
 
@@ -239,8 +240,8 @@ serve(async (req) => {
                 </table>
               </div>
 
-              <h3 style="color: #FFFFFF; font-size: 16px; margin: 30px 0 10px 0; font-family: serif; font-style: italic;">O que você precisa fazer agora?</h3>
-              <p style="margin-top: 0; margin-bottom: 25px;"><strong>Absolutamente nada!</strong> O processo é 100% digital. Apenas confira o desconto demonstrado diretamente no campo de créditos de energia solar na sua próxima fatura de luz mensal.</p>
+              <h3 style="color: #FFFFFF; font-size: 16px; margin: 30px 0 10px 0; font-family: serif; font-style: italic;">O que acontece a partir de agora?</h3>
+              <p style="margin-top: 0; margin-bottom: 25px;">O processo é 100% digital, mas <strong>um especialista da nossa equipe entrará em contato com você via WhatsApp em breve</strong> para passar todas as orientações do fechamento e tirar qualquer dúvida sobre a homologação. Depois disso, basta conferir o desconto demonstrado diretamente na sua fatura de luz em até 90 dias!</p>
 
               <div style="background-color: rgba(255, 90, 31, 0.05); border-left: 4px solid #FF5A1F; padding: 15px; border-radius: 4px; margin-bottom: 30px; font-size: 13px;">
                 <strong style="color: #FF5A1F;">Seu impacto positivo:</strong> Ao economizar na sua conta, você gerou uma cota de suporte essencial para o financiamento coletivo que levará nossa equipe mineira de dança para a Argentina em 2026. Obrigado por fazer a diferença no esporte, na cultura e no planeta! 💚

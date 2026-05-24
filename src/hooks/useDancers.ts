@@ -23,7 +23,6 @@ export function useDancers() {
       const { data, error: fetchError } = await supabase
         .from('dancers')
         .select('*')
-        .order('display_order', { ascending: true })
         .order('name', { ascending: true });
 
       if (fetchError) throw fetchError;

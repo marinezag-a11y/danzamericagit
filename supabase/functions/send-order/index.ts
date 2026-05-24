@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const MAILERSEND_API_KEY = Deno.env.get('MAILERSEND_API_KEY')
+const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
@@ -14,6 +15,7 @@ const corsHeaders = {
 const supabase = createClient(SUPABASE_URL || '', SUPABASE_SERVICE_ROLE_KEY || '')
 
 async function sendResendEmail(payload: any) {
+  if (!RESEND_API_KEY) return { ok: false, error: 'No Resend API Key' }
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -69,6 +71,42 @@ async function sendMailerSendEmail(payload: any) {
     return { ok: true }
   } catch (err) {
     console.error(`[MailerSend Exception]`, err)
+    return { ok: false, error: err }
+  }
+}
+
+async function sendBrevoEmail(payload: any) {
+  if (!BREVO_API_KEY) return { ok: false, error: 'No Brevo API Key' }
+  
+  try {
+    const brevoPayload = {
+      sender: {
+        name: payload.from.match(/^(.+?)\s*</)?.[1] || 'Danzamerica',
+        email: payload.from.match(/<(.+)>/)?.[1] || payload.from
+      },
+      to: payload.to.map((email: string) => ({ email })),
+      subject: payload.subject,
+      htmlContent: payload.html
+    }
+
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'api-key': BREVO_API_KEY
+      },
+      body: JSON.stringify(brevoPayload),
+    })
+    
+    const data = await res.json()
+    if (!res.ok) {
+      console.error(`[Brevo Error]`, JSON.stringify(data))
+      return { ok: false, status: res.status, error: data }
+    }
+    return { ok: true, data }
+  } catch (err) {
+    console.error(`[Brevo Exception]`, err)
     return { ok: false, error: err }
   }
 }
@@ -243,7 +281,7 @@ serve(async (req) => {
       </div>
     `
 
-    // --- EMAIL SENDING FLOW (RESEND WITH MAILERSEND FAILOVER) ---
+    // --- EMAIL SENDING FLOW (DYNAMIC ROTATION & FAILOVER) ---
     const emailPayload = {
       from: 'Danzamerica 2026 <pedidos@nucleotatianafigueiredo.com.br>',
       to: [dbOrder.customer_email],
@@ -251,33 +289,73 @@ serve(async (req) => {
       html: customerEmailHtml,
     }
 
-    console.log(`[Send Order] Attempting Resend...`)
-    let result = await sendResendEmail(emailPayload)
-    let mailersendError = null
+    // Configuração e pesos de cada provedor
+    const activeProviders = []
+    if (RESEND_API_KEY) activeProviders.push({ name: 'resend', weight: 1, sendFn: sendResendEmail })
+    if (BREVO_API_KEY) activeProviders.push({ name: 'brevo', weight: 3, sendFn: sendBrevoEmail })
+    if (MAILERSEND_API_KEY) activeProviders.push({ name: 'mailersend', weight: 4, sendFn: sendMailerSendEmail })
 
-    // Failover se o Resend falhar
-    if (!result.ok) {
-      console.warn(`[Send Order] Resend failed, trying MailerSend fallback...`)
-      const mailerSendResult = await sendMailerSendEmail(emailPayload)
-      if (mailerSendResult.ok) {
-        console.log(`[Send Order] MailerSend success!`)
-        result = { ok: true, data: 'sent_via_mailersend' }
-      } else {
-        console.error(`[Send Order] Both email providers failed.`)
-        mailersendError = mailerSendResult.error
-      }
-    } else {
-      console.log(`[Send Order] Resend success!`)
+    if (activeProviders.length === 0) {
+      console.error('[Send Order] Nenhum provedor de e-mail está configurado com chaves secretas no Supabase.')
+      return new Response(JSON.stringify({ error: 'Nenhum provedor de e-mail configurado.' }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      })
     }
 
-    const finalSuccess = result.ok
-    const errorDetail = !finalSuccess ? `Resend: ${JSON.stringify(result.error || 'Timeout')}. MailerSend: ${JSON.stringify(mailersendError || 'Unknown')}` : null
+    // Sorteia o provedor inicial com base em seus pesos
+    const totalWeight = activeProviders.reduce((acc, p) => acc + p.weight, 0)
+    let randomNum = Math.random() * totalWeight
+    
+    const attemptOrder = []
+    const providersCopy = [...activeProviders]
+    
+    let selectedIdx = 0
+    for (let i = 0; i < providersCopy.length; i++) {
+      randomNum -= providersCopy[i].weight
+      if (randomNum <= 0) {
+        selectedIdx = i
+        break
+      }
+    }
+    
+    // Insere o provedor sorteado no topo da fila
+    const firstProvider = providersCopy.splice(selectedIdx, 1)[0]
+    if (firstProvider) attemptOrder.push(firstProvider)
+    
+    // Adiciona os demais ordenados pelo peso (do maior para o menor) para contingência eficiente
+    providersCopy.sort((a, b) => b.weight - a.weight)
+    attemptOrder.push(...providersCopy)
+
+    console.log(`[Send Order] Fila de tentativas de envio sorteada: ${attemptOrder.map(p => `${p.name} (peso ${p.weight})`).join(' -> ')}`)
+
+    let finalSuccess = false
+    let usedProvider = ''
+    let errorDetails: string[] = []
+
+    // Tenta cada provedor na ordem gerada até que um funcione
+    for (const provider of attemptOrder) {
+      console.log(`[Send Order] Tentando enviar e-mail via: ${provider.name.toUpperCase()}...`)
+      const res = await provider.sendFn(emailPayload)
+      if (res.ok) {
+        console.log(`[Send Order] E-mail enviado com sucesso via ${provider.name.toUpperCase()}!`)
+        finalSuccess = true
+        usedProvider = provider.name
+        break
+      } else {
+        const errorMsg = `${provider.name.toUpperCase()}: ${JSON.stringify(res.error || 'Erro desconhecido')}`
+        console.warn(`[Send Order] Falha no provedor ${provider.name.toUpperCase()}. Detalhe:`, errorMsg)
+        errorDetails.push(errorMsg)
+      }
+    }
+
+    const errorDetailText = !finalSuccess ? errorDetails.join(' | ') : null
 
     // --- DATABASE UPDATE ---
     const table = isRaffle ? 'raffle_orders' : 'help_orders'
     const { error: dbUpdateErr } = await supabase.from(table).update({ 
       notification_sent: finalSuccess,
-      reason: finalSuccess ? null : `Erro no envio: ${errorDetail}`
+      reason: finalSuccess ? null : `Erro no envio: ${errorDetailText}`
     }).eq('id', finalOrderId)
 
     if (dbUpdateErr) {
@@ -286,7 +364,7 @@ serve(async (req) => {
       console.log(`[Send Order] Database successfully updated with notification_sent = ${finalSuccess}`)
     }
 
-    return new Response(JSON.stringify({ success: finalSuccess, error: errorDetail, providerData: result.data }), { 
+    return new Response(JSON.stringify({ success: finalSuccess, error: errorDetailText, provider: usedProvider }), { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: finalSuccess ? 200 : 500
     })

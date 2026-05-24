@@ -162,6 +162,23 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     if (result.success) {
       setStatus('paid');
       onAlert('Sucesso', 'Pagamento confirmado com sucesso.', 'info');
+      
+      // Enviar e-mail de confirmação de pagamento automaticamente
+      try {
+        await supabase.functions.invoke('send-order', {
+          body: {
+            type: 'status_update',
+            order_id: order.id,
+            customer_name: order.customer_name,
+            customer_email: order.customer_email,
+            new_status: 'paid'
+          }
+        });
+        // Atualizar estado de notificação enviada no banco e localmente
+        await onUpdate(order.id, { notification_sent: true });
+      } catch (err) {
+        console.error('Erro ao enviar e-mail automático de pagamento confirmado:', err);
+      }
     } else {
       onAlert('Erro', result.error || 'Erro ao confirmar pagamento', 'danger');
     }

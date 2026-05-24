@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Loader2, 
@@ -17,10 +17,13 @@ import {
   Filter,
   Trash2,
   FileSpreadsheet,
-  Printer
+  Printer,
+  Award,
+  User
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
+import { useDancers } from '../../../hooks/useDancers';
 
 interface EnergyInjectionManagerProps {
   onAlert: (title: string, message: string, variant: 'danger' | 'warning' | 'info') => void;
@@ -50,12 +53,14 @@ interface Lead {
   campaign_id: string | null;
   notification_sent: boolean;
   created_at: string;
+  dancer_name?: string | null;
 }
 
 export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionManagerProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const { dancers } = useDancers();
   
   // Create Campaign Accordion state
   const [isAddingCampaign, setIsAddingCampaign] = useState(false);
@@ -64,7 +69,7 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
   const [campaignStart, setCampaignStart] = useState('');
   const [campaignEnd, setCampaignEnd] = useState('');
   const [campaignMeta, setCampaignMeta] = useState('');
-  const [campaignPercentage, setCampaignPercentage] = useState('20');
+  const [campaignPercentage, setCampaignPercentage] = useState('15');
   const [campaignImageUrl, setCampaignImageUrl] = useState('/solar_energy_illustration.png');
   const [savingCampaign, setSavingCampaign] = useState(false);
 
@@ -74,12 +79,31 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
   const [periodFilter, setPeriodFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
   const [billRangeFilter, setBillRangeFilter] = useState('all');
+  const [dancerFilter, setDancerFilter] = useState('all');
   
   // Transition state
   const [transitioningLead, setTransitioningLead] = useState<Lead | null>(null);
   const [targetStatus, setTargetStatus] = useState<'pending' | 'launched' | 'approved' | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
+  const [deletingCampaign, setDeletingCampaign] = useState<Campaign | null>(null);
+
+  const handleUpdateDancer = async (leadId: string, dancerName: string) => {
+    if (!supabase) return;
+    try {
+      const { error } = await supabase
+        .from('energy_leads')
+        .update({ dancer_name: dancerName })
+        .eq('id', leadId);
+
+      if (error) throw error;
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, dancer_name: dancerName } : l));
+      onAlert('Sucesso', 'Bailarino apoiado atualizado com sucesso.', 'info');
+    } catch (err: any) {
+      console.error('Error updating lead dancer:', err);
+      onAlert('Erro', 'Não foi possível atualizar o bailarino do lead.', 'danger');
+    }
+  };
 
   // Load Data
   const loadData = async () => {
@@ -152,7 +176,7 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
       setCampaignStart('');
       setCampaignEnd('');
       setCampaignMeta('');
-      setCampaignPercentage('20');
+      setCampaignPercentage('15');
       setCampaignImageUrl('/solar_energy_illustration.png');
       setIsAddingCampaign(false);
     } catch (err: any) {
@@ -229,6 +253,50 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
     }
   };
 
+  // Handle Campaign Update
+  const handleUpdateCampaignLocal = async (id: string, updates: any) => {
+    if (!supabase) return { success: false, error: 'Database connection offline' };
+    try {
+      const { data, error } = await supabase
+        .from('energy_campaigns')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Update local state
+      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+      return { success: true, data };
+    } catch (err: any) {
+      console.error('Error updating energy campaign:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  // Handle Campaign Delete Confirmation
+  const handleDeleteCampaignConfirm = async () => {
+    if (!supabase || !deletingCampaign) return;
+    try {
+      const { error } = await supabase
+        .from('energy_campaigns')
+        .delete()
+        .eq('id', deletingCampaign.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setCampaigns(prev => prev.filter(c => c.id !== deletingCampaign.id));
+      onAlert('Sucesso', 'Ação de energia excluída com sucesso.', 'info');
+    } catch (err: any) {
+      console.error('Error deleting campaign:', err);
+      onAlert('Erro', 'Ocorreu um erro ao excluir a ação de energia.', 'danger');
+    } finally {
+      setDeletingCampaign(null);
+    }
+  };
+
   // KPI Calculations
   const totalAdherents = leads.length;
   const pendingCount = leads.filter(l => l.status === 'pending').length;
@@ -247,6 +315,8 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     
     const matchesCity = cityFilter === 'all' || lead.city === cityFilter;
+    
+    const matchesDancer = dancerFilter === 'all' || (lead.dancer_name || 'Geral') === dancerFilter;
     
     let matchesBill = true;
     if (billRangeFilter === '0-200') matchesBill = lead.average_bill <= 200;
@@ -271,8 +341,53 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
       }
     }
 
-    return matchesSearch && matchesStatus && matchesCity && matchesBill && matchesPeriod;
+    return matchesSearch && matchesStatus && matchesCity && matchesBill && matchesPeriod && matchesDancer;
   });
+
+  // Ranking calculation
+  const ranking = useMemo(() => {
+    const stats: Record<string, { count: number; totalBill: number }> = {};
+    
+    // Initialize stats for all active dancers
+    dancers.filter(d => d.is_active).forEach(d => {
+      stats[d.name] = { count: 0, totalBill: 0 };
+    });
+
+    // Accumulate from leads (only approved ones!)
+    leads.forEach(lead => {
+      if (lead.status !== 'approved') return;
+
+      const name = lead.dancer_name || 'Geral';
+      if (name && name !== 'Geral') {
+        if (!stats[name]) {
+          stats[name] = { count: 0, totalBill: 0 };
+        }
+        stats[name].count += 1;
+        stats[name].totalBill += lead.average_bill || 0;
+      }
+    });
+
+    // Map to array with dancer details
+    return dancers
+      .filter(dancer => dancer.is_active)
+      .map(dancer => {
+        const s = stats[dancer.name] || { count: 0, totalBill: 0 };
+        return {
+          id: dancer.id,
+          name: dancer.name,
+          photo_url: dancer.photo_url,
+          count: s.count,
+          totalBill: s.totalBill
+        };
+      })
+      .filter(row => row.count > 0)
+      .sort((a, b) => {
+        if (b.totalBill !== a.totalBill) {
+          return b.totalBill - a.totalBill;
+        }
+        return b.count - a.count;
+      });
+  }, [leads, dancers]);
 
   const getStatusLabel = (status: 'pending' | 'launched' | 'approved') => {
     switch (status) {
@@ -517,6 +632,37 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
         </div>
       )}
 
+      {/* Ações de Energia Cadastradas (Gerenciamento e Edição) */}
+      {canManageCampaigns && (
+        <div className="space-y-6 pt-4">
+          <div className="flex flex-col gap-2 ml-1 mb-6">
+            <h4 className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-bold">
+              Ações de Energia Ativas ({campaigns.length})
+            </h4>
+            <div className="h-px w-12 bg-white/5" />
+          </div>
+          
+          {campaigns.length > 0 ? (
+            <div className="space-y-4">
+              {campaigns.map((camp, idx) => (
+                <EnergyCampaignAccordion 
+                  key={camp.id}
+                  campaign={camp}
+                  index={idx + 1}
+                  onUpdate={handleUpdateCampaignLocal}
+                  onDelete={(campaign) => setDeletingCampaign(campaign)}
+                  onAlert={onAlert}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-10 text-center text-white/30 italic border border-white/5 bg-brand-white/[0.02] rounded-[2rem]">
+              Nenhuma ação de energia cadastrada.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Seção B: Indicadores (KPIs) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         {[
@@ -535,6 +681,151 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
             <p className="text-4xl sm:text-5xl font-serif text-white italic tracking-tight">{kpi.val}</p>
           </div>
         ))}
+      </div>
+
+      {/* Seção D: Ranking de Captação */}
+      <div className="space-y-6">
+        <div className="flex flex-col gap-1 ml-1">
+          <p className="text-white/20 text-[9px] uppercase tracking-[0.4em] font-black italic">COMPETIÇÃO SAUDÁVEL</p>
+          <h4 className="text-2xl font-serif italic text-white/40">Ranking de Captação de Energia</h4>
+          <div className="h-1 w-12 bg-emerald-500/40 rounded-full mt-1" />
+        </div>
+
+        {/* Podium and Table Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Top 3 Podium (Left 5 cols) */}
+          <div className="lg:col-span-5 bg-brand-white/[0.02] border border-white/5 rounded-[3rem] p-8 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+            
+            <div className="relative space-y-4">
+              <h5 className="text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-black">Pódio de Destaque</h5>
+              <p className="text-xs text-white/40 font-serif italic">Os 3 bailarinos que lideram a injeção de energia limpa rumo ao Danzamerica 2026!</p>
+            </div>
+
+            {/* Podium layout */}
+            <div className="flex items-end justify-center gap-4 mt-8 pb-4">
+              {/* 2nd Place */}
+              {ranking[1] && (
+                <div className="flex flex-col items-center flex-1 group">
+                  <div className="relative">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-slate-300 shadow-xl group-hover:scale-105 transition-transform bg-white/10 shrink-0">
+                      {ranking[1].photo_url ? (
+                        <img src={ranking[1].photo_url} className="w-full h-full object-cover scale-[1.7]" alt="" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-white/5">
+                          <User className="w-6 h-6 text-white/20" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-slate-300 text-slate-800 rounded-full flex items-center justify-center text-xs font-black shadow-md border border-brand-dark">
+                      2
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/70 font-serif italic mt-3 font-semibold text-center truncate w-full">{ranking[1].name.split(' ')[0]}</p>
+                  <p className="text-[9px] text-emerald-400 font-bold font-mono mt-0.5">R$ {ranking[1].totalBill.toFixed(0)}</p>
+                  <div className="w-full h-16 bg-slate-400/20 border border-slate-400/10 rounded-t-xl mt-3 flex items-center justify-center">
+                    <span className="text-[10px] font-black text-slate-300">PRATA</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 1st Place */}
+              {ranking[0] && (
+                <div className="flex flex-col items-center flex-1 group -translate-y-4">
+                  <div className="relative">
+                    <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden border-4 border-yellow-400 shadow-2xl group-hover:scale-105 transition-transform bg-white/10 shrink-0">
+                      {ranking[0].photo_url ? (
+                        <img src={ranking[0].photo_url} className="w-full h-full object-cover scale-[1.7]" alt="" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-white/5">
+                          <User className="w-8 h-8 text-white/20" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-yellow-400 text-yellow-950 rounded-full flex items-center justify-center text-sm font-black shadow-lg border-2 border-brand-dark animate-bounce">
+                      1
+                    </div>
+                  </div>
+                  <p className="text-sm text-white font-serif italic mt-3 font-bold text-center truncate w-full">{ranking[0].name.split(' ')[0]}</p>
+                  <p className="text-xs text-yellow-400 font-black font-mono mt-0.5">R$ {ranking[0].totalBill.toFixed(0)}</p>
+                  <div className="w-full h-24 bg-yellow-500/20 border border-yellow-500/10 rounded-t-2xl mt-3 flex items-center justify-center">
+                    <Award className="w-6 h-6 text-yellow-400 animate-pulse" />
+                  </div>
+                </div>
+              )}
+
+              {/* 3rd Place */}
+              {ranking[2] && (
+                <div className="flex flex-col items-center flex-1 group">
+                  <div className="relative">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-amber-600 shadow-xl group-hover:scale-105 transition-transform bg-white/10 shrink-0">
+                      {ranking[2].photo_url ? (
+                        <img src={ranking[2].photo_url} className="w-full h-full object-cover scale-[1.7]" alt="" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-white/5">
+                          <User className="w-6 h-6 text-white/20" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-600 text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border border-brand-dark">
+                      3
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/70 font-serif italic mt-3 font-semibold text-center truncate w-full">{ranking[2].name.split(' ')[0]}</p>
+                  <p className="text-[9px] text-emerald-400 font-bold font-mono mt-0.5">R$ {ranking[2].totalBill.toFixed(0)}</p>
+                  <div className="w-full h-12 bg-amber-600/20 border border-amber-600/10 rounded-t-xl mt-3 flex items-center justify-center">
+                    <span className="text-[10px] font-black text-amber-500">BRONZE</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Leaderboard Table (Right 7 cols) */}
+          <div className="lg:col-span-7 bg-brand-white/[0.02] border border-white/5 rounded-[3rem] p-8 shadow-2xl flex flex-col justify-between">
+            <div className="space-y-4">
+              <h5 className="text-[10px] uppercase tracking-[0.3em] text-white/30 font-black">Classificação Geral</h5>
+              
+              <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                {ranking.length > 0 ? (
+                  ranking.map((row, idx) => (
+                    <div key={row.id} className="flex items-center justify-between p-4 bg-white/[0.01] hover:bg-white/[0.03] transition-colors border border-white/5 rounded-2xl group">
+                      <div className="flex items-center gap-4">
+                        <span className="w-6 text-center font-mono text-xs font-bold text-white/20 group-hover:text-emerald-400 transition-colors">
+                          {idx + 1}º
+                        </span>
+                        <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 shrink-0 bg-white/5 flex items-center justify-center">
+                          {row.photo_url ? (
+                            <img src={row.photo_url} className="w-full h-full object-cover scale-[1.7]" alt="" />
+                          ) : (
+                            <User className="w-4 h-4 text-white/20" />
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-serif italic text-white/80 font-bold leading-tight">{row.name}</p>
+                          <p className="text-[9px] text-white/30 uppercase tracking-widest mt-1 font-bold">
+                            {row.count} {row.count === 1 ? 'Adesão' : 'Adesões'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="text-sm font-serif italic text-emerald-400 font-bold tabular-nums">
+                          R$ {row.totalBill.toFixed(2).replace('.', ',')}
+                        </p>
+                        <p className="text-[8px] text-white/20 uppercase tracking-wider font-extrabold mt-0.5">Captados</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-12 text-center text-white/30 italic">
+                    Nenhum bailarino ativo cadastrado.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Seção C: Lista de Controle e Gestão de Status */}
@@ -627,6 +918,19 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
               ))}
             </select>
 
+            {/* Dancer Filter */}
+            <select 
+              value={dancerFilter}
+              onChange={(e) => setDancerFilter(e.target.value)}
+              className="bg-white/5 border border-white/5 hover:border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer transition-colors max-w-[150px] truncate"
+            >
+              <option value="all" className="bg-brand-dark text-white">Todos os Bailarinos</option>
+              <option value="Geral" className="bg-brand-dark text-white">Geral</option>
+              {dancers.filter(d => d.is_active).map(dancer => (
+                <option key={dancer.id} value={dancer.name} className="bg-brand-dark text-white">{dancer.name}</option>
+              ))}
+            </select>
+
             {/* Bill Range Filter */}
             <select 
               value={billRangeFilter}
@@ -641,13 +945,14 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
             </select>
             
             {/* Clear Filters Button (only show if any filter is active) */}
-            {(statusFilter !== 'all' || periodFilter !== 'all' || cityFilter !== 'all' || billRangeFilter !== 'all' || searchTerm !== '') && (
+            {(statusFilter !== 'all' || periodFilter !== 'all' || cityFilter !== 'all' || billRangeFilter !== 'all' || dancerFilter !== 'all' || searchTerm !== '') && (
               <button 
                 onClick={() => {
                   setStatusFilter('all');
                   setPeriodFilter('all');
                   setCityFilter('all');
                   setBillRangeFilter('all');
+                  setDancerFilter('all');
                   setSearchTerm('');
                 }}
                 className="text-[10px] text-white/30 hover:text-white uppercase tracking-widest font-bold ml-2 transition-colors"
@@ -666,6 +971,7 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
                 <tr className="border-b border-white/5 text-[9px] uppercase tracking-widest text-white/30 font-black">
                   <th className="p-6 md:p-8 pl-8 md:pl-10">Data</th>
                   <th className="p-6 md:p-8">Nome / Cidade</th>
+                  <th className="p-6 md:p-8">Bailarino Apoiado</th>
                   <th className="p-6 md:p-8">Contato</th>
                   <th className="p-6 md:p-8 text-right">Média Conta</th>
                   <th className="p-6 md:p-8 text-center">Status</th>
@@ -684,6 +990,19 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
                       <td className="p-6 md:p-8">
                         <p className="font-serif text-base text-white/80 font-bold leading-none">{lead.name}</p>
                         <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1.5 font-bold">{lead.city}</p>
+                      </td>
+                      {/* Bailarino Apoiado */}
+                      <td className="p-6 md:p-8">
+                        <select
+                          value={lead.dancer_name || 'Geral'}
+                          onChange={(e) => handleUpdateDancer(lead.id, e.target.value)}
+                          className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none cursor-pointer focus:bg-brand-dark focus:border-emerald-500/50 transition-colors font-medium max-w-[150px] truncate"
+                        >
+                          <option value="Geral" className="bg-brand-dark text-white">Geral (Apoio Geral)</option>
+                          {dancers.filter(d => d.is_active).map(d => (
+                            <option key={d.id} value={d.name} className="bg-brand-dark text-white">{d.name}</option>
+                          ))}
+                        </select>
                       </td>
                       {/* Contato */}
                       <td className="p-6 md:p-8 space-y-1">
@@ -760,7 +1079,7 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-20 text-center text-white/30 italic">
+                    <td colSpan={7} className="py-20 text-center text-white/30 italic">
                       Nenhuma adesão encontrada com os filtros selecionados.
                     </td>
                   </tr>
@@ -792,6 +1111,238 @@ export function EnergyInjectionManager({ onAlert, userRole }: EnergyInjectionMan
         confirmLabel={`SIM, EXCLUIR`}
         variant="danger"
       />
+
+      {/* Confirmação de Exclusão de Ação de Energia */}
+      <ConfirmModal 
+        isOpen={!!deletingCampaign}
+        onConfirm={handleDeleteCampaignConfirm}
+        onCancel={() => setDeletingCampaign(null)}
+        title={`Excluir Ação de Energia?`}
+        message={`Você está prestes a excluir a ação de energia "${deletingCampaign?.name}". Isso pode desvincular leads associados a ela e removerá os dados permanentemente.`}
+        confirmLabel={`SIM, EXCLUIR AÇÃO`}
+        variant="danger"
+      />
     </div>
   );
 }
+
+// ==========================================
+// COMPONENTE: ENERGY CAMPAIGN ACCORDION (Edição Inline)
+// ==========================================
+interface EnergyCampaignAccordionProps {
+  campaign: Campaign;
+  index: number;
+  onUpdate: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+  onDelete: (campaign: Campaign) => void;
+  onAlert: (title: string, message: string, variant: 'danger' | 'warning' | 'info') => void;
+}
+
+const EnergyCampaignAccordion: React.FC<EnergyCampaignAccordionProps> = ({ 
+  campaign, 
+  index, 
+  onUpdate, 
+  onDelete, 
+  onAlert 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  const [localName, setLocalName] = useState(campaign.name);
+  const [localDescription, setLocalDescription] = useState(campaign.description || '');
+  const [localPercentage, setLocalPercentage] = useState(campaign.percentage || 15);
+  const [localImageUrl, setLocalImageUrl] = useState(campaign.image_url || '/solar_energy_illustration.png');
+  const [localMeta, setLocalMeta] = useState(campaign.target_meta || '');
+  
+  const formatDateToInput = (dateStr: string | null | undefined) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
+
+  const [localStart, setLocalStart] = useState(formatDateToInput(campaign.start_date));
+  const [localEnd, setLocalEnd] = useState(formatDateToInput(campaign.end_date));
+
+  useEffect(() => {
+    if (!isOpen) {
+      setLocalName(campaign.name);
+      setLocalDescription(campaign.description || '');
+      setLocalPercentage(campaign.percentage || 15);
+      setLocalImageUrl(campaign.image_url || '/solar_energy_illustration.png');
+      setLocalMeta(campaign.target_meta || '');
+      setLocalStart(formatDateToInput(campaign.start_date));
+      setLocalEnd(formatDateToInput(campaign.end_date));
+    }
+  }, [campaign, isOpen]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const updates: any = {
+      name: localName,
+      description: localDescription || null,
+      percentage: localPercentage,
+      image_url: localImageUrl || '/solar_energy_illustration.png',
+      target_meta: localMeta ? parseFloat(String(localMeta)) : null,
+      start_date: localStart ? new Date(localStart).toISOString() : null,
+      end_date: localEnd ? new Date(localEnd).toISOString() : null
+    };
+
+    const result = await onUpdate(campaign.id, updates);
+    setSaving(false);
+    if (result.success) {
+      setIsOpen(false);
+      onAlert('Sucesso', 'Ação de energia atualizada com sucesso.', 'info');
+    } else {
+      onAlert('Erro', result.error || 'Não foi possível atualizar a ação de energia.', 'danger');
+    }
+  };
+
+  return (
+    <div className={`border transition-all duration-500 overflow-hidden rounded-[2.5rem] ${
+      isOpen 
+        ? 'bg-black/30 border-white/10 shadow-2xl' 
+        : 'bg-black/10 border-white/5 hover:border-white/20'
+    }`}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-10 flex items-center justify-between group cursor-pointer"
+      >
+        <div className="flex items-center gap-6 text-left">
+          <div className="text-[10px] font-bold text-white/10 group-hover:text-emerald-400 transition-colors font-sans w-6 text-center">
+            {index.toString().padStart(2, '0')}
+          </div>
+          <div className="w-16 h-12 bg-black rounded-lg overflow-hidden border border-white/5 relative flex-shrink-0">
+             <img src={campaign.image_url || '/solar_energy_illustration.png'} className="w-full h-full object-cover opacity-60" alt="" />
+          </div>
+          <div>
+            <div className="flex items-center gap-3">
+              <h3 className={`text-xl font-serif italic transition-all duration-500 ${
+                isOpen ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+              }`}>
+                {campaign.name}
+              </h3>
+              <span className="px-2.5 py-0.5 text-[8px] uppercase tracking-wider font-extrabold rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                {campaign.percentage || 15}% Economia
+              </span>
+            </div>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-white/20 font-bold mt-1 group-hover:text-white/30 transition-colors">
+              Meta: {campaign.target_meta || 'Sem meta'} faturas • Início: {campaign.start_date ? new Date(campaign.start_date).toLocaleDateString('pt-BR') : 'Imediato'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(campaign);
+            }}
+            className="p-3 rounded-xl transition-all border border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center cursor-pointer"
+            title="Excluir Ação"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <ChevronDown className={`w-5 h-5 text-white/10 group-hover:text-white/40 transition-all duration-500 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
+          >
+            <div className="px-12 pb-12 text-left">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8 border-t border-white/5">
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-bold ml-1">Nome da Ação</label>
+                    <input 
+                      type="text" value={localName}
+                      onChange={(e) => setLocalName(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-emerald-500/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner font-semibold"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-bold ml-1">Economia (%)</label>
+                      <input 
+                        type="number" min="0" max="100" value={localPercentage}
+                        onChange={(e) => setLocalPercentage(parseInt(e.target.value) || 0)}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-emerald-500/40 outline-none transition-all text-emerald-400 font-bold rounded-2xl shadow-inner text-xl"
+                      />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-bold ml-1">Meta Estimada</label>
+                      <input 
+                        type="number" value={localMeta}
+                        onChange={(e) => setLocalMeta(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-emerald-500/40 outline-none transition-all text-white font-bold rounded-2xl shadow-inner text-xl"
+                        placeholder="Sem meta"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-bold ml-1">URL da Imagem Ilustrativa</label>
+                    <input 
+                      type="text" value={localImageUrl}
+                      onChange={(e) => setLocalImageUrl(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-emerald-500/40 outline-none transition-all text-white/60 rounded-2xl shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <label className="block text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-bold ml-1">Descrição dos Benefícios</label>
+                    <textarea 
+                      value={localDescription}
+                      onChange={(e) => setLocalDescription(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-emerald-500/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner min-h-[140px] font-semibold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-bold ml-1">Data de Início</label>
+                      <input 
+                        type="date" value={localStart}
+                        onChange={(e) => setLocalStart(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-emerald-500/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner font-semibold"
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block text-[10px] uppercase tracking-[0.3em] text-emerald-400 font-bold ml-1">Data de Término</label>
+                      <input 
+                        type="date" value={localEnd}
+                        onChange={(e) => setLocalEnd(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 p-6 text-sm font-sans focus:border-emerald-500/40 outline-none transition-all text-white/80 rounded-2xl shadow-inner font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-8 mt-8 border-t border-white/5 flex justify-end">
+                <button 
+                  onClick={handleSave}
+                  disabled={saving || !localName}
+                  className="px-12 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl rounded-2xl flex items-center gap-3 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  SALVAR ALTERAÇÕES
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

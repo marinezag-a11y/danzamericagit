@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, CheckCircle, HelpCircle, Sparkles, Zap, Award, ArrowRight, Building2, User, ChevronDown } from 'lucide-react';
+import { X, Loader2, CheckCircle, HelpCircle, Sparkles, Zap, Award, ArrowRight, Building2, User, ChevronDown, Check, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useEventTracking } from '../../hooks/useEventTracking';
+import { useDancers, Dancer } from '../../hooks/useDancers';
 
 interface EnergyAdesaoModalProps {
   isOpen: boolean;
@@ -13,6 +14,10 @@ interface EnergyAdesaoModalProps {
 
 export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValue = '' }: EnergyAdesaoModalProps) {
   const { trackEvent } = useEventTracking();
+  const { dancers, loading: loadingDancers } = useDancers();
+
+  const [step, setStep] = useState(1);
+  const [selectedDancer, setSelectedDancer] = useState<Dancer | null>(null);
 
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
@@ -50,6 +55,8 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   useEffect(() => {
     if (isOpen) {
       trackEvent('Abrir Modal Adesão Energia', 'view');
+      setStep(1);
+      setSelectedDancer(null);
       setName('');
       setCpf('');
       setWhatsapp('');
@@ -138,7 +145,8 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
           city: 'Belo Horizonte',
           average_bill: numericBill,
           status: 'pending',
-          campaign_id: campaignId || null
+          campaign_id: campaignId || null,
+          dancer_name: selectedDancer?.name || 'Geral'
         });
 
       if (insertError) {
@@ -207,104 +215,232 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
         {/* Content */}
         <div className="modal-content overflow-y-auto max-h-[70vh] px-8 py-8">
           {!success ? (
-            <div className="space-y-8">
-              {/* Introduction Card */}
-              <div className="p-6 bg-emerald-50/60 rounded-[1.8rem] border border-emerald-100 flex gap-4 items-start">
-                <Zap className="w-8 h-8 text-emerald-600 shrink-0 mt-1" />
-                <div className="space-y-1">
-                  <h4 className="font-serif text-lg font-bold text-emerald-950 leading-tight">Como funciona?</h4>
-                  <p className="text-emerald-900/70 text-xs leading-relaxed italic">
-                    Ao preencher os dados abaixo, você solicita a injeção de energia limpa na sua conta. Nosso time analisará seu histórico e aplicará um desconto garantido sem qualquer alteração na sua instalação física ou cobrança de taxa de adesão!
+            step === 1 ? (
+              <div className="space-y-8">
+                {/* Introduction / Title */}
+                <div className="text-center space-y-2">
+                  <h3 className="text-2xl font-serif italic text-zinc-800 font-bold">
+                    Escolha seu Talento<span className="text-emerald-600">.</span>
+                  </h3>
+                  <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-400 font-black font-sans">
+                    INVESTINDO NO FUTURO DA DANÇA
                   </p>
                 </div>
-              </div>
 
-              {/* Form */}
-              <div className="space-y-6">
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Nome Completo *</label>
-                      <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Ex: João Silva Santos"
-                        className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                      />
+                {/* Grid of Dancers */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar py-2">
+                  {loadingDancers ? (
+                    <div className="col-span-full py-20 flex flex-col items-center gap-6">
+                      <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+                      <p className="text-[10px] uppercase tracking-widest font-black text-zinc-400">Carregando o Elenco...</p>
                     </div>
+                  ) : (
+                    dancers.filter(d => d.is_active).map((dancer) => (
+                      <button
+                        key={dancer.id}
+                        onClick={() => setSelectedDancer(dancer)}
+                        className={`group relative flex flex-col items-center p-2 rounded-[2rem] transition-all duration-500 border-2 bg-white ${
+                          selectedDancer?.id === dancer.id 
+                            ? 'border-emerald-600 shadow-[0_15px_30px_-10px_rgba(16,185,129,0.3)] scale-[1.03] z-10' 
+                            : 'border-zinc-100 hover:border-emerald-600/30'
+                        }`}
+                      >
+                        {/* Circle Avatar Photo with border style */}
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-zinc-100 group-hover:border-emerald-600/30 transition-all bg-zinc-50">
+                          {dancer.photo_url ? (
+                            <img 
+                              src={dancer.photo_url} 
+                              className="w-full h-full object-cover scale-[1.5] group-hover:scale-[1.6] transition-transform duration-500" 
+                              alt={dancer.name} 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <User className="w-8 h-8 text-zinc-300" />
+                            </div>
+                          )}
+                        </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">WhatsApp *</label>
-                        <input
-                          type="tel"
-                          required
-                          value={whatsapp}
-                          onChange={(e) => setWhatsapp(maskPhone(e.target.value))}
-                          placeholder="Ex: (31) 98888-8888"
-                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">CPF *</label>
-                        <input
-                          type="text"
-                          required
-                          value={cpf}
-                          onChange={(e) => setCpf(maskCpf(e.target.value))}
-                          placeholder="Ex: 123.456.789-00"
-                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                        />
-                      </div>
-                    </div>
+                        {/* Selected Checkmark overlay */}
+                        {selectedDancer?.id === dancer.id && (
+                          <div className="absolute top-2 right-2 w-6 h-6 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-md border border-white">
+                            <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                          </div>
+                        )}
 
-                    <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Valor Médio da Conta *</label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">R$</span>
-                        <input
-                          type="text"
-                          required
-                          value={averageBill}
-                          onChange={(e) => handleBillChange(e.target.value)}
-                          placeholder="Ex: 250,00"
-                          className="w-full p-4 pl-10 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-bold placeholder:text-zinc-400 text-zinc-900 shadow-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold rounded-r-xl"
-                    >
-                      {error}
-                    </motion.div>
+                        {/* Name and destaque */}
+                        <div className="text-center mt-3 w-full">
+                          <p className="text-zinc-800 font-serif italic text-xs font-bold leading-tight truncate">{dancer.name}</p>
+                          <p className="text-emerald-600 text-[7px] uppercase tracking-[0.2em] font-black mt-1">Destaque</p>
+                        </div>
+                      </button>
+                    ))
                   )}
+                </div>
 
-                  <div className="pt-4">
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full py-4.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-lg hover:shadow-emerald-600/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-95"
+                {/* Navigation Actions */}
+                <div className="flex flex-col items-center gap-4 pt-6 border-t border-zinc-100">
+                  <button 
+                    onClick={() => setStep(2)}
+                    disabled={!selectedDancer}
+                    className="w-full py-4.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-lg hover:shadow-emerald-600/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-95"
+                  >
+                    CONTINUAR PARA O CADASTRO <ChevronRight className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="flex w-full items-center justify-between px-2 text-xs">
+                    <button 
+                      onClick={() => {
+                        setSelectedDancer(null);
+                        setStep(2);
+                      }} 
+                      className="text-zinc-400 hover:text-zinc-600 transition-colors uppercase font-black text-[9px] tracking-widest font-sans"
                     >
-                      {submitting ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <>
-                          <Zap className="w-4 h-4 fill-current" />
-                          Aderir ao Plano de Energia
-                        </>
-                      )}
+                      Apoiar sem Vincular (Apoio Geral)
+                    </button>
+                    <button 
+                      onClick={onClose} 
+                      className="text-red-500/60 hover:text-red-600 transition-colors uppercase font-black text-[9px] tracking-widest italic font-sans"
+                    >
+                      Desistir do Apoio
                     </button>
                   </div>
-                </form>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-8">
+                {/* Introduction Card */}
+                <div className="p-6 bg-emerald-50/60 rounded-[1.8rem] border border-emerald-100 flex gap-4 items-start">
+                  <Zap className="w-8 h-8 text-emerald-600 shrink-0 mt-1" />
+                  <div className="space-y-1">
+                    <h4 className="font-serif text-lg font-bold text-emerald-950 leading-tight">Como funciona?</h4>
+                    <p className="text-emerald-900/70 text-xs leading-relaxed italic">
+                      Ao preencher os dados abaixo, você solicita a injeção de energia limpa na sua conta. Nosso time analisará seu histórico e aplicará um desconto garantido sem qualquer alteração na sua instalação física ou cobrança de taxa de adesão!
+                    </p>
+                  </div>
+                </div>
+
+                {/* Supported Dancer Badge (if selected) */}
+                {selectedDancer && (
+                  <div className="p-3 px-4 bg-emerald-50/40 border border-emerald-100 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full overflow-hidden border border-emerald-200 shrink-0">
+                        {selectedDancer.photo_url ? (
+                          <img src={selectedDancer.photo_url} className="w-full h-full object-cover scale-150" alt="" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-emerald-50">
+                            <User className="w-4 h-4 text-emerald-600" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[8px] uppercase tracking-[0.2em] font-black text-emerald-600 leading-none">Você está apoiando</p>
+                        <p className="text-sm font-serif italic text-emerald-900 font-bold leading-tight mt-1">{selectedDancer.name}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setStep(1)} 
+                      className="text-[9px] uppercase tracking-widest font-black text-zinc-400 hover:text-emerald-600 transition-colors font-sans"
+                    >
+                      Alterar
+                    </button>
+                  </div>
+                )}
+
+                {/* Form */}
+                <div className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Nome Completo *</label>
+                        <input
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Ex: João Silva Santos"
+                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">WhatsApp *</label>
+                          <input
+                            type="tel"
+                            required
+                            value={whatsapp}
+                            onChange={(e) => setWhatsapp(maskPhone(e.target.value))}
+                            placeholder="Ex: (31) 98888-8888"
+                            className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">CPF *</label>
+                          <input
+                            type="text"
+                            required
+                            value={cpf}
+                            onChange={(e) => setCpf(maskCpf(e.target.value))}
+                            placeholder="Ex: 123.456.789-00"
+                            className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">Valor Médio da Conta *</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">R$</span>
+                          <input
+                            type="text"
+                            required
+                            value={averageBill}
+                            onChange={(e) => handleBillChange(e.target.value)}
+                            placeholder="Ex: 250,00"
+                            className="w-full p-4 pl-10 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-bold placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold rounded-r-xl"
+                      >
+                        {error}
+                      </motion.div>
+                    )}
+
+                    <div className="pt-4 flex flex-col gap-3">
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-4.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-lg hover:shadow-emerald-600/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-95"
+                      >
+                        {submitting ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4 fill-current" />
+                            Aderir ao Plano de Energia
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        className="text-[9px] uppercase tracking-[0.3em] font-black text-zinc-400 hover:text-zinc-600 transition-all italic mt-2 text-center font-sans"
+                      >
+                        ← Voltar para Escolha de Talento
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )
           ) : (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -336,9 +472,12 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
                   <li>Sem cobrança de taxa de adesão ou fidelidade.</li>
                   <li>Aviso e novidades via e-mail e WhatsApp informados.</li>
                 </ul>
-                <div className="mt-4 p-3 bg-emerald-100/50 rounded-xl border border-emerald-200/50">
-                  <p className="text-xs text-emerald-800 font-medium text-center">
-                    Próximo passo: <strong>Um especialista da nossa equipe entrará em contato em breve</strong> pelo seu WhatsApp para finalizar o processo de ativação.
+                <div className="mt-4 p-4 bg-amber-50 rounded-2xl border-l-4 border-amber-500 text-left space-y-1">
+                  <p className="text-[10px] text-amber-800 font-black uppercase tracking-wider flex items-center gap-1 font-sans">
+                    ⚠️ Atenção
+                  </p>
+                  <p className="text-xs text-amber-900/95 font-serif leading-relaxed italic">
+                    O pré-cadastro <strong>não garante a injeção automática</strong>. Um especialista fará contato via WhatsApp para análise técnica e fechamento do contrato.
                   </p>
                 </div>
               </div>

@@ -563,14 +563,14 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     href={item.href} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-8 p-10 bg-black/[0.02] hover:bg-white hover:shadow-2xl hover:scale-[1.02] border border-transparent hover:border-black/5 rounded-[3rem] group transition-all duration-500"
+                    className="flex items-center gap-4 xs:gap-6 sm:gap-8 p-6 xs:p-8 sm:p-10 bg-black/[0.02] hover:bg-white hover:shadow-2xl hover:scale-[1.02] border border-transparent hover:border-black/5 rounded-[3rem] group transition-all duration-500"
                   >
-                    <div className="w-16 h-16 bg-white shadow-xl flex items-center justify-center rounded-[1.8rem] group-hover:rotate-12 transition-transform">
+                    <div className="w-16 h-16 bg-white shadow-xl flex items-center justify-center rounded-[1.8rem] group-hover:rotate-12 transition-transform shrink-0">
                       <item.icon className="w-7 h-7" style={{ color: item.color }} />
                     </div>
-                    <div className="text-left">
-                      <p className="text-[9px] uppercase font-black tracking-[0.3em] text-brand-dark/20 group-hover:text-brand-orange transition-colors">{item.label}</p>
-                      <p className="text-xl font-serif italic text-brand-dark leading-tight mt-1">{item.value}</p>
+                    <div className="text-left min-w-0 flex-1">
+                      <p className="text-[9px] uppercase font-black tracking-[0.3em] text-brand-dark/20 group-hover:text-brand-orange transition-colors truncate">{item.label}</p>
+                      <p className="text-base xs:text-lg sm:text-xl font-serif italic text-brand-dark leading-tight mt-1 break-words">{item.value}</p>
                     </div>
                   </motion.a>
                 ))}

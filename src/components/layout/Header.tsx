@@ -48,7 +48,7 @@ export function Header({
 
         {/* Logo */}
         <div
-          className="flex items-center cursor-pointer z-10"
+          className="flex items-center cursor-pointer z-10 shrink-0"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
           <img
@@ -59,21 +59,21 @@ export function Header({
         </div>
 
         {/* Desktop Nav Links */}
-        <div className="hidden xl:flex gap-4 xl:gap-8 text-[9px] xl:text-[10px] uppercase tracking-[0.15em] xl:tracking-[0.2em] font-display font-medium z-10">
+        <div className="hidden xl:flex items-center gap-2 xl:gap-4 2xl:gap-6 text-[8.5px] xl:text-[9.5px] 2xl:text-[11px] uppercase tracking-[0.08em] xl:tracking-[0.12em] 2xl:tracking-[0.2em] font-display font-medium z-10 flex-nowrap">
           {NAV_LINKS.map((link) => (
             <a
               key={link.id}
               href={link.href}
               className={`${
                 activeSection === link.id ? 'text-brand-orange' : 'text-white'
-              } hover:text-brand-orange transition-colors drop-shadow-md`}
+              } hover:text-brand-orange transition-colors drop-shadow-md whitespace-nowrap`}
             >
               {link.label}
             </a>
           ))}
           <button
             onClick={onContactClick}
-            className="text-white hover:text-brand-orange transition-colors drop-shadow-md uppercase"
+            className="text-white hover:text-brand-orange transition-colors drop-shadow-md uppercase whitespace-nowrap"
           >
             Contatos
           </button>

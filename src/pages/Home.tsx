@@ -216,13 +216,26 @@ export default function Home() {
     if (!isLoading && window.location.hash) {
       const hash = window.location.hash;
       const id = hash.replace('#', '');
-      const timer = setTimeout(() => {
+      
+      const scrollToElement = (behavior: ScrollBehavior = 'auto') => {
         const element = document.getElementById(id);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+          element.scrollIntoView({ behavior });
         }
-      }, 500);
-      return () => clearTimeout(timer);
+      };
+
+      // 1. Scroll immediately
+      scrollToElement('auto');
+
+      // 2. Schedule multiple scroll updates to correct any layout shifts (lazy-loaded images, fonts, dynamic lists)
+      const intervals = [100, 300, 600, 1000, 1800];
+      const timers = intervals.map(delay => 
+        setTimeout(() => scrollToElement('auto'), delay)
+      );
+
+      return () => {
+        timers.forEach(clearTimeout);
+      };
     }
   }, [settingsLoading, bannersLoading, galleryLoading, tiersLoading, phrasesLoading, journeyLoading, helpLoading, sponsorBrandsLoading, financialLoading, rafflesLoading]);
 

@@ -21,6 +21,7 @@ import { useFinancial } from '../hooks/useFinancial';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useEventTracking } from '../hooks/useEventTracking';
 import { useSponsorBrands } from '../hooks/useSponsorBrands';
+import { useRaffles } from '../hooks/useRaffles';
 import { Header } from '../components/layout/Header';
 import { DonationDropdown } from '../components/DonationDropdown';
 import { Footer } from '../components/layout/Footer';
@@ -124,6 +125,7 @@ export default function Home() {
   const { items: helpItems, loading: helpLoading } = useHelpItems();
   const { totals, loading: financialLoading } = useFinancial();
   const { brands: sponsorBrands, loading: sponsorBrandsLoading } = useSponsorBrands();
+  const { campaigns: raffleCampaigns, loading: rafflesLoading } = useRaffles();
 
   // Analytics: track page view
   usePageTracking();
@@ -210,7 +212,7 @@ export default function Home() {
 
   // Handle scrolling to hash anchor (like #energia) on initial load after data loading is finished
   useEffect(() => {
-    const isLoading = settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading || sponsorBrandsLoading || financialLoading;
+    const isLoading = settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading || sponsorBrandsLoading || financialLoading || rafflesLoading;
     if (!isLoading && window.location.hash) {
       const hash = window.location.hash;
       const id = hash.replace('#', '');
@@ -222,7 +224,7 @@ export default function Home() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [settingsLoading, bannersLoading, galleryLoading, tiersLoading, phrasesLoading, journeyLoading, helpLoading, sponsorBrandsLoading, financialLoading]);
+  }, [settingsLoading, bannersLoading, galleryLoading, tiersLoading, phrasesLoading, journeyLoading, helpLoading, sponsorBrandsLoading, financialLoading, rafflesLoading]);
 
   useEffect(() => {
     const sections = ['essencia', 'jornada', 'desafio', 'galeria', 'ajudar', 'rifas', 'energia', 'patrocinio'];
@@ -246,9 +248,9 @@ export default function Home() {
     });
 
     return () => observer.disconnect();
-  }, [settingsLoading, bannersLoading, galleryLoading, tiersLoading, phrasesLoading, journeyLoading, helpLoading, sponsorBrandsLoading, financialLoading]);
+  }, [settingsLoading, bannersLoading, galleryLoading, tiersLoading, phrasesLoading, journeyLoading, helpLoading, sponsorBrandsLoading, financialLoading, rafflesLoading]);
   
-  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading || sponsorBrandsLoading || financialLoading) return (
+  if (settingsLoading || bannersLoading || galleryLoading || tiersLoading || phrasesLoading || journeyLoading || helpLoading || sponsorBrandsLoading || financialLoading || rafflesLoading) return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-8">
       <div className="w-8 h-8 border-2 border-[#BE3144] border-t-transparent rounded-full animate-spin mb-4"></div>
       <p className="text-[10px] uppercase tracking-widest opacity-40">Carregando conteúdo...</p>
@@ -701,7 +703,7 @@ export default function Home() {
         </div>
       </section>
 
-      <RaffleSection />
+      <RaffleSection campaigns={raffleCampaigns} loading={rafflesLoading} />
 
       <EnergyCaptureSection />
 

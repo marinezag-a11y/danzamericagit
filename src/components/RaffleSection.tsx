@@ -7,8 +7,17 @@ import { Toast } from './ui/Toast';
 import { RaffleRanking } from './RaffleRanking';
 import { RaffleRankingModal } from './modals/RaffleRankingModal';
 
-export function RaffleSection() {
-  const { campaigns, loading, fetchTakenTickets } = useRaffles();
+interface RaffleSectionProps {
+  campaigns?: RaffleCampaign[];
+  loading?: boolean;
+}
+
+export function RaffleSection({ campaigns: propCampaigns, loading: propLoading }: RaffleSectionProps = {}) {
+  const { campaigns: hookCampaigns, loading: hookLoading, fetchTakenTickets } = useRaffles();
+  
+  const campaigns = propCampaigns !== undefined ? propCampaigns : hookCampaigns;
+  const loading = propLoading !== undefined ? propLoading : hookLoading;
+  
   const [selectedCampaign, setSelectedCampaign] = useState<RaffleCampaign | null>(null);
   const [activeSoldOutCampaign, setActiveSoldOutCampaign] = useState<RaffleCampaign | null>(null);
   const [selectedRankingCampaign, setSelectedRankingCampaign] = useState<RaffleCampaign | null>(null);

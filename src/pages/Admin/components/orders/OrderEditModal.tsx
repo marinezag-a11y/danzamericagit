@@ -63,6 +63,16 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
     }
   }, [isOpen]); // Depend only on isOpen so background data refreshes don't wipe user input
 
+  const areNumbersReleased = () => {
+    if (status === 'cancelled' || status === 'unconfirmed') return true;
+    if (status === 'pending') {
+      const createdTime = new Date(order.created_at).getTime();
+      const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
+      return createdTime < fifteenMinutesAgo;
+    }
+    return false;
+  };
+
   const updateItemQuantity = (id: string, delta: number) => {
     const newItems = orderItems.map(item => {
       if (item.id === id) {
@@ -350,10 +360,25 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                           </div>
                           <div className="space-y-2">
                             <span className="text-[8px] text-brand-dark/40 uppercase tracking-[0.2em] font-black block ml-1">Números Reservados:</span>
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="flex flex-wrap gap-1.5 items-center">
                               {(order.selected_numbers || []).map((n: number) => (
-                                <span key={n} className="px-3 py-1.5 bg-brand-orange text-white rounded-lg text-xs font-mono font-bold shadow-sm">#{n}</span>
+                                <span 
+                                  key={n} 
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold shadow-sm transition-all border ${
+                                    areNumbersReleased()
+                                      ? 'line-through bg-black/5 text-brand-dark/20 border-black/5 opacity-50'
+                                      : 'bg-brand-orange text-white border-brand-orange'
+                                  }`}
+                                  title={areNumbersReleased() ? "Número liberado e disponível para venda" : "Número reservado/pago"}
+                                >
+                                  #{n}
+                                </span>
                               ))}
+                              {areNumbersReleased() && (
+                                <span className="text-[8px] text-red-500 font-extrabold uppercase tracking-wider ml-2 px-2 py-1 rounded bg-red-500/10 border border-red-500/20 shadow-sm">
+                                  Liberado / Disponível no Site
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>

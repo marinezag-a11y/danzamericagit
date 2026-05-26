@@ -6,6 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const responseHeaders = {
+  ...corsHeaders,
+  'Content-Type': 'application/json',
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -15,12 +20,12 @@ serve(async (req) => {
     const { payment_id, order_id } = await req.json()
 
     if (!payment_id || !order_id) {
-      return new Response(JSON.stringify({ error: 'Missing payment_id or order_id' }), { headers: corsHeaders, status: 400 })
+      return new Response(JSON.stringify({ error: 'Missing payment_id or order_id' }), { headers: responseHeaders, status: 400 })
     }
 
     const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')
     if (!MP_ACCESS_TOKEN) {
-      return new Response(JSON.stringify({ error: 'MP_ACCESS_TOKEN not configured' }), { headers: corsHeaders, status: 500 })
+      return new Response(JSON.stringify({ error: 'MP_ACCESS_TOKEN not configured' }), { headers: responseHeaders, status: 500 })
     }
 
     const pollingTimestamp = new Date().toISOString()
@@ -33,7 +38,7 @@ serve(async (req) => {
     if (!mpRes.ok) {
       const errorText = await mpRes.text()
       console.error(`[MP Polling] Erro ao consultar payment ${payment_id}: ${mpRes.status} ${errorText}`)
-      return new Response(JSON.stringify({ error: 'Failed to fetch from Mercado Pago', details: errorText }), { headers: corsHeaders, status: 400 })
+      return new Response(JSON.stringify({ error: 'Failed to fetch from Mercado Pago', details: errorText }), { headers: responseHeaders, status: 400 })
     }
 
     const mpData = await mpRes.json()
@@ -77,13 +82,27 @@ serve(async (req) => {
         console.log(`[MP Polling] Banco atualizado para PAID via polling ativo (webhook não chegou). order_id=${order_id}`)
       }
 
-      return new Response(JSON.stringify({ status: 'approved' }), { headers: corsHeaders, status: 200 })
+      return new Response(JSON.stringify({ 
+        status: 'approved',
+        status_detail: mpData.status_detail,
+        payment_method_id: mpData.payment_method_id,
+        date_created: mpData.date_created,
+        date_approved: mpData.date_approved,
+        transaction_amount: mpData.transaction_amount
+      }), { headers: responseHeaders, status: 200 })
     }
 
-    return new Response(JSON.stringify({ status: mpData.status }), { headers: corsHeaders, status: 200 })
+    return new Response(JSON.stringify({ 
+      status: mpData.status,
+      status_detail: mpData.status_detail,
+      payment_method_id: mpData.payment_method_id,
+      date_created: mpData.date_created,
+      date_approved: mpData.date_approved,
+      transaction_amount: mpData.transaction_amount
+    }), { headers: responseHeaders, status: 200 })
 
   } catch (error: any) {
     console.error('[MP Polling] Exceção:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), { headers: corsHeaders, status: 500 })
+    return new Response(JSON.stringify({ error: error.message }), { headers: responseHeaders, status: 500 })
   }
 })

@@ -13,6 +13,7 @@ import { maskBRL } from '../../../../lib/utils';
 import { OrderEditModal } from './OrderEditModal';
 import { ReasonModal } from '../../../../components/modals/ReasonModal';
 import { ConfirmModal } from '../../../../components/modals/ConfirmModal';
+import { MercadoPagoDetailsModal } from '../../../../components/modals/MercadoPagoDetailsModal';
 
 interface OrderRowProps {
   order: any;
@@ -32,6 +33,9 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
   const [resending, setResending] = useState(false);
   const [isConfirmingInfinitePay, setIsConfirmingInfinitePay] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [checkingMP, setCheckingMP] = useState(false);
+  const [mpDetails, setMpDetails] = useState<any | null>(null);
+  const [isMpDetailsOpen, setIsMpDetailsOpen] = useState(false);
 
   // Sincronizar o estado local com o prop caso ele mude externamente
   React.useEffect(() => {
@@ -39,6 +43,16 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
       setStatus(order.status);
     }
   }, [order?.status]);
+
+  const areNumbersReleased = () => {
+    if (status === 'cancelled' || status === 'unconfirmed') return true;
+    if (status === 'pending') {
+      const createdTime = new Date(order.created_at).getTime();
+      const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
+      return createdTime < fifteenMinutesAgo;
+    }
+    return false;
+  };
 
   const getElapsedTime = () => {
     if (!order.created_at || !order.updated_at || order.status === 'pending' || order.status === 'unconfirmed') return null;
@@ -270,6 +284,51 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
     }
   };
 
+  const handleCheckMercadoPago = async () => {
+    if (!order.mp_payment_id) return;
+    setCheckingMP(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-mercado-pago-payment', {
+        body: {
+          payment_id: order.mp_payment_id,
+          order_id: order.id
+        }
+      });
+
+      if (error || !data) {
+        throw error || new Error('Não foi possível obter resposta da consulta.');
+      }
+
+      let responseData = data;
+      if (typeof data === 'string') {
+        try {
+          responseData = JSON.parse(data);
+        } catch (e) {
+          console.error('Erro ao converter resposta em JSON:', e);
+        }
+      }
+
+      if (responseData.status === 'approved') {
+        setStatus('paid');
+        onAlert('Sucesso', 'Pagamento confirmado e atualizado via Mercado Pago com sucesso!', 'info');
+        
+        await onUpdate(order.id, { 
+          status: 'paid', 
+          payment_origin: 'mercadopago',
+          updated_at: new Date().toISOString()
+        });
+      } else {
+        setMpDetails(responseData);
+        setIsMpDetailsOpen(true);
+      }
+    } catch (err: any) {
+      console.error('Erro na consulta do Mercado Pago:', err);
+      onAlert('Erro de Consulta', err.message || 'Houve um erro ao verificar o pagamento no Mercado Pago.', 'danger');
+    } finally {
+      setCheckingMP(false);
+    }
+  };
+
   const handleWhatsAppNotify = () => {
     const pixKey = settings['pix_key_checkout']?.value || 'ballettatianafigueiredo@gmail.com';
     const pixBank = settings['pix_checkout_bank']?.value || 'SICOOB';
@@ -375,11 +434,29 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
                 <span className="text-[11px] text-white font-medium italic">
                   Apoiado: {order.dancer_name || 'Geral'}
                 </span>
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex flex-wrap gap-1 mt-1 items-center">
                   {(order.selected_numbers || []).map((n: number) => (
-                    <span key={n} className="text-[9px] bg-white/5 border border-white/10 text-white/40 px-1 rounded-sm tabular-nums">#{n}</span>
+                    <span 
+                      key={n} 
+                      className={`text-[9px] px-1.5 py-0.5 rounded-sm tabular-nums transition-all border ${
+                        areNumbersReleased()
+                          ? 'line-through text-white/20 bg-white/[0.01] border-white/5 opacity-50'
+                          : 'bg-white/5 border-white/10 text-white/40'
+                      }`}
+                      title={areNumbersReleased() ? "Número liberado e disponível para venda" : "Número reservado/pago"}
+                    >
+                      #{n}
+                    </span>
                   ))}
-                  {hasConflict && (
+                  {areNumbersReleased() && (
+                    <span 
+                      className="text-[8px] text-red-500 font-extrabold uppercase tracking-wider ml-1 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20"
+                      title="Os 15 minutos de reserva expiraram ou o pedido foi cancelado. Este número já voltou a ficar disponível no site!"
+                    >
+                      Liberado
+                    </span>
+                  )}
+                  {hasConflict && !areNumbersReleased() && (
                     <div className="flex items-center gap-1 ml-2 animate-pulse" title="CONFLITO: Este número está duplicado em outro pedido ativo!">
                       <AlertCircle className="w-3 h-3 text-red-500" />
                       <span className="text-[8px] text-red-500 font-black uppercase">Duplicado</span>
@@ -509,6 +586,26 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
                 {order.payment_origin === 'mercadopago' ? '🤝 Mercado Pago' : order.payment_origin === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
               </span>
             )}
+            {order.mp_payment_id && (status === 'pending' || status === 'unconfirmed' || status === 'cancelled') && (
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await handleCheckMercadoPago();
+                }}
+                disabled={checkingMP || updating}
+                className="mt-1.5 flex items-center gap-1.5 text-[8px] uppercase tracking-wider font-extrabold px-2.5 py-1.5 rounded border border-brand-orange/30 bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                title="Consultar status do Pix em tempo real no Mercado Pago"
+              >
+                {checkingMP ? (
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" strokeWidth={3} />
+                ) : (
+                  <>
+                    <span>🔍</span>
+                    <span>Consultar MP</span>
+                  </>
+                )}
+              </button>
+            )}
             {order.status_updated_by && (
               <div className="mt-1.5 pt-1 border-t border-white/5 w-full text-left space-y-0.5">
                 <p className="text-[8px] text-white/40 font-mono tracking-tight truncate max-w-[120px]" title={order.status_updated_by}>
@@ -616,6 +713,13 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
           setPendingStatus(null);
         }}
         variant="warning"
+      />
+
+      <MercadoPagoDetailsModal
+        isOpen={isMpDetailsOpen}
+        onClose={() => setIsMpDetailsOpen(false)}
+        details={mpDetails}
+        paymentId={order.mp_payment_id}
       />
     </>
   );

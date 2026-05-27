@@ -115,13 +115,11 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
   };
 
   useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => {
-        checkScrollability();
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, step, mpPaymentData]);
+    const timer = setTimeout(() => {
+      checkScrollability();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [step, mpPaymentData]);
 
   useEffect(() => {
     window.addEventListener('resize', checkScrollability);
@@ -867,8 +865,9 @@ export function RaffleCheckoutModal({ campaign, onClose }: RaffleCheckoutModalPr
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            )}
+              </div>
+            </motion.div>
+          )}
 
             {step === 'success' && (
               <motion.div 

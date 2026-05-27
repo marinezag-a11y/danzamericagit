@@ -17,6 +17,10 @@ export interface RaffleCampaign {
   cost: number;
   completion_text?: string;
   created_at: string;
+  winner_name?: string | null;
+  winner_phone?: string | null;
+  winner_number?: number | null;
+  winner_dancer_name?: string | null;
 }
 
 

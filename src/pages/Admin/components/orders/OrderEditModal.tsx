@@ -15,7 +15,10 @@ import {
   CheckCircle2,
   Truck,
   AlertCircle,
-  Ticket
+  Ticket,
+  Trophy,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { ReasonModal } from '../../../../components/modals/ReasonModal';
 import { ConfirmModal } from '../../../../components/modals/ConfirmModal';
@@ -32,16 +35,16 @@ interface OrderEditModalProps {
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
+  dancers: any[];
 }
 
-export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, onClose, onSave, onAlert }) => {
+export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, onClose, onSave, onAlert, dancers }) => {
   const [updating, setUpdating] = useState(false);
   const { items: helpItems } = useHelpItems();
-  const { dancers } = useDancers();
   const { userRole } = useAdminAuth();
   const isMaster = userRole === 'master';
   
-  const selectedDancer = dancers.find(d => d.name === order?.dancer_name);
+  const selectedDancer = (dancers || []).find(d => d.name?.trim()?.toLowerCase() === order?.dancer_name?.trim()?.toLowerCase());
   
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -51,6 +54,66 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
   const [isAskingReason, setIsAskingReason] = useState(false);
   const [status, setStatus] = useState('pending');
   const [isConfirmingInfinitePay, setIsConfirmingInfinitePay] = useState(false);
+  
+  const [showSensitiveName, setShowSensitiveName] = useState(false);
+  const [showSensitivePhone, setShowSensitivePhone] = useState(false);
+  const [showSensitiveEmail, setShowSensitiveEmail] = useState(false);
+  const [isMarkingWinner, setIsMarkingWinner] = useState(false);
+  const [selectedWinningNumber, setSelectedWinningNumber] = useState<number | null>(null);
+
+  const maskName = (val: string) => {
+    if (!val) return '';
+    const parts = val.trim().split(/\s+/);
+    return parts.map((part, i) => {
+      if (i === 0) return part;
+      if (part.length <= 1) return part;
+      return part[0] + '*'.repeat(Math.min(part.length - 1, 4));
+    }).join(' ');
+  };
+
+  const maskPhone = (val: string) => {
+    if (!val) return '';
+    const clean = val.replace(/\D/g, '');
+    if (clean.length >= 10) {
+      const ddd = clean.slice(0, 2);
+      const start = clean.slice(2, 3);
+      const end = clean.slice(-4);
+      return `(${ddd}) ${start}****-${end}`;
+    }
+    return val.slice(0, Math.max(0, val.length - 4)) + '****';
+  };
+
+  const maskEmail = (val: string) => {
+    if (!val || !val.includes('@')) return val;
+    const [local, domain] = val.split('@');
+    if (local.length <= 2) return `*@${domain}`;
+    return `${local[0]}***${local[local.length - 1]}@${domain}`;
+  };
+
+  const handleMarkWinner = async () => {
+    if (selectedWinningNumber === null) return;
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('raffle_campaigns')
+        .update({
+          winner_name: customerName,
+          winner_phone: customerPhone,
+          winner_number: selectedWinningNumber,
+          winner_dancer_name: order.dancer_name || 'Geral'
+        })
+        .eq('id', order.campaign_id);
+
+      if (error) throw error;
+      onAlert('Ganhador Definido', `Número #${selectedWinningNumber} marcado como ganhador com sucesso!`, 'info');
+      setIsMarkingWinner(false);
+    } catch (err: any) {
+      console.error(err);
+      onAlert('Erro ao Definir Ganhador', err.message || 'Falha ao registrar.', 'danger');
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   useEffect(() => {
     if (order && isOpen) {
@@ -232,49 +295,58 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="modal-container relative w-full max-w-6xl"
+            className="modal-container relative w-full !max-w-[72rem]"
+            style={{ maxWidth: '1152px' }}
           >
             {/* Top Accent Bar */}
             <div className="h-1 w-full bg-gradient-to-r from-brand-orange/0 via-brand-orange to-brand-orange/0" />
 
             {/* Header Area */}
-            <div className="modal-header">
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-2xl bg-brand-orange/10 flex items-center justify-center border border-brand-orange/30 rotate-3 group-hover:rotate-0 transition-transform">
-                    <ShoppingCart className="w-8 h-8 text-brand-orange" />
+            <div className="modal-header flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-10 border-b border-black/5 bg-black/[0.01]">
+              <div className="flex items-center gap-4 sm:gap-6 w-full md:w-auto justify-between md:justify-start">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-brand-orange/10 flex items-center justify-center border border-brand-orange/30 rotate-3 shadow-sm">
+                      <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-brand-orange" />
+                    </div>
+                    <div className="absolute -top-1.5 -right-1.5 bg-brand-orange text-white text-[8px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-md">
+                      #{order?.id?.split('-')[0].toUpperCase()}
+                    </div>
                   </div>
-                  <div className="absolute -top-2 -right-2 bg-brand-orange text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
-                    #{order?.id?.split('-')[0].toUpperCase()}
+                  <div>
+                    <h2 className="text-xl sm:text-3xl font-serif text-brand-dark italic leading-none">Gestão de Pedido</h2>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
+                      <p className="text-[8px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.4em] text-brand-orange font-bold">Suite Administrativa</p>
+                      {status === 'paid' && (
+                        <span className={`text-[7px] sm:text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-sm border ${
+                          (order?.payment_origin || 'manual') === 'infinitepay'
+                            ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+                            : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                        }`}>
+                          {(order?.payment_origin || 'manual') === 'mercadopago' ? '🤝 MP' : (order?.payment_origin || 'manual') === 'infinitepay' ? '⚡ InfinitePay' : 'Avulso'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <h2 className="text-3xl font-serif text-brand-dark italic leading-tight">Gestão de Pedido</h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-[10px] uppercase tracking-[0.4em] text-brand-orange font-bold">Administrative Suite</p>
-                    {status === 'paid' && (
-                      <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-sm border ${
-                        (order?.payment_origin || 'manual') === 'infinitepay'
-                          ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-                          : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
-                      }`}>
-                        {(order?.payment_origin || 'manual') === 'mercadopago' ? '🤝 Mercado Pago' : (order?.payment_origin || 'manual') === 'infinitepay' ? '⚡ InfinitePay' : '👤 Avulso'}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                
+                {/* Close button on mobile */}
+                <button onClick={onClose} type="button" className="md:hidden p-2 hover:bg-black/5 rounded-full transition-all">
+                  <X className="w-5 h-5 text-brand-dark/30 hover:text-brand-orange" />
+                </button>
               </div>
 
               {/* Status Stepper */}
-              <div className="flex items-center gap-1 bg-black/5 p-1 rounded-full border border-black/5">
+              <div className="flex items-center gap-1 bg-black/5 p-1 rounded-full border border-black/5 max-w-full overflow-x-auto custom-scrollbar self-center md:self-auto shrink-0">
                 {statusSteps.map((step, idx) => {
                   const isActive = idx <= currentStepIdx;
                   const isCurrent = step.id === status;
                   return (
                     <button 
                       key={step.id}
+                      type="button"
                       onClick={() => setStatus(step.id)}
-                      className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all ${isCurrent ? 'bg-brand-orange text-white shadow-lg shadow-brand-orange/20' : isActive ? 'text-brand-dark/60 hover:bg-black/5' : 'text-brand-dark/20'}`}
+                      className={`flex items-center gap-1.5 px-3 py-2 sm:px-6 sm:py-2.5 rounded-full transition-all shrink-0 ${isCurrent ? 'bg-brand-orange text-white shadow-lg shadow-brand-orange/20' : isActive ? 'text-brand-dark/60 hover:bg-black/5' : 'text-brand-dark/20'}`}
                     >
                       <step.icon className={`w-4 h-4 ${isCurrent ? 'text-white' : isActive ? step.color : ''}`} />
                       <span className="text-[10px] uppercase tracking-[0.15em] font-black hidden lg:inline">{step.label}</span>
@@ -283,11 +355,12 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                 })}
               </div>
 
-              <button onClick={onClose} className="p-3 hover:bg-black/5 rounded-full transition-all group">
+              {/* Close button on desktop */}
+              <button onClick={onClose} className="hidden md:block p-3 hover:bg-black/5 rounded-full transition-all group">
                 <X className="w-6 h-6 text-brand-dark/20 group-hover:text-brand-orange group-hover:rotate-90 transition-all" />
               </button>
             </div>
-
+            
             <div className="modal-content">
               <div className="grid grid-cols-1 lg:grid-cols-12">
                 
@@ -301,38 +374,62 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                           <User className="w-3.5 h-3.5" /> Detalhes do Apoiador
                         </h3>
                         <div className="space-y-6">
-                          <div className="relative group">
+                          <div className="relative group flex items-center">
                             <label className="absolute -top-2 left-4 bg-white px-2 text-[7px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">Nome Completo *</label>
                             <input 
                               type="text"
                               required
                               placeholder="Nome"
-                              value={customerName} 
-                              onChange={e => setCustomerName(e.target.value)} 
-                              className="w-full bg-white border border-black/10 px-4 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
+                              value={showSensitiveName ? customerName : maskName(customerName)} 
+                              onChange={e => showSensitiveName && setCustomerName(e.target.value)} 
+                              readOnly={!showSensitiveName}
+                              className="w-full bg-white border border-black/10 pl-4 pr-12 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowSensitiveName(!showSensitiveName)}
+                              className="absolute right-4 text-brand-dark/30 hover:text-brand-orange transition-colors"
+                            >
+                              {showSensitiveName ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                           </div>
-                          <div className="relative group">
+                          <div className="relative group flex items-center">
                             <label className="absolute -top-2 left-4 bg-white px-2 text-[7px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">WhatsApp *</label>
                             <input 
                               type="tel"
                               required
                               placeholder="(00) 00000-0000"
-                              value={customerPhone} 
-                              onChange={e => setCustomerPhone(e.target.value)} 
-                              className="w-full bg-white border border-black/10 px-4 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
+                              value={showSensitivePhone ? customerPhone : maskPhone(customerPhone)} 
+                              onChange={e => showSensitivePhone && setCustomerPhone(e.target.value)} 
+                              readOnly={!showSensitivePhone}
+                              className="w-full bg-white border border-black/10 pl-4 pr-12 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowSensitivePhone(!showSensitivePhone)}
+                              className="absolute right-4 text-brand-dark/30 hover:text-brand-orange transition-colors"
+                            >
+                              {showSensitivePhone ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                           </div>
-                          <div className="relative group">
+                          <div className="relative group flex items-center">
                             <label className="absolute -top-2 left-4 bg-white px-2 text-[7px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">E-mail *</label>
                             <input 
                               type="email"
                               required
                               placeholder="seu@email.com"
-                              value={customerEmail} 
-                              onChange={e => setCustomerEmail(e.target.value)} 
-                              className="w-full bg-white border border-black/10 px-4 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
+                              value={showSensitiveEmail ? customerEmail : maskEmail(customerEmail)} 
+                              onChange={e => showSensitiveEmail && setCustomerEmail(e.target.value)} 
+                              readOnly={!showSensitiveEmail}
+                              className="w-full bg-white border border-black/10 pl-4 pr-12 py-3 text-brand-dark text-sm outline-none focus:border-brand-orange rounded-xl placeholder:text-brand-dark/10 transition-all shadow-sm focus:shadow-md" 
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowSensitiveEmail(!showSensitiveEmail)}
+                              className="absolute right-4 text-brand-dark/30 hover:text-brand-orange transition-colors"
+                            >
+                              {showSensitiveEmail ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -343,19 +440,21 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                           <Ticket className="w-3.5 h-3.5" /> Detalhes da Ação
                         </h3>
                         <div className="space-y-4">
-                          <div className="flex flex-col sm:flex-row items-center p-4 bg-white border border-brand-orange/5 rounded-xl gap-4 shadow-sm">
+                          <div className="flex flex-col sm:flex-row items-center p-6 bg-white border border-brand-orange/10 rounded-2xl gap-6 shadow-sm">
                             {selectedDancer?.photo_url ? (
-                              <div className="w-16 h-16 rounded-lg overflow-hidden border border-black/5 shrink-0">
-                                <img src={selectedDancer.photo_url} alt={selectedDancer.name} className="w-full h-full object-cover" />
+                              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-brand-orange shadow-md shrink-0 relative group">
+                                <img src={selectedDancer.photo_url} alt={selectedDancer.name} className="w-full h-full object-cover scale-[1.5] origin-center group-hover:scale-[1.6] transition-transform duration-500" />
+                                <div className="absolute inset-0 bg-brand-orange/5" />
                               </div>
                             ) : (
-                              <div className="w-16 h-16 rounded-lg bg-black/5 flex items-center justify-center shrink-0">
-                                <User className="w-6 h-6 text-brand-dark/10" />
+                              <div className="w-24 h-24 rounded-full bg-brand-orange/5 border-2 border-brand-orange/10 flex items-center justify-center shrink-0 shadow-inner">
+                                <User className="w-10 h-10 text-brand-orange/30" />
                               </div>
                             )}
                             <div className="flex-1 text-center sm:text-left">
-                              <span className="text-[8px] text-brand-dark/40 uppercase tracking-[0.2em] font-black block mb-1">Bailarino Apoiado:</span>
-                              <span className="text-xl text-brand-dark font-serif italic">{order.dancer_name || 'Geral'}</span>
+                              <span className="text-[9px] text-brand-orange/85 uppercase tracking-[0.25em] font-extrabold block mb-1">Bailarino Apoiado</span>
+                              <span className="text-2xl text-brand-dark font-serif italic font-semibold">{order.dancer_name || 'Geral'}</span>
+                              <p className="text-[10px] text-brand-dark/40 mt-1 font-sans">Apoiado com carinho nesta campanha especial.</p>
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -364,14 +463,14 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                               {(order.selected_numbers || []).map((n: number) => (
                                 <span 
                                   key={n} 
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold shadow-sm transition-all border ${
+                                  className={`px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl text-sm sm:text-2xl font-mono font-black shadow-md transition-all border ${
                                     areNumbersReleased()
                                       ? 'line-through bg-black/5 text-brand-dark/20 border-black/5 opacity-50'
                                       : 'bg-brand-orange text-white border-brand-orange'
                                   }`}
                                   title={areNumbersReleased() ? "Número liberado e disponível para venda" : "Número reservado/pago"}
                                 >
-                                  #{n}
+                                  #{String(n).padStart(2, '0')}
                                 </span>
                               ))}
                               {areNumbersReleased() && (
@@ -395,40 +494,64 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                           Dados do Comprador
                         </h3>
                         <div className="space-y-6">
-                          <div className="relative group">
+                          <div className="relative group flex items-center">
                             <label className="absolute -top-2 left-3 bg-white px-2 text-[8px] uppercase tracking-widest text-brand-orange font-bold z-10">Nome Completo *</label>
                             <input 
                               type="text"
                               required
-                              value={customerName}
-                              onChange={e => setCustomerName(e.target.value)}
-                              className="w-full bg-black/[0.03] border border-black/5 px-4 py-4 text-brand-dark text-sm outline-none focus:border-brand-orange focus:bg-white transition-all font-serif italic rounded-xl"
+                              value={showSensitiveName ? customerName : maskName(customerName)}
+                              onChange={e => showSensitiveName && setCustomerName(e.target.value)}
+                              readOnly={!showSensitiveName}
+                              className="w-full bg-black/[0.03] border border-black/5 pl-4 pr-12 py-4 text-brand-dark text-sm outline-none focus:border-brand-orange focus:bg-white transition-all font-serif italic rounded-xl"
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowSensitiveName(!showSensitiveName)}
+                              className="absolute right-4 text-brand-dark/30 hover:text-brand-orange transition-colors"
+                            >
+                              {showSensitiveName ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                           </div>
-                          <div className="relative group">
+                          <div className="relative group flex items-center">
                             <label className="absolute -top-2 left-4 bg-white px-2 text-[8px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">WhatsApp *</label>
-                            <div className="flex items-center">
+                            <div className="flex items-center w-full">
                                <Phone className="absolute left-5 w-4 h-4 text-brand-dark/20 group-focus-within:text-brand-orange transition-colors" />
                                <input 
                                  type="tel"
                                  required
-                                 value={customerPhone}
-                                 onChange={e => setCustomerPhone(e.target.value)}
-                                 className="w-full bg-white border border-black/10 pl-14 pr-5 py-5 text-brand-dark text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-2xl shadow-sm focus:shadow-md"
+                                 value={showSensitivePhone ? customerPhone : maskPhone(customerPhone)}
+                                 onChange={e => showSensitivePhone && setCustomerPhone(e.target.value)}
+                                 readOnly={!showSensitivePhone}
+                                 className="w-full bg-white border border-black/10 pl-14 pr-12 py-5 text-brand-dark text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-2xl shadow-sm focus:shadow-md"
                                />
+                               <button
+                                 type="button"
+                                 onClick={() => setShowSensitivePhone(!showSensitivePhone)}
+                                 className="absolute right-4 text-brand-dark/30 hover:text-brand-orange transition-colors z-20"
+                               >
+                                 {showSensitivePhone ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                               </button>
                             </div>
                           </div>
-                          <div className="relative group">
+                          <div className="relative group flex items-center">
                             <label className="absolute -top-2 left-4 bg-white px-2 text-[8px] uppercase tracking-[0.2em] text-brand-orange font-black z-10">E-mail *</label>
-                            <div className="flex items-center">
+                            <div className="flex items-center w-full">
                                <Mail className="absolute left-5 w-4 h-4 text-brand-dark/20 group-focus-within:text-brand-orange transition-colors" />
                                <input 
                                  type="email"
                                  required
-                                 value={customerEmail}
-                                 onChange={e => setCustomerEmail(e.target.value)}
-                                 className="w-full bg-white border border-black/10 pl-14 pr-5 py-5 text-brand-dark text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-2xl shadow-sm focus:shadow-md"
+                                 value={showSensitiveEmail ? customerEmail : maskEmail(customerEmail)}
+                                 onChange={e => showSensitiveEmail && setCustomerEmail(e.target.value)}
+                                 readOnly={!showSensitiveEmail}
+                                 className="w-full bg-white border border-black/10 pl-14 pr-12 py-5 text-brand-dark text-xs outline-none focus:border-brand-orange transition-all font-mono rounded-2xl shadow-sm focus:shadow-md"
                                />
+                               <button
+                                 type="button"
+                                 onClick={() => setShowSensitiveEmail(!showSensitiveEmail)}
+                                 className="absolute right-4 text-brand-dark/30 hover:text-brand-orange transition-colors z-20"
+                               >
+                                 {showSensitiveEmail ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                               </button>
                             </div>
                           </div>
                         </div>
@@ -631,11 +754,23 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto justify-end">
+                  {order?.type === 'raffle' && status === 'paid' && (
+                    <button 
+                      onClick={() => setIsMarkingWinner(true)}
+                      disabled={updating}
+                      type="button"
+                      className="flex-1 sm:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black bg-amber-500 hover:bg-amber-600 text-white transition-all rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                      title="Marcar comprador como ganhador desta rifa"
+                    >
+                      <Trophy className="w-4 h-4" />
+                      Marcar Ganhador
+                    </button>
+                  )}
                   <button 
                     onClick={handleResendEmail}
                     disabled={updating}
-                    className="flex-1 lg:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black bg-red-600 text-white hover:bg-red-700 transition-all border border-red-700 rounded-xl flex items-center gap-2 shadow-lg shadow-red-600/20"
+                    className="flex-1 sm:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black bg-red-600 text-white hover:bg-red-700 transition-all border border-red-700 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
                     title="Re-enviar e-mail de confirmação agora"
                   >
                     {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
@@ -643,14 +778,14 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
                   </button>
                   <button 
                     onClick={onClose}
-                    className="flex-1 lg:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-brand-dark/40 hover:text-brand-dark transition-all border border-black/5 hover:bg-black/5 rounded-xl whitespace-nowrap"
+                    className="flex-1 sm:flex-none px-6 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-brand-dark/40 hover:text-brand-dark transition-all border border-black/5 hover:bg-black/5 rounded-xl whitespace-nowrap text-center"
                   >
                     Cancelar
                   </button>
                   <button 
                     onClick={handleSave}
                     disabled={updating}
-                    className="flex-1 lg:flex-none bg-brand-orange px-8 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-white hover:bg-brand-dark transition-all rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand-orange/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                    className="flex-1 sm:flex-none bg-brand-orange px-8 py-3.5 text-[9px] uppercase tracking-[0.1em] font-black text-white hover:bg-brand-dark transition-all rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand-orange/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                   >
                     {updating ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -667,6 +802,76 @@ export const OrderEditModal: React.FC<OrderEditModalProps> = ({ order, isOpen, o
           </motion.div>
         </div>
       )}
+
+            {/* Winning Number Selection Drawer/Modal overlay */}
+            <AnimatePresence>
+              {isMarkingWinner && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-brand-dark/95 z-[10010] flex items-center justify-center p-6"
+                >
+                  <motion.div 
+                    initial={{ scale: 0.95, y: 10 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.95, y: 10 }}
+                    className="bg-white rounded-[2.5rem] p-10 max-w-md w-full border border-black/5 text-center shadow-2xl relative"
+                  >
+                    <button 
+                      onClick={() => setIsMarkingWinner(false)}
+                      className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 text-brand-dark/30 transition-all"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    
+                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Trophy className="w-8 h-8 text-amber-600" />
+                    </div>
+                    
+                    <h4 className="text-2xl font-serif italic text-brand-dark mb-4">Escolha o Número Ganhador</h4>
+                    <p className="text-xs text-brand-dark/60 mb-6">
+                      Selecione qual dos números deste comprador foi sorteado:
+                    </p>
+                    
+                    <div className="flex flex-wrap justify-center gap-2 mb-8">
+                      {(order?.selected_numbers || []).map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setSelectedWinningNumber(num)}
+                          className={`w-14 h-14 rounded-2xl flex items-center justify-center text-sm font-mono font-bold border transition-all ${
+                            selectedWinningNumber === num
+                              ? 'bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/30'
+                              : 'bg-black/5 border-black/5 text-brand-dark hover:border-amber-500/50 hover:bg-amber-500/5'
+                          }`}
+                        >
+                          #${num}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => setIsMarkingWinner(false)}
+                        type="button"
+                        className="flex-1 py-4 border border-black/5 hover:bg-black/5 text-brand-dark/60 rounded-xl text-[10px] uppercase tracking-widest font-black transition-all"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        onClick={handleMarkWinner}
+                        type="button"
+                        disabled={selectedWinningNumber === null || updating}
+                        className="flex-1 py-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-[10px] uppercase tracking-widest font-black transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                      >
+                        {updating ? 'Gravando...' : 'Confirmar'}
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
       <ConfirmModal
         isOpen={isConfirmingInfinitePay}

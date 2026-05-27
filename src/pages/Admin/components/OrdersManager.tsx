@@ -173,11 +173,11 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       const matchesCampaign = selectedCampaignId === 'all' || (o?.type === 'raffle' && o?.campaign_id === selectedCampaignId);
       
       const matchesSearch = !searchTerm || 
-        o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.customer_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
+        o.customer_name?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+        o.id?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+        o.product_name?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+        o.customer_phone?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+        o.customer_email?.toLowerCase()?.includes(searchTerm.toLowerCase());
 
       const matchesDancer = dancerFilter === 'all' || o.dancer_name === dancerFilter;
 
@@ -229,7 +229,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     }, 0)
   };
 
-  const handlePrintReport = () => {
+    const handlePrintReport = () => {
     const reportDate = new Date().toLocaleString('pt-BR');
     const campaignName = selectedCampaignId === 'all' 
       ? 'Todas' 
@@ -239,30 +239,35 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     const html = `
       <html>
         <head>
+          <meta charset="UTF-8">
           <title>Relatório de Pedidos - Danzamerica</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 20px; color: #1a1a1a; margin: 0; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 30px; }
-            .logo { font-size: 20px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-            .meta { font-size: 9px; color: #666; text-align: right; }
-            .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
-            .kpi-card { background: #f8f8f8; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
-            .kpi-label { font-size: 8px; text-transform: uppercase; font-weight: 700; color: #999; margin-bottom: 5px; }
-            .kpi-value { font-size: 16px; font-weight: 700; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { text-align: left; font-size: 9px; text-transform: uppercase; color: #999; padding: 10px; border-bottom: 2px solid #f0f0f0; }
-            td { padding: 10px; font-size: 11px; border-bottom: 1px solid #f0f0f0; word-break: break-word; }
-            .status { font-weight: 700; text-transform: uppercase; font-size: 8px; }
-            .footer { margin-top: 40px; font-size: 8px; color: #ccc; text-align: center; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;650;800&display=swap');
+            @page { size: portrait; margin: 8mm; }
+            body { font-family: 'Inter', sans-serif; padding: 10px; color: #1a1a1a; margin: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 12px; margin-bottom: 20px; }
+            .logo { font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #BE3144; }
+            .meta { font-size: 8px; color: #666; text-align: right; line-height: 1.4; }
+            .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+            .kpi-card { background: #fdfdfd; padding: 12px; border-radius: 8px; border: 1px solid #eee; }
+            .kpi-label { font-size: 7.5px; text-transform: uppercase; font-weight: 800; color: #999; margin-bottom: 4px; letter-spacing: 0.5px; }
+            .kpi-value { font-size: 14px; font-weight: 800; color: #1a1a1a; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            th { text-align: left; font-size: 8.5px; text-transform: uppercase; color: #999; padding: 8px 10px; border-bottom: 2px solid #1a1a1a; font-weight: 850; letter-spacing: 0.5px; }
+            td { padding: 8px 10px; font-size: 9.5px; border-bottom: 1px solid #f0f0f0; color: #333; line-height: 1.3; }
+            .status { font-weight: 800; text-transform: uppercase; font-size: 7.5px; letter-spacing: 0.5px; }
+            .nowrap { white-space: nowrap; }
+            .numbers-list { font-family: monospace; color: #BE3144; font-weight: 800; font-size: 8.5px; margin-top: 2.5px; background: rgba(190, 49, 68, 0.05); padding: 2px 6px; border-radius: 4px; display: inline-block; }
+            .status-pending { color: #d97706; }
+            .status-paid { color: #16a34a; }
+            .status-sent { color: #2563eb; }
+            .status-cancelled { color: #dc2626; }
+            .status-unconfirmed { color: #b45309; }
+            .footer { margin-top: 30px; font-size: 7.5px; color: #ccc; text-align: center; letter-spacing: 0.5px; }
             @media print { 
               .no-print { display: none; } 
               body { padding: 0; }
-            }
-            @media (max-width: 600px) {
-              .kpi-grid { grid-template-columns: 1fr; }
-              .header { flex-direction: column; align-items: flex-start; gap: 10px; }
-              .meta { text-align: left; }
             }
           </style>
         </head>
@@ -270,12 +275,12 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
           <div class="header">
             <div class="logo">DANZAMERICA</div>
             <div class="meta">
-              <p>Gerado em: ${reportDate}</p>
+              <p><b>Gerado em:</b> ${reportDate}</p>
               <p>${filterInfo}</p>
             </div>
           </div>
           
-          <h2 style="font-size: 14px; margin-bottom: 15px;">Relatório Consolidado de Pedidos</h2>
+          <h2 style="font-size: 12px; margin-bottom: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #333;">Relatório Consolidado de Pedidos</h2>
 
           <div class="kpi-grid">
             <div class="kpi-card">
@@ -288,30 +293,51 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
             </div>
             <div class="kpi-card">
               <p class="kpi-label">Total Líquido</p>
-              <p class="kpi-value" style="color: #c9510c">${maskBRL(stats.totalNetValue)}</p>
+              <p class="kpi-value" style="color: #BE3144">${maskBRL(stats.totalNetValue)}</p>
             </div>
           </div>
 
           <table>
             <thead>
               <tr>
-                <th>Data</th>
-                <th>Cliente</th>
-                <th>Produto / Ação</th>
-                <th>Valor</th>
-                <th>Status</th>
+                <th style="width: 1%;">Data</th>
+                <th style="width: 25%;">Cliente</th>
+                <th style="width: 50%;">Produto / Ação</th>
+                <th style="width: 12%;">Valor</th>
+                <th style="width: 12%;">Status</th>
               </tr>
             </thead>
             <tbody>
-              ${filteredOrders.map(o => `
-                <tr>
-                  <td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
-                  <td>${o.customer_name}</td>
-                  <td>${o.product_name}</td>
-                  <td>${maskBRL(o.total_price || o.product_price || 0)}</td>
-                  <td class="status">${o.status}</td>
-                </tr>
-              `).join('')}
+              ${filteredOrders.map(o => {
+                const isRaffle = o.type === 'raffle';
+                const numbers = o.selected_numbers || [];
+                const numbersHtml = isRaffle && numbers.length > 0
+                  ? `<div class="numbers-list">[${numbers.map(n => `#${String(n).padStart(2, '0')}`).join(', ')}]</div>`
+                  : '';
+                
+                const statusLabels = {
+                  pending: 'Pendente',
+                  paid: 'Pago',
+                  sent: 'Enviado',
+                  cancelled: 'Cancelado',
+                  unconfirmed: 'Não Conf.'
+                };
+                const statusLabel = statusLabels[o.status as keyof typeof statusLabels] || o.status;
+                const statusClass = `status-${o.status}`;
+
+                return `
+                  <tr>
+                    <td class="nowrap">${new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
+                    <td style="font-weight: 650;">${o.customer_name}</td>
+                    <td>
+                      <div>${o.product_name}</div>
+                      ${numbersHtml}
+                    </td>
+                    <td class="nowrap" style="font-weight: 650; font-family: monospace;">${maskBRL(o.total_price || o.product_price || 0)}</td>
+                    <td class="status ${statusClass} nowrap">${statusLabel}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
 
@@ -680,6 +706,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
                   key={order.id} 
                   order={order} 
                   settings={settings}
+                  dancers={dancers}
                   onUpdate={updateOrder} 
                   onDelete={() => setOrderToDelete(order.id)} 
                   onAlert={onAlert}

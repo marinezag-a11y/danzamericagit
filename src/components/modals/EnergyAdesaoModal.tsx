@@ -20,6 +20,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
   const [selectedDancer, setSelectedDancer] = useState<Dancer | null>(null);
 
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [averageBill, setAverageBill] = useState(initialBillValue);
@@ -58,6 +59,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
       setStep(1);
       setSelectedDancer(null);
       setName('');
+      setEmail('');
       setCpf('');
       setWhatsapp('');
       setAverageBill(initialBillValue);
@@ -98,6 +100,11 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
     return rest === split[10];
   };
 
+  const isValidEmail = (emailStr: string) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(emailStr.trim());
+  };
+
   const handleBillChange = (value: string) => {
     const sanitized = value.replace(/[^0-9,.]/g, '');
     setAverageBill(sanitized);
@@ -111,8 +118,13 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
       return;
     }
 
-    if (!name || !whatsapp || !cpf || !averageBill) {
+    if (!name || !email || !whatsapp || !cpf || !averageBill) {
       setError('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError('E-mail inválido. Verifique o formato digitado.');
       return;
     }
 
@@ -140,7 +152,7 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
           cpf: cpf.replace(/\D/g, ''),
           cnpj: null,
           consumer_unit: '000000',
-          email: `${whatsapp.replace(/\D/g, '')}@tatienergy.com`,
+          email: email.trim().toLowerCase(),
           whatsapp: whatsapp.replace(/\D/g, ''),
           city: 'Belo Horizonte',
           average_bill: numericBill,
@@ -358,6 +370,18 @@ export function EnergyAdesaoModal({ isOpen, onClose, campaignId, initialBillValu
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="Ex: João Silva Santos"
+                          className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-500 block mb-2 px-1">E-mail *</label>
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="Ex: joao@email.com"
                           className="w-full p-4 bg-zinc-100/50 border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-emerald-500/30 transition-all font-medium placeholder:text-zinc-400 text-zinc-900 shadow-sm"
                         />
                       </div>

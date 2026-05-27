@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Ticket, Loader2, Share2, Check, Trophy } from 'lucide-react';
 import { useRaffles, RaffleCampaign } from '../hooks/useRaffles';
+import { useDancers } from '../hooks/useDancers';
 import { DancerSponsorshipModal } from './modals/DancerSponsorshipModal';
 import { Toast } from './ui/Toast';
 import { RaffleRanking } from './RaffleRanking';
@@ -14,6 +15,29 @@ interface RaffleSectionProps {
 
 export function RaffleSection({ campaigns: propCampaigns, loading: propLoading }: RaffleSectionProps = {}) {
   const { campaigns: hookCampaigns, loading: hookLoading, fetchTakenTickets } = useRaffles();
+  const { dancers } = useDancers();
+
+  const maskName = (val: string) => {
+    if (!val) return '';
+    const parts = val.trim().split(/\s+/);
+    return parts.map((part, i) => {
+      if (i === 0) return part;
+      if (part.length <= 1) return part;
+      return part[0] + '*'.repeat(Math.min(part.length - 1, 4));
+    }).join(' ');
+  };
+
+  const maskPhone = (val: string) => {
+    if (!val) return '';
+    const clean = val.replace(/\D/g, '');
+    if (clean.length >= 10) {
+      const ddd = clean.slice(0, 2);
+      const start = clean.slice(2, 3);
+      const end = clean.slice(-4);
+      return `(${ddd}) ${start}****-${end}`;
+    }
+    return val.slice(0, Math.max(0, val.length - 4)) + '****';
+  };
   
   const campaigns = propCampaigns !== undefined ? propCampaigns : hookCampaigns;
   const loading = propLoading !== undefined ? propLoading : hookLoading;
@@ -210,6 +234,40 @@ export function RaffleSection({ campaigns: propCampaigns, loading: propLoading }
                       </p>
                     )}
                     
+                    {campaign.winner_number && (
+                      <div className="mb-8 p-6 bg-amber-500/5 border border-amber-500/20 rounded-[2rem] flex flex-col sm:flex-row items-center gap-6 shadow-sm">
+                        {/* Highlight sponsored dancer */}
+                        {(() => {
+                          const winningDancer = dancers.find(d => d.name === campaign.winner_dancer_name);
+                          return winningDancer?.photo_url ? (
+                            <div className="w-16 h-16 rounded-2xl overflow-hidden border border-amber-500/20 shrink-0 relative group-hover:scale-105 transition-transform duration-500 shadow-md">
+                              <img src={winningDancer.photo_url} alt={winningDancer.name} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-amber-500/10" />
+                            </div>
+                          ) : (
+                            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 shadow-md">
+                              <Trophy className="w-8 h-8 text-amber-500" />
+                            </div>
+                          );
+                        })()}
+                        
+                        <div className="flex-1 text-center sm:text-left space-y-1">
+                          <span className="text-[8px] uppercase tracking-[0.25em] font-black text-amber-600 block">Sorteio Realizado • Bilhete Ganhador</span>
+                          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                            <span className="text-lg text-brand-dark font-serif italic font-bold">
+                              {maskName(campaign.winner_name || '')}
+                            </span>
+                            <span className="w-fit px-2 py-0.5 text-[9px] font-mono font-bold bg-amber-500 text-white rounded-lg shadow-sm">
+                              #{String(campaign.winner_number).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-brand-dark/40 font-mono">
+                            WhatsApp: {maskPhone(campaign.winner_phone || '')} • Apoiou: <span className="font-serif italic font-medium text-brand-dark/70">{campaign.winner_dancer_name || 'Geral'}</span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="space-y-8 mb-10">
                       <div className="flex items-center justify-between gap-4 p-8 bg-brand-grey/50 rounded-[2.5rem] border border-black/[0.03]">
                         <div className="space-y-1">
@@ -338,6 +396,19 @@ export function RaffleSection({ campaigns: propCampaigns, loading: propLoading }
                             <h4 className="font-serif text-xl text-brand-dark italic leading-tight group-hover:text-brand-orange transition-colors truncate">
                               {campaign.name}
                             </h4>
+                            {campaign.winner_number && (
+                              <div className="mt-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-center gap-3">
+                                <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                                <div className="min-w-0 flex-1 text-left">
+                                  <p className="text-[9px] text-brand-dark font-bold truncate">
+                                    Ganhador: {maskName(campaign.winner_name || '')} (#{String(campaign.winner_number).padStart(2, '0')})
+                                  </p>
+                                  <p className="text-[8px] text-brand-dark/40 font-mono truncate">
+                                    WhatsApp: {maskPhone(campaign.winner_phone || '')} • {campaign.winner_dancer_name}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                             {campaign.description && (
                               <p className="text-brand-dark/40 text-xs mt-2 font-serif italic line-clamp-2 leading-relaxed">
                                 {campaign.description}

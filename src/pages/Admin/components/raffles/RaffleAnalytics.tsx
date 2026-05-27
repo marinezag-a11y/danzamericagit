@@ -15,6 +15,16 @@ interface RaffleAnalyticsProps {
 
 export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
   const { stats: raffleStats, loading, refresh } = useRaffleAnalytics();
+
+  if (loading && (!raffleStats || !raffleStats.campaignsProgress || raffleStats.campaignsProgress.length === 0)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32">
+        <div className="w-12 h-12 rounded-full border-4 border-white/5 border-t-brand-orange animate-spin mb-4" />
+        <p className="text-[10px] uppercase tracking-widest text-white/30 font-black">Carregando estatísticas...</p>
+      </div>
+    );
+  }
+
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -148,15 +158,15 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
 
   // Filtered Raffle Stats
   const filteredOrders = selectedCampaignId === 'all' 
-    ? raffleStats.allOrders 
-    : raffleStats.allOrders.filter(o => o.campaign_id === selectedCampaignId);
+    ? (raffleStats?.allOrders || []) 
+    : (raffleStats?.allOrders || []).filter(o => o.campaign_id === selectedCampaignId);
 
   const totalCost = selectedCampaignId === 'all'
-    ? raffleStats.campaignsProgress.reduce((sum, c) => sum + Number(c.cost || 0), 0)
-    : (raffleStats.campaignsProgress.find(c => c.id === selectedCampaignId)?.cost || 0);
+    ? (raffleStats?.campaignsProgress || []).reduce((sum, c) => sum + Number(c.cost || 0), 0)
+    : (raffleStats?.campaignsProgress || []).find(c => c.id === selectedCampaignId)?.cost || 0;
 
   const displayStats = selectedCampaignId === 'all' 
-    ? { ...raffleStats, totalCost, netProfit: raffleStats.totalRevenue - totalCost }
+    ? { ...raffleStats, totalCost, netProfit: (raffleStats?.totalRevenue || 0) - totalCost }
     : (() => {
         const dancerMap: Record<string, any> = {};
         let rev = 0;
@@ -171,13 +181,17 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
           rev += price;
           tks += tickets;
 
+          const campaignData = Array.isArray(o.raffle_campaigns)
+            ? o.raffle_campaigns[0]
+            : o.raffle_campaigns;
+
           if (!dancerMap[dancer]) {
             dancerMap[dancer] = { 
               name: dancer, 
               totalSales: 0, 
               orderCount: 0, 
               ticketCount: 0,
-              goal: o.raffle_campaigns?.goal_per_dancer || 53
+              goal: campaignData?.goal_per_dancer || 53
             };
           }
           dancerMap[dancer].totalSales += price;

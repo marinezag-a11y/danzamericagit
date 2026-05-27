@@ -18,13 +18,14 @@ import { MercadoPagoDetailsModal } from '../../../../components/modals/MercadoPa
 interface OrderRowProps {
   order: any;
   settings: Record<string, any>;
+  dancers: any[];
   onUpdate: (id: string, data: any) => Promise<{ success: boolean; error?: any }>;
   onDelete: () => void;
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
   hasConflict?: boolean;
 }
 
-export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, onDelete, onAlert, hasConflict }) => {
+export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, dancers, onUpdate, onDelete, onAlert, hasConflict }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [isAskingReason, setIsAskingReason] = useState(false);
@@ -674,6 +675,7 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, onUpdate, o
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         order={order}
+        dancers={dancers}
         onSave={handleSaveFromModal}
         onAlert={onAlert}
       />

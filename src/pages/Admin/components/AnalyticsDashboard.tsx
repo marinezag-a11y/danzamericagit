@@ -16,7 +16,8 @@ import {
   ShoppingCart,
   ShoppingBag,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAnalytics, AnalyticsPeriod } from '../../../hooks/useAnalytics';
 
@@ -121,7 +122,41 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
     }, 600);
   };
 
-  if (loading && data.totalViews === 0) {
+  const handleExportExcel = () => {
+    if (!data) return;
+    const csvRows = [
+      ['Danzamerica Web Analytics Report', `${periodLabels[period]}`],
+      ['Gerado em', `${reportDate} as ${reportTime}`],
+      [],
+      ['Metrica', 'Valor'],
+      ['Visualizacoes Totais', data.totalViews],
+      ['Visitantes Unicos', data.uniqueVisitors],
+      ['Permanencia Media (s)', data.avgDuration],
+      ['Taxa de Rejeicao (%)', data.bounceRate],
+      ['Taxa de Conversao (%)', data.conversionRate],
+      ['Abandono de Carrinho (%)', data.cartAbandonment],
+      [],
+      ['Paginas Mais Populares', 'Visualizacoes'],
+      ...(data.topPages || []).map(p => [p.path, p.views]),
+      [],
+      ['Dispositivo', 'Porcentagem'],
+      ['Desktop', `${desktopPct}%`],
+      ['Mobile', `${mobilePct}%`]
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+      + csvRows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `analytics_report_${period}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (!data || (loading && (!data.totalViews || data.totalViews === 0))) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
         <Loader2 className="w-8 h-8 text-brand-orange animate-spin mb-4" />
@@ -162,7 +197,7 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
             {/* Export Buttons */}
             <div className="flex items-center gap-2 ml-2">
               <button 
-                onClick={handlePrintHTML}
+                onClick={handlePrintReport}
                 title="Imprimir Relatório"
                 className="h-10 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/50 hover:text-white transition-all text-xs font-medium"
               >
@@ -284,28 +319,34 @@ export function AnalyticsDashboard({ onAlert }: AnalyticsDashboardProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-white/5 border border-white/10 p-8 rounded-2xl"
+          className="bg-white/5 border border-white/10 p-8 rounded-2xl group hover:border-brand-orange/30 transition-all"
         >
           <div className="flex items-center justify-between mb-4">
-             <p className="text-[9px] uppercase tracking-widest text-pink-500 font-bold">Taxa de Conversão</p>
+             <p className="text-[9px] uppercase tracking-widest text-pink-500 font-bold">Conversão Geral</p>
              <TrendingUp className="w-4 h-4 text-pink-500/40" />
           </div>
           <p className="text-4xl font-sans text-white mb-1">{data.conversionRate}%</p>
-          <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold">Vendas/Acessos</p>
+          <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold mb-2">
+            {data.totalConversions} Pedidos • {data.totalTicketsSold} Bilhetes Vendidos
+          </p>
+          <div className="flex justify-between text-[9px] text-white/40 uppercase tracking-widest font-black mt-2 pt-2 border-t border-white/5">
+            <span>Rifas: {data.raffleConversionRate}%</span>
+            <span>Loja: {data.storeConversionRate}%</span>
+          </div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-white/5 border border-white/10 p-8 rounded-2xl"
+          className="bg-white/5 border border-white/10 p-8 rounded-2xl group hover:border-brand-orange/30 transition-all"
         >
           <div className="flex items-center justify-between mb-4">
-             <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold">Abandono de Carrinho</p>
+             <p className="text-[9px] uppercase tracking-widest text-brand-orange font-bold">Abandono de Carrinho (Loja)</p>
              <ShoppingBag className="w-4 h-4 text-brand-orange/40" />
           </div>
           <p className="text-4xl font-sans text-white mb-1">{data.cartAbandonment}%</p>
-          <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold">Iniciaram mas não pagaram</p>
+          <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold">Iniciaram a loja física mas não pagaram</p>
         </motion.div>
       </div>
 

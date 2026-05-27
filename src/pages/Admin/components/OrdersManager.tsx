@@ -173,12 +173,21 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       const matchesCampaign = selectedCampaignId === 'all' || (o?.type === 'raffle' && o?.campaign_id === selectedCampaignId);
       
       const cleanSearch = searchTerm.trim().toLowerCase().replace(/^#/, '');
+      const cleanSearchAsNum = parseInt(cleanSearch, 10);
+      
+      const matchesNumbers = o.type === 'raffle' && (o.selected_numbers || []).some((n: number) => {
+        return String(n) === cleanSearch || 
+               String(n).padStart(3, '0') === cleanSearch ||
+               (!isNaN(cleanSearchAsNum) && n === cleanSearchAsNum);
+      });
+
       const matchesSearch = !searchTerm || 
         o.customer_name?.toLowerCase()?.includes(cleanSearch) ||
         o.id?.toLowerCase()?.includes(cleanSearch) ||
         o.product_name?.toLowerCase()?.includes(cleanSearch) ||
         o.customer_phone?.toLowerCase()?.includes(cleanSearch) ||
-        o.customer_email?.toLowerCase()?.includes(cleanSearch);
+        o.customer_email?.toLowerCase()?.includes(cleanSearch) ||
+        matchesNumbers;
 
       const matchesDancer = dancerFilter === 'all' || o.dancer_name === dancerFilter;
 

@@ -174,20 +174,24 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       
       const cleanSearch = searchTerm.trim().toLowerCase().replace(/^#/, '');
       const cleanSearchAsNum = parseInt(cleanSearch, 10);
+      const isPureNumeric = /^\d+$/.test(cleanSearch);
       
-      const matchesNumbers = o.type === 'raffle' && (o.selected_numbers || []).some((n: number) => {
-        return String(n) === cleanSearch || 
-               String(n).padStart(3, '0') === cleanSearch ||
-               (!isNaN(cleanSearchAsNum) && n === cleanSearchAsNum);
-      });
-
-      const matchesSearch = !searchTerm || 
-        o.customer_name?.toLowerCase()?.includes(cleanSearch) ||
-        o.id?.toLowerCase()?.includes(cleanSearch) ||
-        o.product_name?.toLowerCase()?.includes(cleanSearch) ||
-        o.customer_phone?.toLowerCase()?.includes(cleanSearch) ||
-        o.customer_email?.toLowerCase()?.includes(cleanSearch) ||
-        matchesNumbers;
+      let matchesSearch = !searchTerm;
+      
+      if (searchTerm.trim().startsWith('#') || (isPureNumeric && cleanSearch.length <= 4)) {
+        // Busca PRECISA por número de rifa (ex: #3, #003, 3) para fins de sorteio
+        matchesSearch = o.type === 'raffle' && (o.selected_numbers || []).some((n: number) => {
+          return n === cleanSearchAsNum || String(n).padStart(3, '0') === cleanSearch;
+        });
+      } else {
+        // Busca geral por texto/telefone/id
+        matchesSearch = !searchTerm || 
+          o.customer_name?.toLowerCase()?.includes(cleanSearch) ||
+          o.id?.toLowerCase()?.includes(cleanSearch) ||
+          o.product_name?.toLowerCase()?.includes(cleanSearch) ||
+          o.customer_phone?.toLowerCase()?.includes(cleanSearch) ||
+          o.customer_email?.toLowerCase()?.includes(cleanSearch);
+      }
 
       const matchesDancer = dancerFilter === 'all' || o.dancer_name === dancerFilter;
 

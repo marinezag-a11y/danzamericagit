@@ -45,6 +45,30 @@ export function useHelpOrders() {
       // Auto-expire pending raffle orders older than 15 minutes
       try {
         const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        
+        // 1. Buscar pedidos pendentes prestes a expirar que possuem ID do Mercado Pago
+        const { data: expiringOrders } = await supabase
+          .from('raffle_orders')
+          .select('id, mp_payment_id')
+          .eq('status', 'pending')
+          .not('mp_payment_id', 'is', null)
+          .lt('created_at', fifteenMinutesAgo);
+
+        if (expiringOrders && expiringOrders.length > 0) {
+          console.log(`[Segurança] Verificando ${expiringOrders.length} pedidos pendentes no Mercado Pago antes de expirar...`);
+          // Executa a conferência para cada um em paralelo/lote para rapidez
+          await Promise.all(expiringOrders.map(async (order) => {
+            try {
+              await supabase.functions.invoke('check-mercado-pago-payment', {
+                body: { payment_id: order.mp_payment_id, order_id: order.id }
+              });
+            } catch (e) {
+              console.error(`Erro na conferência preventiva do pedido ${order.id}:`, e);
+            }
+          }));
+        }
+
+        // 2. Agora expira apenas os que continuam pendentes (os que foram pagos já viraram 'paid')
         await supabase
           .from('raffle_orders')
           .update({ 

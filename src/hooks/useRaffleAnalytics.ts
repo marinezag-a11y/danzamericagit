@@ -41,7 +41,11 @@ export function useRaffleAnalytics() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchRaffleAnalytics = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      setLoading(false);
+      setError("Cliente Supabase não inicializado.");
+      return;
+    }
     setLoading(true);
     setError(null);
 

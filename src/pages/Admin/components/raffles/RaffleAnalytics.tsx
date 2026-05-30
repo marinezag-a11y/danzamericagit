@@ -16,7 +16,16 @@ interface RaffleAnalyticsProps {
 export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
   const { stats: raffleStats, loading, refresh } = useRaffleAnalytics();
 
-  if (loading && (!raffleStats || !raffleStats.campaignsProgress || raffleStats.campaignsProgress.length === 0)) {
+  const safeStats = raffleStats || {
+    totalRevenue: 0,
+    totalTickets: 0,
+    avgTicketPrice: 0,
+    topDancers: [],
+    campaignsProgress: [],
+    allOrders: [],
+  };
+
+  if (loading && (!safeStats.campaignsProgress || safeStats.campaignsProgress.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
         <div className="w-12 h-12 rounded-full border-4 border-white/5 border-t-brand-orange animate-spin mb-4" />
@@ -35,7 +44,6 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
   };
 
   const handlePrintReport = () => {
-    // Reutilizando a lógica de impressão focada apenas nesta seção
     const printContent = document.getElementById('raffle-report-content')?.innerHTML;
     if (!printContent) return;
 
@@ -55,7 +63,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
     const reportDate = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     const selectedCampaignName = selectedCampaignId === 'all' 
       ? 'Todas as Ações' 
-      : raffleStats.campaignsProgress.find(c => c.id === selectedCampaignId)?.name || 'Campanha Selecionada';
+      : (safeStats.campaignsProgress || []).find(c => c.id === selectedCampaignId)?.name || 'Campanha Selecionada';
 
     doc.open();
     doc.write(`
@@ -114,7 +122,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
               </tr>
             </thead>
             <tbody>
-              ${displayStats.topDancers.map((d, idx) => `
+              ${(displayStats.topDancers || []).map((d, idx) => `
                 <tr>
                   <td>${idx + 1}</td>
                   <td>${d.name}</td>
@@ -135,7 +143,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
               </tr>
             </thead>
             <tbody>
-              ${raffleStats.campaignsProgress.map(c => `
+              ${(safeStats.campaignsProgress || []).map(c => `
                 <tr style="${selectedCampaignId !== 'all' && selectedCampaignId !== c.id ? 'opacity: 0.3' : ''}">
                   <td>${c.name}</td>
                   <td class="right">${c.ticketsVendidos} / ${c.metaTickets}</td>
@@ -158,22 +166,31 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
 
   // Filtered Raffle Stats
   const filteredOrders = selectedCampaignId === 'all' 
-    ? (raffleStats?.allOrders || []) 
-    : (raffleStats?.allOrders || []).filter(o => o.campaign_id === selectedCampaignId);
+    ? (safeStats.allOrders || []) 
+    : (safeStats.allOrders || []).filter(o => o?.campaign_id === selectedCampaignId);
 
   const totalCost = selectedCampaignId === 'all'
-    ? (raffleStats?.campaignsProgress || []).reduce((sum, c) => sum + Number(c.cost || 0), 0)
-    : (raffleStats?.campaignsProgress || []).find(c => c.id === selectedCampaignId)?.cost || 0;
+    ? (safeStats.campaignsProgress || []).reduce((sum, c) => sum + Number(c?.cost || 0), 0)
+    : (safeStats.campaignsProgress || []).find(c => c?.id === selectedCampaignId)?.cost || 0;
 
   const displayStats = selectedCampaignId === 'all' 
-    ? { ...raffleStats, totalCost, netProfit: (raffleStats?.totalRevenue || 0) - totalCost }
+    ? { 
+        totalRevenue: safeStats.totalRevenue || 0,
+        totalTickets: safeStats.totalTickets || 0,
+        avgTicketPrice: safeStats.avgTicketPrice || 0,
+        topDancers: safeStats.topDancers || [],
+        campaignsProgress: safeStats.campaignsProgress || [],
+        allOrders: safeStats.allOrders || [],
+        totalCost, 
+        netProfit: (safeStats.totalRevenue || 0) - totalCost 
+      }
     : (() => {
         const dancerMap: Record<string, any> = {};
         let rev = 0;
         let tks = 0;
 
         filteredOrders.forEach(o => {
-          if (o.status === 'cancelled') return;
+          if (!o || o.status === 'cancelled') return;
           
           const price = Number(o.total_price || 0);
           const tickets = (o.selected_numbers || []).length;
@@ -206,7 +223,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
           netProfit: rev - Number(totalCost),
           avgTicketPrice: tks > 0 ? rev / tks : 0,
           topDancers: Object.values(dancerMap).sort((a: any, b: any) => b.totalSales - a.totalSales),
-          campaignsProgress: raffleStats.campaignsProgress
+          campaignsProgress: safeStats.campaignsProgress || []
         };
       })();
 
@@ -225,7 +242,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {raffleStats.campaignsProgress.length > 0 && (
+          {(safeStats.campaignsProgress || []).length > 0 && (
             <select
               value={selectedCampaignId}
               onChange={(e) => setSelectedCampaignId(e.target.value)}
@@ -233,7 +250,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
               style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'white\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', backgroundSize: '12px' }}
             >
               <option value="all" className="bg-brand-dark">Todas as Ações</option>
-              {raffleStats.campaignsProgress.map(c => (
+              {(safeStats.campaignsProgress || []).map(c => (
                 <option key={c.id} value={c.id} className="bg-brand-dark">{c.name}</option>
               ))}
             </select>
@@ -313,7 +330,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
               Hall de Talentos {selectedCampaignId !== 'all' ? '(Filtrado)' : '(Geral)'}
             </h4>
             <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-              {displayStats.topDancers.map((dancer, idx) => (
+              {(displayStats.topDancers || []).map((dancer, idx) => (
                 <div key={idx} className="relative">
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-sm text-white font-medium">
@@ -346,7 +363,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
               Pulso das Campanhas
             </h4>
             <div className="space-y-8">
-              {raffleStats.campaignsProgress.map((campaign, idx) => {
+              {(safeStats.campaignsProgress || []).map((campaign, idx) => {
                 const isSelected = selectedCampaignId === campaign.id;
                 const progress = Math.min((campaign.ticketsVendidos / campaign.metaTickets) * 100, 100);
                 return (
@@ -375,3 +392,4 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
     </div>
   );
 }
+

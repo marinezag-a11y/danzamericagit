@@ -234,32 +234,68 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true, message: 'Order already paid.' }), { headers: corsHeaders, status: 200 })
       }
 
-      const { error: updateError } = await supabase
+      // Verificação de concorrência/conflito
+      const { data: conflictingOrders } = await supabase
         .from('raffle_orders')
-        .update({ status: 'paid', payment_origin: 'mercadopago', mp_payment_id: String(paymentId), updated_at: new Date().toISOString() })
-        .eq('id', orderId)
+        .select('id, selected_numbers')
+        .eq('campaign_id', raffleOrder.campaign_id)
+        .in('status', ['paid', 'sent'])
+        .neq('id', orderId);
 
-      if (updateError) {
-        console.error(`[MercadoPago Webhook] Error updating raffle order status:`, updateError)
-        return new Response(JSON.stringify({ error: 'DB Update error' }), { headers: corsHeaders, status: 500 })
-      }
+      const paidNumbers = new Set(
+        (conflictingOrders || []).flatMap(o => o.selected_numbers || [])
+      );
 
-      const pushedTimestamp = new Date().toISOString();
-      console.log(`[DIAGNÓSTICO MP] 3. Status atualizado no banco de dados (push pro frontend) às: ${pushedTimestamp}`);
-      console.log(`[MercadoPago Webhook] Raffle order ${orderId} successfully set to PAID!`)
+      const hasConflict = (raffleOrder.selected_numbers || []).some(n => paidNumbers.has(n));
 
-      // Invoca a Edge Function centralizada de envio de e-mails (send-order)
-      supabase.functions.invoke('send-order', {
-        body: { order_id: orderId }
-      }).then(({ data, error }) => {
-        if (error) {
-          console.error(`[MercadoPago Webhook] Failed to invoke send-order Edge Function:`, error)
-        } else {
-          console.log(`[MercadoPago Webhook] send-order invoked successfully:`, data)
+      if (hasConflict) {
+        console.warn(`[MercadoPago Webhook CONFLITO] Pedido ${orderId} pago após janela, mas o(s) número(s) #${(raffleOrder.selected_numbers || []).join(', #')} já foram comprados.`);
+        
+        const { error: updateError } = await supabase
+          .from('raffle_orders')
+          .update({ 
+            status: 'unconfirmed', 
+            payment_origin: 'mercadopago', 
+            mp_payment_id: String(paymentId), 
+            reason: '⚠️ Recebido após janela: número(s) já comprado(s) por outro cliente. Solicitar contato para alocação manual.',
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', orderId)
+
+        if (updateError) {
+          console.error(`[MercadoPago Webhook] Error updating raffle order conflict:`, updateError)
+          return new Response(JSON.stringify({ error: 'DB Update error' }), { headers: corsHeaders, status: 500 })
         }
-      });
 
-      return new Response(JSON.stringify({ success: true, message: 'Raffle order successfully processed.' }), { headers: corsHeaders, status: 200 })
+        return new Response(JSON.stringify({ success: true, conflict: true, message: 'Conflict detected. Order set to unconfirmed.' }), { headers: corsHeaders, status: 200 })
+      } else {
+        const { error: updateError } = await supabase
+          .from('raffle_orders')
+          .update({ status: 'paid', payment_origin: 'mercadopago', mp_payment_id: String(paymentId), updated_at: new Date().toISOString() })
+          .eq('id', orderId)
+
+        if (updateError) {
+          console.error(`[MercadoPago Webhook] Error updating raffle order status:`, updateError)
+          return new Response(JSON.stringify({ error: 'DB Update error' }), { headers: corsHeaders, status: 500 })
+        }
+
+        const pushedTimestamp = new Date().toISOString();
+        console.log(`[DIAGNÓSTICO MP] 3. Status atualizado no banco de dados (push pro frontend) às: ${pushedTimestamp}`);
+        console.log(`[MercadoPago Webhook] Raffle order ${orderId} successfully set to PAID!`)
+
+        // Invoca a Edge Function centralizada de envio de e-mails (send-order)
+        supabase.functions.invoke('send-order', {
+          body: { order_id: orderId }
+        }).then(({ data, error }) => {
+          if (error) {
+            console.error(`[MercadoPago Webhook] Failed to invoke send-order Edge Function:`, error)
+          } else {
+            console.log(`[MercadoPago Webhook] send-order invoked successfully:`, data)
+          }
+        });
+
+        return new Response(JSON.stringify({ success: true, message: 'Raffle order successfully processed.' }), { headers: corsHeaders, status: 200 })
+      }
     }
 
     // Se não encontrou em rifas, tenta em doações (help_orders)

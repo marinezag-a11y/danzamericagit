@@ -169,6 +169,32 @@ export function useHelpOrders() {
 
   const addOrder = async (order: Partial<HelpOrder>) => {
     const table = order.type === 'raffle' ? 'raffle_orders' : 'help_orders';
+    
+    if (order.type === 'raffle' && order.status === 'paid') {
+      try {
+        const { data: conflictingOrders } = await supabase
+          .from('raffle_orders')
+          .select('id, selected_numbers')
+          .eq('campaign_id', order.campaign_id)
+          .in('status', ['paid', 'sent']);
+
+        const paidNumbers = new Set(
+          (conflictingOrders || []).flatMap(o => o.selected_numbers || [])
+        );
+
+        const conflictNums = (order.selected_numbers || []).filter(n => paidNumbers.has(n));
+
+        if (conflictNums.length > 0) {
+          return { 
+            success: false, 
+            error: `Conflito de Números: O(s) número(s) #${conflictNums.join(', #')} já foi(ram) vendido(s) em outro pedido confirmado!` 
+          };
+        }
+      } catch (err: any) {
+        console.error('Erro ao validar concorrência de números:', err);
+      }
+    }
+
     try {
       const { error: addError } = await supabase
         .from(table)
@@ -187,6 +213,33 @@ export function useHelpOrders() {
     if (!order) return { success: false, error: 'Order not found' };
     
     const table = order.type === 'raffle' ? 'raffle_orders' : 'help_orders';
+    
+    // Se for atualizar para 'paid' em uma rifa, verifica se os números já foram vendidos
+    if (order.type === 'raffle' && updates.status === 'paid') {
+      try {
+        const { data: conflictingOrders } = await supabase
+          .from('raffle_orders')
+          .select('id, selected_numbers')
+          .eq('campaign_id', order.campaign_id)
+          .in('status', ['paid', 'sent'])
+          .neq('id', id);
+
+        const paidNumbers = new Set(
+          (conflictingOrders || []).flatMap(o => o.selected_numbers || [])
+        );
+
+        const conflictNums = (order.selected_numbers || []).filter(n => paidNumbers.has(n));
+
+        if (conflictNums.length > 0) {
+          return { 
+            success: false, 
+            error: `Conflito de Números: O(s) número(s) #${conflictNums.join(', #')} já foi(ram) vendido(s) em outro pedido confirmado!` 
+          };
+        }
+      } catch (err: any) {
+        console.error('Erro ao validar concorrência de números:', err);
+      }
+    }
     
     // Optimistic Update: Update local state immediately
     const previousOrders = [...orders];

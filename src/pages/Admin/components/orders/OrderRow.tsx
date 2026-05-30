@@ -55,6 +55,15 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, dancers, on
     return false;
   };
 
+  const isPaidAfterWindow = () => {
+    if (status !== 'paid' || order.payment_origin !== 'mercadopago') return false;
+    if (!order.created_at || !order.updated_at) return false;
+    const created = new Date(order.created_at).getTime();
+    const updated = new Date(order.updated_at).getTime();
+    const diffMin = (updated - created) / (60 * 1000);
+    return diffMin > 15;
+  };
+
   const getElapsedTime = () => {
     if (!order.created_at || !order.updated_at || order.status === 'pending' || order.status === 'unconfirmed') return null;
     const created = new Date(order.created_at).getTime();
@@ -385,7 +394,14 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, dancers, on
         </td>
         <td className="py-5 px-6">
           <div className="flex flex-col">
-            <p className="text-white font-bold text-sm">{order.customer_name}</p>
+            <p className="text-white font-bold text-sm">
+              {order.customer_name}
+              {isPaidAfterWindow() && (
+                <span className="ml-3 text-[8px] bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded font-black uppercase tracking-wider animate-pulse" title="Aviso: Este pedido foi pago pelo Mercado Pago APÓS o término da janela de 15 minutos de reserva!">
+                  ⚠️ Recebido após janela
+                </span>
+              )}
+            </p>
             <div className="flex items-center gap-3 mt-1">
               <span className="text-[10px] text-white/40 font-mono tracking-wider">{order.customer_phone}</span>
               <div className="flex items-center gap-1">

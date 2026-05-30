@@ -52,15 +52,15 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
 
   const duplicateNumbers = React.useMemo(() => {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
     const counts: Record<string, number> = {};
 
     (orders || []).forEach(o => {
       if (o.status !== 'cancelled' && o.status !== 'unconfirmed' && o.type === 'raffle') {
-        // Ignorar ordens pendentes com mais de 5 minutos para alinhar com a regra de expiração do banco
+        // Ignorar ordens pendentes com mais de 15 minutos para alinhar com a regra de expiração do banco
         if (o.status === 'pending') {
           const createdAtDate = new Date(o.created_at);
-          if (createdAtDate < fiveMinutesAgo) {
+          if (createdAtDate < fifteenMinutesAgo) {
             return;
           }
         }
@@ -73,7 +73,6 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     });
     return Object.keys(counts).filter(key => counts[key] > 1);
   }, [orders]);
-  
   // New Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [dancerFilter, setDancerFilter] = useState('all');
@@ -455,6 +454,30 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
           currentEmails={currentEmails}
           onSave={handleSaveEmails}
         />
+      )}
+
+      {/* Alerta de Conflitos/Duplicatas */}
+      {duplicateNumbers.length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl flex items-start gap-4 animate-in fade-in duration-300">
+          <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+          <div className="space-y-2">
+            <h4 className="text-sm font-bold text-red-500 uppercase tracking-wider">Atenção: Vendas Duplicadas Detectadas!</h4>
+            <p className="text-xs text-white/60 leading-relaxed">
+              Existem **{duplicateNumbers.length}** números com vendas concorrentes (duplicados/conflitos) no sistema. Isso geralmente ocorre quando um pagamento Pix é concluído com atraso após a expiração dos 15 minutos e outra reserva foi feita.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {duplicateNumbers.map(key => {
+                const [campId, num] = key.split(':');
+                const campName = campaigns.find(c => c.id === campId)?.name || 'Rifa';
+                return (
+                  <span key={key} className="bg-red-500/20 text-red-400 border border-red-500/30 text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+                    {campName}: #{num}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Header and Controls */}

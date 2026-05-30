@@ -319,14 +319,23 @@ export const OrderRow: React.FC<OrderRowProps> = ({ order, settings, dancers, on
       }
 
       if (responseData.status === 'approved') {
-        setStatus('paid');
-        onAlert('Sucesso', 'Pagamento confirmado e atualizado via Mercado Pago com sucesso!', 'info');
-        
-        await onUpdate(order.id, { 
+        const updateResult = await onUpdate(order.id, { 
           status: 'paid', 
           payment_origin: 'mercadopago',
           updated_at: new Date().toISOString()
         });
+
+        if (updateResult.success) {
+          setStatus('paid');
+          onAlert('Sucesso', 'Pagamento confirmado e número garantido no pedido com sucesso!', 'info');
+        } else {
+          onAlert(
+            '⚠️ CONFLITO: Número já Vendido',
+            `O cliente ${order.customer_name} realizou o pagamento via Pix, mas o número #${(order.selected_numbers || []).join(', ')} já foi comprado por outra pessoa após a expiração da janela de 15 minutos.\n\n` +
+            `ATENÇÃO: Não realizamos estornos. Por favor, entre em contato imediatamente com o cliente pelo WhatsApp para alocar um novo número disponível e registrar o novo pedido manualmente.`,
+            'danger'
+          );
+        }
       } else {
         setMpDetails(responseData);
         setIsMpDetailsOpen(true);

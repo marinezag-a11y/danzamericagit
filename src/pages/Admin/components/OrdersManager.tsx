@@ -209,7 +209,15 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
       } else if (sortBy === 'net_margin') {
         const getNet = (o: any) => {
           const price = o.total_price || o.product_price || 0;
-          if (o.type === 'raffle') return price;
+          if (o.type === 'raffle') {
+            const campaign = campaigns.find(c => c.id === o.campaign_id);
+            if (campaign) {
+              const unitCost = Number(campaign.cost || 0) / (Number(campaign.total_numbers) || 1);
+              const ticketsCount = o.selected_numbers?.length || 1;
+              return price - (unitCost * ticketsCount);
+            }
+            return price;
+          }
           const totalCost = (o.items || []).reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
           return price - totalCost;
         };
@@ -233,13 +241,35 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
     total: filteredOrders.length,
     paid: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').length,
     totalValue: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => sum + (o?.total_price || o?.product_price || 0), 0),
-    totalNetValue: filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => {
-      const price = o?.total_price || o?.product_price || 0;
-      if (o.type === 'raffle') return sum + price;
-      const items = o?.items || [];
-      const totalCost = items.reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
-      return sum + price - totalCost;
-    }, 0)
+    totalNetValue: (() => {
+      const baseNet = filteredOrders.filter(o => o?.status === 'paid' || o?.status === 'sent').reduce((sum, o) => {
+        const price = o?.total_price || o?.product_price || 0;
+        if (o.type === 'raffle') return sum + price;
+        const items = o?.items || [];
+        const totalCost = items.reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0);
+        return sum + price - totalCost;
+      }, 0);
+
+      if (selectedCampaignId !== 'all') {
+        const camp = campaigns.find(c => c.id === selectedCampaignId);
+        return baseNet - Number(camp?.cost || 0);
+      }
+
+      if (typeFilter === 'raffle' || typeFilter === 'all') {
+        const raffleOrders = filteredOrders.filter(o => o.type === 'raffle' && (o.status === 'paid' || o.status === 'sent'));
+        const uniqueCampaignIds = new Set(raffleOrders.map(o => o.campaign_id));
+        let campaignCostSum = 0;
+        for (const campId of uniqueCampaignIds) {
+          const camp = campaigns.find(c => c.id === campId);
+          if (camp) {
+            campaignCostSum += Number(camp.cost || 0);
+          }
+        }
+        return baseNet - campaignCostSum;
+      }
+
+      return baseNet;
+    })()
   };
 
     const handlePrintReport = () => {
@@ -744,6 +774,7 @@ export function OrdersManager({ onAlert, userRole }: OrdersManagerProps) {
                   order={order} 
                   settings={settings}
                   dancers={dancers}
+                  campaigns={campaigns}
                   onUpdate={updateOrder} 
                   onDelete={() => setOrderToDelete(order.id)} 
                   onAlert={onAlert}

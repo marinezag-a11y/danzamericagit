@@ -27,29 +27,50 @@ export function useFinancial() {
       
       if (!supabase) return;
       
-      const [recordsRes, ordersRes, rafflesRes] = await Promise.all([
+      const [recordsRes, ordersRes, rafflesRes, campaignsRes] = await Promise.all([
         supabase
           .from('financial_records')
           .select('*')
           .order('date', { ascending: false }),
         supabase
           .from('help_orders')
-          .select('total_price')
+          .select('total_price, items')
           .in('status', ['paid', 'sent']),
         supabase
           .from('raffle_orders')
-          .select('total_price')
-          .in('status', ['paid', 'sent'])
+          .select('total_price, campaign_id')
+          .in('status', ['paid', 'sent']),
+        supabase
+          .from('raffle_campaigns')
+          .select('id, cost')
       ]);
 
       if (recordsRes.error) throw recordsRes.error;
       if (ordersRes.error) throw ordersRes.error;
       if (rafflesRes.error) throw rafflesRes.error;
+      if (campaignsRes.error) throw campaignsRes.error;
 
       setRecords(recordsRes.data || []);
       
-      const ordersSum = (ordersRes.data || []).reduce((acc, curr) => acc + (parseFloat(curr.total_price) || 0), 0);
-      const rafflesSum = (rafflesRes.data || []).reduce((acc, curr) => acc + (parseFloat(curr.total_price) || 0), 0);
+      const ordersSum = (ordersRes.data || []).reduce((acc, curr) => {
+        const price = parseFloat(curr.total_price) || 0;
+        const items = curr.items || [];
+        const cost = Array.isArray(items) 
+          ? items.reduce((s: number, i: any) => s + (Number(i.cost_price || 0) * (i.quantity || 1)), 0)
+          : 0;
+        return acc + (price - cost);
+      }, 0);
+
+      const baseRafflesSum = (rafflesRes.data || []).reduce((acc, curr) => acc + (parseFloat(curr.total_price) || 0), 0);
+      const activeCampaignIds = new Set((rafflesRes.data || []).map(r => r.campaign_id));
+      let campaignsCostSum = 0;
+      for (const cId of activeCampaignIds) {
+        const camp = (campaignsRes.data || []).find(c => c.id === cId);
+        if (camp) {
+          campaignsCostSum += parseFloat(camp.cost) || 0;
+        }
+      }
+      const rafflesSum = baseRafflesSum - campaignsCostSum;
       
       setPaidOrdersTotal(ordersSum + rafflesSum);
 
@@ -127,6 +148,11 @@ export function useFinancial() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'raffle_orders' },
+        () => fetchRecords()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'raffle_campaigns' },
         () => fetchRecords()
       )
       .subscribe();

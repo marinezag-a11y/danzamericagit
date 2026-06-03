@@ -14,6 +14,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  cost_price?: number;
   image: string;
   description: string;
   options?: string[];
@@ -82,6 +83,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
       id: item?.id || Math.random().toString(),
       name: item?.title || 'Item sem nome',
       price: Number(item?.price) || 0,
+      cost_price: Number(item?.cost_price) || 0,
       description: item?.description || '',
       image: item?.image_url || 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?q=80&w=800&auto=format&fit=crop',
       options: item?.options || []
@@ -197,6 +199,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
           id: p.id, 
           name: p.name || 'Produto', 
           price: p.price || 0,
+          cost_price: p.cost_price || 0,
           quantity: quantities[p.id] || 1,
           option: selectedOptions[p.id] || null
         })),

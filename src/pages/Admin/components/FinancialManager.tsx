@@ -148,6 +148,7 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
 
   const filteredRecords = useMemo(() => {
     return records.filter(r => {
+      if (r.description === 'Vakinha') return false; // Excluded because it is rendered at the top as an automatic row
       const matchesSearch = r.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = typeFilter === 'all' || r.type === typeFilter;
       return matchesSearch && matchesType;
@@ -508,11 +509,54 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
               </tr>
             )}
 
+            {/* Vakinha Sync Row */}
+            {(() => {
+              const vakinhaRecord = records.find(r => r.description === 'Vakinha');
+              if (!vakinhaRecord) return null;
+              
+              const matchesSearch = vakinhaRecord.description.toLowerCase().includes(searchTerm.toLowerCase());
+              const matchesType = typeFilter === 'all' || typeFilter === 'income';
+              if (!matchesSearch || !matchesType) return null;
+
+              return (
+                <tr className="bg-emerald-500/5 border-b border-emerald-500/10 group">
+                  <td className="p-6">
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Automático</span>
+                  </td>
+                  <td className="p-6">
+                    <div className="space-y-1">
+                      <p className="text-sm text-white font-serif italic">Vakinha</p>
+                      {settings && settings['vakinha_donors_count'] && (
+                        <p className="text-[9px] text-brand-orange font-bold font-sans uppercase tracking-widest leading-normal">
+                          {settings['vakinha_donors_count']?.value || '0'} contribuições • Atualizado em {settings['vakinha_last_updated']?.value ? new Date(settings['vakinha_last_updated']?.value).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-white/20 uppercase tracking-widest">{vakinhaRecord.category || 'Geral'}</p>
+                    </div>
+                  </td>
+                  <td className="p-6">
+                    <p className="text-sm text-emerald-500 font-mono font-bold">
+                      {vakinhaRecord.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
+                  </td>
+                  <td className="p-6">
+                    <span className="px-3 py-1 rounded-full text-[8px] uppercase tracking-widest font-bold bg-emerald-500/10 text-emerald-500">
+                      Entrada
+                    </span>
+                  </td>
+                  <td className="p-6 text-center">
+                    <span className="text-[10px] text-white/20 italic">Sincronizado</span>
+                  </td>
+                </tr>
+              );
+            })()}
+
             {filteredRecords.length > 0 ? (
               filteredRecords.map((record) => (
                 <FinancialRow 
                   key={record.id} 
                   record={record} 
+                  settings={settings}
                   onEdit={() => setEditingRecord(record)}
                   onDelete={() => handleDelete(record.id)}
                 />
@@ -535,19 +579,31 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
 
 interface FinancialRowProps {
   record: FinancialRecord;
+  settings?: Record<string, any>;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-const FinancialRow: React.FC<FinancialRowProps> = ({ record, onEdit, onDelete }) => {
+const FinancialRow: React.FC<FinancialRowProps> = ({ record, settings, onEdit, onDelete }) => {
+  const isAuto = record.description === 'Vakinha';
+
   return (
     <tr className="hover:bg-white/[0.02] transition-all group">
       <td className="p-6">
-        <span className="text-xs text-white/60">{record.date}</span>
+        {isAuto ? (
+          <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Automático</span>
+        ) : (
+          <span className="text-xs text-white/60">{record.date}</span>
+        )}
       </td>
       <td className="p-6">
         <div className="space-y-1">
           <p className="text-sm text-white font-serif italic">{record.description}</p>
+          {record.description === 'Vakinha' && settings && settings['vakinha_donors_count'] && (
+            <p className="text-[9px] text-brand-orange font-bold font-sans uppercase tracking-widest leading-normal">
+              {settings['vakinha_donors_count']?.value || '0'} contribuições • Atualizado em {settings['vakinha_last_updated']?.value ? new Date(settings['vakinha_last_updated']?.value).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+            </p>
+          )}
           <p className="text-[10px] text-white/20 uppercase tracking-widest">{record.category || 'Geral'}</p>
         </div>
       </td>
@@ -561,23 +617,27 @@ const FinancialRow: React.FC<FinancialRowProps> = ({ record, onEdit, onDelete })
           {record.type === 'income' ? 'Entrada' : 'Saída'}
         </span>
       </td>
-      <td className="p-6">
-        <div className="flex items-center justify-center gap-4">
-          <button 
-            onClick={onEdit}
-            className="p-2 text-white/10 hover:text-brand-orange hover:bg-brand-orange/10 rounded-full transition-all"
-            title="Editar Registro"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={onDelete}
-            className="p-2 text-white/10 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all"
-            title="Excluir Registro"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
+      <td className="p-6 text-center">
+        {isAuto ? (
+          <span className="text-[10px] text-white/20 italic">Sincronizado</span>
+        ) : (
+          <div className="flex items-center justify-center gap-4">
+            <button 
+              onClick={onEdit}
+              className="p-2 text-white/10 hover:text-brand-orange hover:bg-brand-orange/10 rounded-full transition-all"
+              title="Editar Registro"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={onDelete}
+              className="p-2 text-white/10 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all"
+              title="Excluir Registro"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   );

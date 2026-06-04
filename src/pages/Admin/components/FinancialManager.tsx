@@ -41,6 +41,14 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
   
+  // Vakinha Edit State
+  const [isEditingVakinha, setIsEditingVakinha] = useState(false);
+  const [vakinhaGrossInput, setVakinhaGrossInput] = useState('');
+  const [vakinhaNetInput, setVakinhaNetInput] = useState('');
+  const [vakinhaWithdrawableInput, setVakinhaWithdrawableInput] = useState('');
+  const [vakinhaPendingInput, setVakinhaPendingInput] = useState('');
+  const [vakinhaDonorsInput, setVakinhaDonorsInput] = useState('');
+  
   // Form State
   const [newDesc, setNewDesc] = useState('');
   const [newAmount, setNewAmount] = useState('');
@@ -469,6 +477,125 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
         )}
       </AnimatePresence>
 
+      {/* Vakinha Edit Modal */}
+      <AnimatePresence>
+        {isEditingVakinha && (() => {
+          const vakinhaRecord = records.find(r => r.description === 'Vakinha');
+          if (!vakinhaRecord) return null;
+          return (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-brand-dark/90 backdrop-blur-sm overflow-hidden">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-brand-dark border border-white/10 w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl relative"
+              >
+                <div className="flex items-center justify-between p-8 border-b border-white/5 bg-white/[0.02]">
+                  <div>
+                    <h4 className="text-[10px] uppercase tracking-[0.3em] text-brand-orange font-bold">Editar Valores da Vakinha</h4>
+                    <p className="text-white/40 text-xs mt-1">Atualize os valores reais do painel da Vakinha</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsEditingVakinha(false)}
+                    className="p-2 hover:bg-white/10 rounded-full transition-all"
+                  >
+                    <X className="w-5 h-5 text-white/40" />
+                  </button>
+                </div>
+
+                <div className="p-8 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor Bruto (R$)</label>
+                      <input 
+                        type="text"
+                        value={vakinhaGrossInput}
+                        onChange={(e) => setVakinhaGrossInput(maskBRL(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm font-mono"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Valor Líquido (R$)</label>
+                      <input 
+                        type="text"
+                        value={vakinhaNetInput}
+                        onChange={(e) => setVakinhaNetInput(maskBRL(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm font-mono"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Liberado para Saque (R$)</label>
+                      <input 
+                        type="text"
+                        value={vakinhaWithdrawableInput}
+                        onChange={(e) => setVakinhaWithdrawableInput(maskBRL(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm font-mono"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Aguardando Liberação (R$)</label>
+                      <input 
+                        type="text"
+                        value={vakinhaPendingInput}
+                        onChange={(e) => setVakinhaPendingInput(maskBRL(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm font-mono"
+                      />
+                    </div>
+                    <div className="space-y-3 md:col-span-2">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Número de Contribuições</label>
+                      <input 
+                        type="number"
+                        value={vakinhaDonorsInput}
+                        onChange={(e) => setVakinhaDonorsInput(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 p-4 text-sm outline-none focus:border-brand-orange transition-all text-white rounded-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 pt-8 border-t border-white/5 mt-8">
+                    <button 
+                      onClick={() => setIsEditingVakinha(false)}
+                      className="flex-1 py-4 border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        const grossVal = parseBRL(vakinhaGrossInput);
+                        const netVal = parseBRL(vakinhaNetInput);
+                        const withdrawableVal = parseBRL(vakinhaWithdrawableInput);
+                        const pendingVal = parseBRL(vakinhaPendingInput);
+                        const donorsVal = parseInt(vakinhaDonorsInput) || 0;
+
+                        setSaving(vakinhaRecord.id);
+                        
+                        // Update settings in database
+                        await updateSetting('vakinha_gross_amount', grossVal.toString());
+                        await updateSetting('vakinha_net_amount', netVal.toString());
+                        await updateSetting('vakinha_withdrawable_amount', withdrawableVal.toString());
+                        await updateSetting('vakinha_pending_amount', pendingVal.toString());
+                        await updateSetting('vakinha_donors_count', donorsVal.toString());
+                        await updateSetting('vakinha_last_updated', new Date().toISOString());
+
+                        // Update the Vakinha record amount to netVal
+                        await updateRecord(vakinhaRecord.id, { amount: netVal });
+
+                        setIsEditingVakinha(false);
+                        setSaving(null);
+                        onAlert('Sucesso', 'Valores da Vakinha atualizados com sucesso.', 'info');
+                      }}
+                      className="flex-2 py-4 bg-brand-orange text-white text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-brand-dark transition-all px-12"
+                    >
+                      Salvar Alterações
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
+
       <div className="border border-white/10 overflow-x-auto rounded-sm bg-black/20">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -518,6 +645,11 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
               const matchesType = typeFilter === 'all' || typeFilter === 'income';
               if (!matchesSearch || !matchesType) return null;
 
+              const gross = Number(settings['vakinha_gross_amount']?.value) || 0;
+              const net = Number(settings['vakinha_net_amount']?.value) || vakinhaRecord.amount;
+              const withdrawable = Number(settings['vakinha_withdrawable_amount']?.value) || 0;
+              const pending = Number(settings['vakinha_pending_amount']?.value) || 0;
+
               return (
                 <tr className="bg-emerald-500/5 border-b border-emerald-500/10 group">
                   <td className="p-6">
@@ -525,7 +657,12 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
                   </td>
                   <td className="p-6">
                     <div className="space-y-1">
-                      <p className="text-sm text-white font-serif italic">Vakinha</p>
+                      <p className="text-sm text-white font-serif italic">Vakinha (Líquido)</p>
+                      <p className="text-[10px] text-white/40 font-sans leading-normal">
+                        Bruto: {gross.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} • 
+                        Liberado: {withdrawable.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} • 
+                        Aguardando: {pending.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </p>
                       {settings && settings['vakinha_donors_count'] && (
                         <p className="text-[9px] text-brand-orange font-bold font-sans uppercase tracking-widest leading-normal">
                           {settings['vakinha_donors_count']?.value || '0'} contribuições • Atualizado em {settings['vakinha_last_updated']?.value ? new Date(settings['vakinha_last_updated']?.value).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
@@ -536,7 +673,7 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
                   </td>
                   <td className="p-6">
                     <p className="text-sm text-emerald-500 font-mono font-bold">
-                      {vakinhaRecord.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {net.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </p>
                   </td>
                   <td className="p-6">
@@ -545,7 +682,27 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
                     </span>
                   </td>
                   <td className="p-6 text-center">
-                    <span className="text-[10px] text-white/20 italic">Sincronizado</span>
+                    {userRole === 'master' ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => {
+                            setVakinhaGrossInput(maskBRL(gross.toFixed(2)));
+                            setVakinhaNetInput(maskBRL(net.toFixed(2)));
+                            setVakinhaWithdrawableInput(maskBRL(withdrawable.toFixed(2)));
+                            setVakinhaPendingInput(maskBRL(pending.toFixed(2)));
+                            setVakinhaDonorsInput(settings['vakinha_donors_count']?.value || '0');
+                            setIsEditingVakinha(true);
+                          }}
+                          className="p-2 text-white/10 hover:text-brand-orange hover:bg-brand-orange/10 rounded-full transition-all"
+                          title="Editar Valores da Vakinha"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <span className="text-[10px] text-white/20 italic">Sincronizado</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-white/20 italic">Sincronizado</span>
+                    )}
                   </td>
                 </tr>
               );

@@ -71,53 +71,97 @@ serve(async (req) => {
     const url = settingData.value
     console.log(`[Vakinha Sync] Fetching url: ${url}`)
 
-    // 2. Fetch page HTML
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    let amount = 0
+    let donorsCount = 0
+    let netAmount = 0
+    let withdrawableAmount = 0
+    let pendingAmount = 0
+    let lastUpdatedISO = new Date().toISOString()
+    let isManual = false
+
+    try {
+      const body = await req.json()
+      if (body && (body.net_amount !== undefined || body.gross_amount !== undefined)) {
+        amount = parseFloat(body.gross_amount || '0')
+        netAmount = parseFloat(body.net_amount || '0')
+        donorsCount = parseInt(body.donors_count || '0', 10)
+        withdrawableAmount = parseFloat(body.withdrawable_amount || '0')
+        pendingAmount = parseFloat(body.pending_amount || '0')
+        isManual = true
       }
-    })
-
-    if (!res.ok) {
-      throw new Error(`Failed to fetch Vakinha page: ${res.statusText}`)
+    } catch (_) {
+      // Body is not JSON or empty
     }
 
-    const html = await res.text()
+    if (!isManual) {
+      // 2. Fetch page HTML
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      })
 
-    // 3. Parse HTML
-    const regex = /"Quanto a vaquinha já arrecadou\?","acceptedAnswer":\{"@type":"Answer","text":"([^"]+)"\}/
-    const match = html.match(regex)
-    if (!match) {
-      throw new Error('Vakinha FAQ answer pattern not found in page HTML')
+      if (!res.ok) {
+        throw new Error(`Failed to fetch Vakinha page: ${res.statusText}`)
+      }
+
+      const html = await res.text()
+
+      // 3. Parse HTML
+      const regex = /"Quanto a vaquinha já arrecadou\?","acceptedAnswer":\{"@type":"Answer","text":"([^"]+)"\}/
+      const match = html.match(regex)
+      if (!match) {
+        throw new Error('Vakinha FAQ answer pattern not found in page HTML')
+      }
+
+      const text = match[1]
+      const amountMatch = text.match(/Valor arrecadado:\s*R\$\s*([\d.,]+)/)
+      const donorsMatch = text.match(/Número de doadores:\s*(\d+)/)
+
+      if (!amountMatch || !donorsMatch) {
+        throw new Error(`Failed to match individual metrics in text: ${text}`)
+      }
+
+      amount = parseFloat(amountMatch[1].replace(/\./g, '').replace(',', '.'))
+      donorsCount = parseInt(donorsMatch[1], 10)
+      
+      // Calculate estimated net amount (6.4% + R$ 0.50 per donor + R$ 5.00 withdrawal fee)
+      const calculatedFee = (amount * 0.064) + (donorsCount * 0.50) + 5.00
+      netAmount = Math.max(0, amount - calculatedFee)
+
+      // Fetch existing withdrawable and pending amounts to avoid overwriting them to 0 during auto sync
+      const { data: existingSettings } = await serviceClient
+        .from('site_settings')
+        .select('key, value')
+        .in('key', ['vakinha_withdrawable_amount', 'vakinha_pending_amount'])
+
+      if (existingSettings) {
+        const withdrawableSetting = existingSettings.find(s => s.key === 'vakinha_withdrawable_amount')
+        const pendingSetting = existingSettings.find(s => s.key === 'vakinha_pending_amount')
+        if (withdrawableSetting) withdrawableAmount = parseFloat(withdrawableSetting.value) || 0
+        if (pendingSetting) pendingAmount = parseFloat(pendingSetting.value) || 0
+      }
     }
 
-    const text = match[1]
-    const amountMatch = text.match(/Valor arrecadado:\s*R\$\s*([\d.,]+)/)
-    const donorsMatch = text.match(/Número de doadores:\s*(\d+)/)
+    console.log(`[Vakinha Sync] Gross: ${amount}, Net: ${netAmount}, Donors: ${donorsCount}, Withdrawable: ${withdrawableAmount}, Pending: ${pendingAmount}, Updated: ${lastUpdatedISO}`)
 
-    if (!amountMatch || !donorsMatch) {
-      throw new Error(`Failed to match individual metrics in text: ${text}`)
-    }
-
-    const amount = parseFloat(amountMatch[1].replace(/\./g, '').replace(',', '.'))
-    const donorsCount = parseInt(donorsMatch[1], 10)
-    const lastUpdatedISO = new Date().toISOString()
-
-    console.log(`[Vakinha Sync] Amount: ${amount}, Donors: ${donorsCount}, Updated: ${lastUpdatedISO}`)
-
-    // 4. Update the financial record with description 'Vakinha'
+    // 4. Update the financial record with description 'Vakinha' (with netAmount!)
     const { error: recordError } = await serviceClient
       .from('financial_records')
-      .update({ amount })
+      .update({ amount: netAmount })
       .eq('description', 'Vakinha')
 
     if (recordError) {
       throw new Error(`Failed to update financial records: ${recordError.message}`)
     }
 
-    // 5. Upsert settings: vakinha_donors_count, vakinha_last_updated
+    // 5. Upsert settings
     const upserts = [
+      { key: 'vakinha_gross_amount', value: amount.toString(), label: 'Bruto da Vakinha', category: 'donations', updated_at: lastUpdatedISO },
+      { key: 'vakinha_net_amount', value: netAmount.toString(), label: 'Líquido da Vakinha', category: 'donations', updated_at: lastUpdatedISO },
       { key: 'vakinha_donors_count', value: donorsCount.toString(), label: 'Doadores da Vakinha', category: 'donations', updated_at: lastUpdatedISO },
+      { key: 'vakinha_withdrawable_amount', value: withdrawableAmount.toString(), label: 'Liberado para Saque', category: 'donations', updated_at: lastUpdatedISO },
+      { key: 'vakinha_pending_amount', value: pendingAmount.toString(), label: 'Aguardando Liberação', category: 'donations', updated_at: lastUpdatedISO },
       { key: 'vakinha_last_updated', value: lastUpdatedISO, label: 'Última atualização da Vakinha', category: 'donations', updated_at: lastUpdatedISO }
     ]
 
@@ -155,7 +199,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      data: { amount, donorsCount, lastUpdated: lastUpdatedISO } 
+      data: { amount, netAmount, donorsCount, withdrawableAmount, pendingAmount, lastUpdated: lastUpdatedISO } 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

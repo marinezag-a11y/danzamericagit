@@ -25,6 +25,9 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
     allOrders: [],
   };
 
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   if (loading && (!safeStats.campaignsProgress || safeStats.campaignsProgress.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
@@ -33,9 +36,6 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
       </div>
     );
   }
-
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -208,7 +208,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
               totalSales: 0, 
               orderCount: 0, 
               ticketCount: 0,
-              goal: campaignData?.goal_per_dancer || 53
+              goal: (safeStats.topDancers || []).find(d => d.name === dancer)?.goal || campaignData?.goal_per_dancer || 53
             };
           }
           dancerMap[dancer].totalSales += price;
@@ -347,7 +347,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
                   <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((dancer.ticketCount / (dancer.goal || 1)) * 100, 100)}%` }}
+                      animate={{ width: `${Math.min((dancer.ticketCount / (dancer.goal || 1)) * 100, 100) || 0}%` }}
                       className="h-full bg-brand-orange"
                     />
                   </div>
@@ -364,10 +364,10 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
             </h4>
             <div className="space-y-8">
               {(safeStats.campaignsProgress || []).map((campaign, idx) => {
-                const isSelected = selectedCampaignId === campaign.id;
-                const progress = Math.min((campaign.ticketsVendidos / campaign.metaTickets) * 100, 100);
+                const isSelected = selectedCampaignId === 'all' || selectedCampaignId === campaign.id;
+                const progress = Math.min((campaign.ticketsVendidos / (campaign.metaTickets || 1)) * 100, 100) || 0;
                 return (
-                  <div key={idx} className={`transition-all duration-500 ${selectedCampaignId !== 'all' && !isSelected ? 'opacity-30' : 'opacity-100'}`}>
+                  <div key={idx} className={`transition-all duration-500 ${!isSelected ? 'opacity-30' : 'opacity-100'}`}>
                     <div className="flex justify-between items-center mb-2">
                       <h5 className="text-[10px] font-bold uppercase text-white truncate max-w-[180px]">{campaign.name}</h5>
                       <span className="text-[9px] font-mono text-brand-orange">{campaign.ticketsVendidos} / {campaign.metaTickets}</span>

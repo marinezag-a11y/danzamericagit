@@ -51,13 +51,21 @@ export function useRaffleAnalytics() {
 
     try {
       // 1. Fetch all raffle orders (excluding cancelled and unconfirmed)
-      const { data: orders, error: ordersError } = await supabase
-        .from('raffle_orders')
-        .select('*, raffle_campaigns(id, name, total_numbers, goal_per_dancer, price_per_number, cost)')
-        .neq('status', 'cancelled')
-        .neq('status', 'unconfirmed');
+      const [ordersRes, dancersRes] = await Promise.all([
+        supabase
+          .from('raffle_orders')
+          .select('*, raffle_campaigns(id, name, total_numbers, goal_per_dancer, price_per_number, cost)')
+          .neq('status', 'cancelled')
+          .neq('status', 'unconfirmed'),
+        supabase
+          .from('dancers')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_active', true)
+      ]);
 
-      if (ordersError) throw ordersError;
+      if (ordersRes.error) throw ordersRes.error;
+      const orders = ordersRes.data;
+      const dancersCount = dancersRes.count || 17;
 
       // 2. Process Stats
       const dancerMap: Record<string, DancerPerformance> = {};
@@ -88,7 +96,7 @@ export function useRaffleAnalytics() {
             totalSales: 0, 
             orderCount: 0, 
             ticketCount: 0,
-            goal: campaignData?.goal_per_dancer || 53
+            goal: campaignData?.total_numbers ? Math.ceil(campaignData.total_numbers / Math.max(1, dancersCount)) : 0
           };
         }
         

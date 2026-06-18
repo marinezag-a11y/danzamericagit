@@ -19,6 +19,7 @@ import { supabase } from '../../../lib/supabase';
 import { useRaffles, RaffleCampaign, RaffleOrder } from '../../../hooks/useRaffles';
 import { useSiteSettings } from '../../../hooks/useSiteSettings';
 import { useProfiles } from '../../../hooks/useProfiles';
+import { useDancers } from '../../../hooks/useDancers';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { NotificationSettings } from './ui/NotificationSettings';
 import { RaffleOrdersModal } from './raffles/RaffleOrdersModal';
@@ -44,6 +45,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
   } = useRaffles();
   const { settings, updateSetting, loading: loadingSettings } = useSiteSettings();
   const { profiles } = useProfiles();
+  const { dancers } = useDancers();
   
   const [view, setView] = useState<'campaigns' | 'dancers' | 'stats'>('campaigns');
   const [isAdding, setIsAdding] = useState(false);
@@ -97,7 +99,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
       image_url: newImageUrl,
       cost: newCost,
       is_active: true,
-      goal_per_dancer: Math.ceil(newTotal / (parseInt(settings['dancers_count']?.value || '19')))
+      goal_per_dancer: Math.ceil(newTotal / Math.max(1, dancers.length))
     };
 
     if (newCompletionText) {
@@ -252,7 +254,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                             </div>
                             <div className="space-y-4">
                               <p className="text-[9px] text-brand-orange mt-3 font-bold uppercase tracking-[0.2em] ml-1">
-                                Meta: {Math.ceil(newTotal / (parseInt(settings['dancers_count']?.value || '19')))} rifas / bailarino
+                                Meta: {Math.ceil(newTotal / Math.max(1, dancers.length))} rifas / bailarino
                               </p>
                             </div>
                           </div>
@@ -328,6 +330,7 @@ export function RaffleManager({ onAlert, userRole }: RaffleManagerProps) {
                 onOpenOrders={handleOpenOrders}
                 onAlert={onAlert}
                 settings={settings}
+                dancersCount={dancers.length}
               />
             ))}
           </div>
@@ -391,9 +394,10 @@ interface RaffleAccordionProps {
   onOpenOrders: (id: string) => Promise<void>;
   onAlert: (t: string, m: string, v: any) => void;
   settings: any;
+  dancersCount: number;
 }
 
-const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUpdate, onDelete, onOpenOrders, onAlert, settings }) => {
+const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUpdate, onDelete, onOpenOrders, onAlert, settings, dancersCount }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [localName, setLocalName] = useState(campaign.name);
@@ -462,7 +466,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
       total_numbers: localTotal,
       image_url: localImageUrl,
       cost: localCost,
-      goal_per_dancer: Math.ceil(localTotal / (parseInt(settings['dancers_count']?.value || '19')))
+      goal_per_dancer: Math.ceil(localTotal / Math.max(1, dancersCount))
     };
 
     if (localCompletionText) {
@@ -595,7 +599,7 @@ const RaffleAccordion: React.FC<RaffleAccordionProps> = ({ campaign, index, onUp
                     <div className="space-y-4">
                       <p className="text-[9px] text-white/20 italic ml-1">* Atenção: Alterar o total de números após o início das vendas pode causar inconsistências se o novo total for menor que o número de bilhetes já vendidos.</p>
                       <p className="text-[10px] text-brand-orange mt-3 font-bold uppercase tracking-[0.2em] ml-1 bg-brand-orange/5 p-2 rounded-lg border border-brand-orange/10 inline-block">
-                        Meta: {Math.ceil(localTotal / (parseInt(settings['dancers_count']?.value || '19')))} rifas / bailarino
+                        Meta: {Math.ceil(localTotal / Math.max(1, dancersCount))} rifas / bailarino
                       </p>
                     </div>
                   </div>

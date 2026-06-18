@@ -20,28 +20,38 @@ export function usePublicRanking(campaignId?: string) {
         setLoading(true);
         if (!campaignId) {
           // Global ranking from raffle_ranking view
-          const { data, error } = await supabase
-            .from('raffle_ranking')
-            .select('*')
-            .order('ticket_count', { ascending: false })
-            .order('order_count', { ascending: false });
+          const [rankingRes, campaignsRes, dancersRes] = await Promise.all([
+            supabase.from('raffle_ranking').select('*').order('ticket_count', { ascending: false }).order('order_count', { ascending: false }),
+            supabase.from('raffle_campaigns').select('total_numbers').eq('is_active', true),
+            supabase.from('dancers').select('id', { count: 'exact', head: true }).eq('is_active', true)
+          ]);
 
-          if (error) throw error;
-          setRanking(data || []);
+          if (rankingRes.error) throw rankingRes.error;
+          
+          let totalNumbers = 0;
+          campaignsRes.data?.forEach(c => totalNumbers += (c.total_numbers || 0));
+          const dancersCount = dancersRes.count || 17;
+          const globalGoal = Math.ceil(totalNumbers / Math.max(1, dancersCount));
+
+          const dataWithGoal = (rankingRes.data || []).map(item => ({
+            ...item,
+            goal: globalGoal
+          }));
+
+          setRanking(dataWithGoal);
         } else {
           // Specific campaign ranking calculated in clientside
-          // 1. Fetch campaign goal
+          // 1. Fetch campaign goal and active dancers count
           let goal = 50;
           try {
-            const { data: campaign } = await supabase
-              .from('raffle_campaigns')
-              .select('goal_per_dancer')
-              .eq('id', campaignId)
-              .maybeSingle();
+            const [campaignRes, dancersRes] = await Promise.all([
+              supabase.from('raffle_campaigns').select('total_numbers').eq('id', campaignId).maybeSingle(),
+              supabase.from('dancers').select('id', { count: 'exact', head: true }).eq('is_active', true)
+            ]);
             
-            if (campaign) {
-              goal = campaign.goal_per_dancer || 50;
-            }
+            const totalNumbers = campaignRes.data?.total_numbers || 1000;
+            const dancersCount = dancersRes.count || 17;
+            goal = Math.ceil(totalNumbers / Math.max(1, dancersCount));
           } catch (e) {
             console.error('[Ranking] Error fetching campaign goal:', e);
           }

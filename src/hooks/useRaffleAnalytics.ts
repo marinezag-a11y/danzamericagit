@@ -51,7 +51,7 @@ export function useRaffleAnalytics() {
 
     try {
       // 1. Fetch all raffle orders (excluding cancelled and unconfirmed)
-      const [ordersRes, dancersRes] = await Promise.all([
+      const [ordersRes, dancersRes, activeCampaignRes] = await Promise.all([
         supabase
           .from('raffle_orders')
           .select('*, raffle_campaigns(id, name, total_numbers, goal_per_dancer, price_per_number, cost)')
@@ -60,12 +60,20 @@ export function useRaffleAnalytics() {
         supabase
           .from('dancers')
           .select('id', { count: 'exact', head: true })
+          .eq('is_active', true),
+        supabase
+          .from('raffle_campaigns')
+          .select('*')
           .eq('is_active', true)
+          .maybeSingle()
       ]);
 
       if (ordersRes.error) throw ordersRes.error;
       const orders = ordersRes.data;
       const dancersCount = dancersRes.count || 17;
+      
+      const activeCampaign = activeCampaignRes.data;
+      const globalGoal = activeCampaign?.goal_per_dancer || (activeCampaign?.total_numbers ? Math.ceil(activeCampaign.total_numbers / Math.max(1, dancersCount)) : 57);
 
       // 2. Process Stats
       const dancerMap: Record<string, DancerPerformance> = {};
@@ -77,7 +85,7 @@ export function useRaffleAnalytics() {
         const isCounted = order.status !== 'cancelled' && order.status !== 'unconfirmed';
         const price = Number(order.total_price || 0);
         const tickets = (order.selected_numbers || []).length;
-        const dancer = order.dancer_name || 'Geral';
+        const dancer = (order.dancer_name || 'Geral').trim();
         const campaignId = order.campaign_id;
         const campaignData = Array.isArray(order.raffle_campaigns)
           ? order.raffle_campaigns[0]
@@ -89,14 +97,13 @@ export function useRaffleAnalytics() {
           totalTickets += tickets;
         }
 
-        // Dancer Stats (Aggregated for now, we'll filter in the component)
         if (!dancerMap[dancer]) {
           dancerMap[dancer] = { 
             name: dancer, 
             totalSales: 0, 
             orderCount: 0, 
             ticketCount: 0,
-            goal: campaignData?.total_numbers ? Math.ceil(campaignData.total_numbers / Math.max(1, dancersCount)) : 0
+            goal: globalGoal
           };
         }
         

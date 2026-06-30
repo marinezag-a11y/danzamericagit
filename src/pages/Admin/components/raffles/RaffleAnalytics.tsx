@@ -8,6 +8,7 @@ import {
   Printer
 } from 'lucide-react';
 import { useRaffleAnalytics } from '../../../../hooks/useRaffleAnalytics';
+import { useDragScroll } from '../../../../hooks/useDragScroll';
 
 interface RaffleAnalyticsProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
@@ -15,6 +16,7 @@ interface RaffleAnalyticsProps {
 
 export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
   const { stats: raffleStats, loading, refresh } = useRaffleAnalytics();
+  const dragScroll = useDragScroll<HTMLDivElement>();
 
   const safeStats = raffleStats || {
     totalRevenue: 0,
@@ -194,7 +196,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
           
           const price = Number(o.total_price || 0);
           const tickets = (o.selected_numbers || []).length;
-          const dancer = o.dancer_name || 'Geral';
+          const dancer = (o.dancer_name || 'Geral').trim();
           rev += price;
           tks += tickets;
 
@@ -208,7 +210,7 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
               totalSales: 0, 
               orderCount: 0, 
               ticketCount: 0,
-              goal: (safeStats.topDancers || []).find(d => d.name === dancer)?.goal || campaignData?.goal_per_dancer || 53
+              goal: (safeStats.topDancers || []).find(d => d.name === dancer)?.goal || campaignData?.goal_per_dancer || 57
             };
           }
           dancerMap[dancer].totalSales += price;
@@ -329,7 +331,10 @@ export function RaffleAnalytics({ onAlert }: RaffleAnalyticsProps) {
               <Users className="w-4 h-4 text-brand-orange" />
               Hall de Talentos {selectedCampaignId !== 'all' ? '(Filtrado)' : '(Geral)'}
             </h4>
-            <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            <div 
+              {...dragScroll}
+              className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar"
+            >
               {(displayStats.topDancers || []).map((dancer, idx) => (
                 <div key={idx} className="relative">
                   <div className="flex justify-between items-end mb-2">

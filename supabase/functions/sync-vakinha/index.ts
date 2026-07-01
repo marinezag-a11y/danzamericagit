@@ -54,8 +54,9 @@ serve(async (req) => {
 
     const serviceClient = createClient(
       Deno.env.get('SUPABASE_URL') || '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || dbServiceRoleKey
     )
+    console.log(`[Vakinha Sync] Has SUPABASE_SERVICE_ROLE_KEY: ${!!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`)
 
     // 1. Get vakinha_url from site_settings
     const { data: settingData, error: settingError } = await serviceClient
@@ -108,7 +109,7 @@ serve(async (req) => {
       const html = await res.text()
 
       // 3. Parse HTML
-      const regex = /"Quanto a vaquinha já arrecadou\?","acceptedAnswer":\{"@type":"Answer","text":"([^"]+)"\}/
+      const regex = /"name":"Quanto a vaquinha já arrecadou\?","acceptedAnswer":\{"@type":"Answer","text":"([^"]+)"\}/
       const match = html.match(regex)
       if (!match) {
         throw new Error('Vakinha FAQ answer pattern not found in page HTML')
@@ -125,8 +126,8 @@ serve(async (req) => {
       amount = parseFloat(amountMatch[1].replace(/\./g, '').replace(',', '.'))
       donorsCount = parseInt(donorsMatch[1], 10)
       
-      // Calculate estimated net amount (6.4% + R$ 0.50 per donor + R$ 5.00 withdrawal fee)
-      const calculatedFee = (amount * 0.064) + (donorsCount * 0.50) + 5.00
+      // Calculate estimated net amount (6.4% + R$ 0.50 per donor) - withdrawal fee is only charged upon withdrawal
+      const calculatedFee = (amount * 0.064) + (donorsCount * 0.50)
       netAmount = Math.max(0, amount - calculatedFee)
 
       // Fetch existing withdrawable and pending amounts to avoid overwriting them to 0 during auto sync
@@ -166,12 +167,13 @@ serve(async (req) => {
     ]
 
     for (const item of upserts) {
-      const { error: upsertError } = await serviceClient
+      const { error: updateError } = await serviceClient
         .from('site_settings')
-        .upsert(item, { onConflict: 'key' })
+        .update({ value: item.value, updated_at: item.updated_at })
+        .eq('key', item.key)
       
-      if (upsertError) {
-        throw new Error(`Failed to upsert setting ${item.key}: ${upsertError.message}`)
+      if (updateError) {
+        throw new Error(`Failed to update setting ${item.key}: ${updateError.message}`)
       }
     }
 
@@ -193,8 +195,8 @@ serve(async (req) => {
         }
       }
       // Upsert target_amount (expense) and current_amount (income) in site_settings
-      await serviceClient.from('site_settings').upsert({ key: 'target_amount', value: expense.toString(), updated_at: lastUpdatedISO }, { onConflict: 'key' })
-      await serviceClient.from('site_settings').upsert({ key: 'current_amount', value: income.toString(), updated_at: lastUpdatedISO }, { onConflict: 'key' })
+      await serviceClient.from('site_settings').update({ value: expense.toString(), updated_at: lastUpdatedISO }).eq('key', 'target_amount')
+      await serviceClient.from('site_settings').update({ value: income.toString(), updated_at: lastUpdatedISO }).eq('key', 'current_amount')
     }
 
     return new Response(JSON.stringify({ 

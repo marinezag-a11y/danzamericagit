@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../../../lib/supabase';
 import { 
   Loader2, 
   Plus, 
@@ -48,6 +49,7 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
   const [vakinhaWithdrawableInput, setVakinhaWithdrawableInput] = useState('');
   const [vakinhaPendingInput, setVakinhaPendingInput] = useState('');
   const [vakinhaDonorsInput, setVakinhaDonorsInput] = useState('');
+  const [syncingVakinha, setSyncingVakinha] = useState(false);
   
   // Form State
   const [newDesc, setNewDesc] = useState('');
@@ -75,6 +77,20 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
     // Target Amount = Total Expense
     await updateSetting('target_amount', expense.toString());
     await updateSetting('current_amount', income.toString());
+  };
+
+  const handleSyncVakinha = async () => {
+    setSyncingVakinha(true);
+    try {
+      const { error } = await supabase.functions.invoke('sync-vakinha', { method: 'POST' });
+      if (error) throw error;
+      onAlert('Sucesso', 'Valores sincronizados com a Vakinha!', 'info');
+      refresh();
+    } catch (err: any) {
+      onAlert('Erro', err.message || 'Falha ao sincronizar Vakinha.', 'danger');
+    } finally {
+      setSyncingVakinha(false);
+    }
   };
 
   const handleAdd = async () => {
@@ -697,6 +713,14 @@ export function FinancialManager({ onAlert, userRole }: FinancialManagerProps) {
                           title="Editar Valores da Vakinha"
                         >
                           <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={handleSyncVakinha}
+                          disabled={syncingVakinha}
+                          className={`p-2 rounded-full transition-all flex items-center justify-center ${syncingVakinha ? 'text-white/20' : 'text-white/10 hover:text-emerald-500 hover:bg-emerald-500/10'}`}
+                          title="Sincronizar Valores da Vakinha Automaticamente"
+                        >
+                          {syncingVakinha ? <Loader2 className="w-4 h-4 animate-spin" /> : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>}
                         </button>
                         <span className="text-[10px] text-white/20 italic">Sincronizado</span>
                       </div>

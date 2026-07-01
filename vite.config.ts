@@ -19,7 +19,7 @@ export default defineConfig(({mode}) => {
     server: {
       hmr: false,
       watch: null,
-      host: '127.0.0.1',
+      host: true,
       strictPort: true,
     },
 

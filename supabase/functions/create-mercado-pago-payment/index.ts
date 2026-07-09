@@ -88,8 +88,9 @@ serve(async (req) => {
     console.log(`[MercadoPago] PIX successfully generated. Payment ID: ${data.id}`)
 
     // Update the DB to store the MP payment ID
+    const tableName = body.order_type === 'store' ? 'help_orders' : 'raffle_orders';
     await supabase
-      .from('raffle_orders')
+      .from(tableName)
       .update({ mp_payment_id: String(data.id) })
       .eq('id', order_id);
 

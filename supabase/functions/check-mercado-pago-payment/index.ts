@@ -64,49 +64,74 @@ serve(async (req) => {
         .from('raffle_orders')
         .select('id, status, selected_numbers, campaign_id')
         .eq('id', order_id)
-        .single()
+        .maybeSingle()
 
-      if (order && order.status !== 'paid') {
-        // Verificação de concorrência/conflito
-        const { data: conflictingOrders } = await supabase
-          .from('raffle_orders')
-          .select('id, selected_numbers')
-          .eq('campaign_id', order.campaign_id)
-          .in('status', ['paid', 'sent'])
-          .neq('id', order_id);
-
-        const paidNumbers = new Set(
-          (conflictingOrders || []).flatMap(o => o.selected_numbers || [])
-        );
-
-        const hasConflict = (order.selected_numbers || []).some(n => paidNumbers.has(n));
-
-        if (hasConflict) {
-          console.warn(`[MP Polling CONFLITO] Pedido ${order_id} pago após janela de 15min, mas o(s) número(s) #${(order.selected_numbers || []).join(', #')} já foram comprados.`);
-          
-          await supabase
+      if (order) {
+        if (order.status !== 'paid') {
+          // Verificação de concorrência/conflito
+          const { data: conflictingOrders } = await supabase
             .from('raffle_orders')
-            .update({
-              status: 'unconfirmed',
-              payment_origin: 'mercadopago',
-              mp_payment_id: String(payment_id),
-              reason: '⚠️ Recebido após janela: número(s) já comprado(s) por outro cliente. Solicitar contato para alocação manual.',
-              updated_at: nowTs
-            })
-            .eq('id', order_id);
+            .select('id, selected_numbers')
+            .eq('campaign_id', order.campaign_id)
+            .in('status', ['paid', 'sent'])
+            .neq('id', order_id);
 
-          return new Response(JSON.stringify({ 
-            status: 'approved',
-            conflict: true,
-            status_detail: mpData.status_detail,
-            payment_method_id: mpData.payment_method_id,
-            date_created: mpData.date_created,
-            date_approved: mpData.date_approved,
-            transaction_amount: mpData.transaction_amount
-          }), { headers: responseHeaders, status: 200 });
-        } else {
+          const paidNumbers = new Set(
+            (conflictingOrders || []).flatMap(o => o.selected_numbers || [])
+          );
+
+          const hasConflict = (order.selected_numbers || []).some(n => paidNumbers.has(n));
+
+          if (hasConflict) {
+            console.warn(`[MP Polling CONFLITO] Pedido ${order_id} pago após janela de 15min, mas o(s) número(s) #${(order.selected_numbers || []).join(', #')} já foram comprados.`);
+            
+            await supabase
+              .from('raffle_orders')
+              .update({
+                status: 'unconfirmed',
+                payment_origin: 'mercadopago',
+                mp_payment_id: String(payment_id),
+                reason: '⚠️ Recebido após janela: número(s) já comprado(s) por outro cliente. Solicitar contato para alocação manual.',
+                updated_at: nowTs
+              })
+              .eq('id', order_id);
+
+            return new Response(JSON.stringify({ 
+              status: 'approved',
+              conflict: true,
+              status_detail: mpData.status_detail,
+              payment_method_id: mpData.payment_method_id,
+              date_created: mpData.date_created,
+              date_approved: mpData.date_approved,
+              transaction_amount: mpData.transaction_amount
+            }), { headers: responseHeaders, status: 200 });
+          } else {
+            const { error: updateError } = await supabase
+              .from('raffle_orders')
+              .update({ 
+                status: 'paid', 
+                payment_origin: 'mercadopago', 
+                mp_payment_id: String(payment_id), 
+                updated_at: nowTs
+              })
+              .eq('id', order_id)
+
+            if (updateError) throw updateError
+
+            console.log(`[MP Polling] Banco atualizado para PAID via polling ativo. order_id=${order_id}`)
+          }
+        }
+      } else {
+        // Tenta buscar no help_orders
+        const { data: helpOrder } = await supabase
+          .from('help_orders')
+          .select('id, status')
+          .eq('id', order_id)
+          .maybeSingle()
+
+        if (helpOrder && helpOrder.status !== 'paid') {
           const { error: updateError } = await supabase
-            .from('raffle_orders')
+            .from('help_orders')
             .update({ 
               status: 'paid', 
               payment_origin: 'mercadopago', 
@@ -117,7 +142,7 @@ serve(async (req) => {
 
           if (updateError) throw updateError
 
-          console.log(`[MP Polling] Banco atualizado para PAID via polling ativo. order_id=${order_id}`)
+          console.log(`[MP Polling] Banco (help_orders) atualizado para PAID via polling ativo. order_id=${order_id}`)
         }
       }
 

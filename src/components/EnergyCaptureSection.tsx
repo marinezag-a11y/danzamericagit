@@ -48,10 +48,7 @@ export function EnergyCaptureSection() {
     async function loadApprovedLeads() {
       try {
         if (!supabase) return;
-        const { data } = await supabase
-          .from('energy_leads')
-          .select('average_bill, dancer_name, status')
-          .eq('status', 'approved');
+        const { data } = await supabase.rpc('get_approved_energy_leads');
 
         if (data) {
           setLeads(data);

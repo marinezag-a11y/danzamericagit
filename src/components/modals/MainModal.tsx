@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin, Plus, Minus, Copy, ChevronDown } from 'lucide-react';
+import { X, ShoppingBag, ArrowRight, Loader2, CheckCircle, Phone, Instagram, Mail, MapPin, Plus, Minus, Copy, ChevronDown, Check } from 'lucide-react';
 import { useHelpOrders } from '../../hooks/useHelpOrders';
 import { HelpItem } from '../../hooks/useHelpItems';
 import { usePageTracking } from '../../hooks/usePageTracking';
@@ -40,6 +40,14 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  
+  // Estados para integração com Mercado Pago
+  const [mpPaymentData, setMpPaymentData] = useState<{qr_code?: string, qr_code_base64?: string, ticket_url?: string, payment_id?: string} | null>(null);
+  const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
+  const [orderId, setOrderId] = useState('');
+  const [isConfirmedAutomatic, setIsConfirmedAutomatic] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(300);
+  const [step, setStep] = useState<'cart' | 'payment' | 'success'>('cart');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
 
@@ -161,6 +169,12 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
     setSubmitting(false);
     setError(null);
     setCopied(false);
+    setStep('cart');
+    setMpPaymentData(null);
+    setIsGeneratingPayment(false);
+    setOrderId('');
+    setIsConfirmedAutomatic(false);
+    setTimeLeft(300);
   };
 
   const { settings } = useSiteSettings();
@@ -178,6 +192,88 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
       console.error('Falha ao copiar:', err);
     }
   };
+
+  // Polling de segurança e WebSocket
+  useEffect(() => {
+    if (step !== 'payment' || !orderId) return;
+
+    let alreadyConfirmed = false;
+
+    const handleConfirmed = () => {
+      if (alreadyConfirmed) return;
+      alreadyConfirmed = true;
+      setIsConfirmedAutomatic(true);
+      setStep('success');
+      setSuccess(true);
+    };
+
+    // WebSocket
+    const channel = supabase
+      .channel(`order_payment_status_store:${orderId}`, {
+        config: { broadcast: { self: false }, presence: { key: orderId } }
+      })
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'help_orders',
+        filter: `id=eq.${orderId}`
+      }, (payload) => {
+        if (payload.new && payload.new.status === 'paid') {
+          handleConfirmed();
+        }
+      })
+      .subscribe();
+
+    // Polling DB
+    const checkPaymentStatus = async () => {
+      if (alreadyConfirmed) return;
+      try {
+        const { data } = await supabase.from('help_orders').select('status').eq('id', orderId).maybeSingle();
+        if (data?.status === 'paid') handleConfirmed();
+      } catch (err) {}
+    };
+
+    // Polling API MP via Edge Function
+    const pollMercadoPagoAPI = async () => {
+      if (alreadyConfirmed || !mpPaymentData?.payment_id) return;
+      try {
+        const { data, error } = await supabase.functions.invoke('check-mercado-pago-payment', {
+          body: { payment_id: mpPaymentData.payment_id, order_id: orderId }
+        });
+        if (!error && data?.status === 'approved') handleConfirmed();
+      } catch (err) {}
+    };
+
+    checkPaymentStatus();
+    pollMercadoPagoAPI();
+    
+    const fastInterval = setInterval(checkPaymentStatus, 1000);
+    const slowInterval = setInterval(pollMercadoPagoAPI, 2000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(fastInterval);
+      clearInterval(slowInterval);
+    };
+  }, [step, orderId, mpPaymentData?.payment_id]);
+
+  // Timer
+  useEffect(() => {
+    if (step !== 'payment' || !orderId) return;
+    if (timeLeft <= 0) {
+      const cancelExpiredOrder = async () => {
+        try {
+          await supabase.from('help_orders').update({ status: 'unconfirmed', updated_at: new Date().toISOString() }).eq('id', orderId);
+          setError('Tempo limite excedido.');
+          setStep('cart');
+        } catch (e) {}
+      };
+      cancelExpiredOrder();
+      return;
+    }
+    const t = setInterval(() => setTimeLeft(l => l - 1), 1000);
+    return () => clearInterval(t);
+  }, [step, orderId, timeLeft]);
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,7 +306,34 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
       const result = await addOrder(orderData);
 
       if (result.success) {
-        setSuccess(true); // Mostra sucesso imediatamente
+        setOrderId(newOrderId);
+        setIsGeneratingPayment(true);
+        setStep('payment');
+
+        const { data: mpData, error: mpError } = await supabase.functions.invoke('create-mercado-pago-payment', {
+          body: {
+            order_type: 'store',
+            order_id: newOrderId,
+            total_price: totalPrice,
+            customer_name: customerName,
+            customer_email: customerEmail,
+            customer_phone: customerPhone,
+            campaign_name: 'Loja Solidária'
+          }
+        });
+
+        if (mpError || !mpData?.success) {
+          throw new Error(mpData?.error || mpError?.message || 'Erro ao gerar PIX Automático');
+        }
+
+        setMpPaymentData({
+          qr_code: mpData.qr_code,
+          qr_code_base64: mpData.qr_code_base64,
+          ticket_url: mpData.ticket_url,
+          payment_id: mpData.payment_id
+        });
+        
+        setIsGeneratingPayment(false);
         trackEvent('Finalizar Pedido', 'conversion', { total: totalPrice });
       } else {
         setError('Ocorreu um erro ao salvar seu pedido. Por favor, tente novamente ou nos chame no WhatsApp.');
@@ -218,6 +341,8 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
     } catch (err: any) {
       console.error('Error adding order:', err);
       setError('Erro de conexão. Verifique sua internet e tente novamente.');
+      setIsGeneratingPayment(false);
+      setStep('cart');
     } finally {
       setSubmitting(false);
     }
@@ -248,7 +373,13 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="modal-container relative z-10"
+        className={`modal-container relative z-10 ${
+          success 
+            ? 'lg:!max-w-3xl' 
+            : activeModal === 'contact' 
+              ? 'lg:!max-w-4xl' 
+              : 'lg:!max-w-6xl'
+        }`}
       >
         {/* Header Bar */}
         <div className="modal-header">
@@ -278,9 +409,9 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
 
         <div className="modal-content">
           {(activeModal === 'store' || activeModal === 'raffle' || activeModal === 'event' || activeModal === 'donation') && (
-            <div className={`${success ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24'}`}>
-              <div className={success ? 'w-full' : ''}>
-                {!success ? (
+            <div className={`${step === 'success' || step === 'payment' ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24'}`}>
+              <div className={step === 'success' || step === 'payment' ? 'w-full' : ''}>
+                {step === 'cart' ? (
                   <div className="space-y-6">
                     {products.map(product => {
                       const isSelected = !!quantities[product.id];
@@ -373,6 +504,66 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                       );
                     })}
                   </div>
+                ) : step === 'payment' ? (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-white rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden text-center"
+                  >
+                    <div className="flex flex-col items-center gap-6">
+                      <div className="bg-brand-orange/10 p-4 rounded-2xl animate-pulse">
+                        <Loader2 size={32} className="text-brand-orange animate-spin" />
+                      </div>
+                      <h3 className="text-2xl font-serif text-brand-dark italic leading-tight">Aguardando Pagamento</h3>
+                      <p className="text-sm text-brand-dark/70">
+                        Deixe esta tela aberta. Ela atualizará automaticamente na mesma hora em que você pagar o Pix!
+                      </p>
+
+                      <div className="flex items-center gap-4 bg-red-50 px-4 py-2 rounded-full mt-2">
+                        <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                        <span className="text-xs font-black uppercase tracking-wider text-red-600">
+                          Expira em: {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
+                        </span>
+                      </div>
+                      
+                      <div className="w-full max-w-sm mx-auto bg-black/[0.02] border border-black/5 rounded-3xl p-6 mt-4">
+                        {mpPaymentData?.qr_code_base64 ? (
+                          <div className="w-48 h-48 mx-auto bg-white p-2 rounded-xl shadow-sm border border-black/5 mb-6">
+                            <img src={`data:image/jpeg;base64,${mpPaymentData.qr_code_base64}`} alt="QR Code Pix" className="w-full h-full object-contain" />
+                          </div>
+                        ) : (
+                          <div className="w-48 h-48 mx-auto bg-white p-2 rounded-xl shadow-sm border border-black/5 flex items-center justify-center mb-6">
+                            <Loader2 className="w-8 h-8 text-brand-orange animate-spin" />
+                          </div>
+                        )}
+                        
+                        {mpPaymentData?.qr_code && (
+                          <div className="space-y-3 text-left">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-brand-dark text-center">Pix Copia e Cola:</p>
+                            <div className="flex items-center gap-2">
+                              <input 
+                                type="text" 
+                                value={mpPaymentData.qr_code} 
+                                readOnly 
+                                className="flex-1 bg-white border border-black/10 rounded-xl p-3 text-xs text-brand-dark/70 font-mono outline-none"
+                              />
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(mpPaymentData.qr_code!);
+                                  setCopied(true);
+                                  setTimeout(() => setCopied(false), 2000);
+                                }}
+                                className="bg-brand-dark hover:bg-brand-orange text-white p-3 rounded-xl transition-colors flex-shrink-0"
+                              >
+                                {copied ? <Check size={16} /> : <Copy size={16} />}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
                 ) : (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -380,63 +571,32 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                     className="h-full flex flex-col items-center justify-center py-12 text-center"
                   >
                     <div className="relative mb-6">
-                      <div className="w-16 h-16 bg-emerald-500 rounded-[1.5rem] flex items-center justify-center text-white shadow-[0_15px_30px_-10px_rgba(16,185,129,0.5)] rotate-12">
+                      <div className="w-16 h-16 bg-emerald-500 rounded-[1.5rem] flex items-center justify-center text-white shadow-[0_15px_30px_-10px_rgba(16,185,129,0.5)]">
                         <CheckCircle className="w-8 h-8" strokeWidth={1.5} />
                       </div>
                       <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-[1rem] shadow-xl flex items-center justify-center">
-                         <ShoppingBag className="w-5 h-5 text-brand-orange" strokeWidth={1.5} />
+                         <ShoppingBag className="w-5 h-5 text-emerald-500" strokeWidth={1.5} />
                       </div>
                     </div>
 
-                    <h3 className="text-2xl font-serif text-brand-dark mb-4 italic leading-tight">Pedido Recebido com Sucesso!</h3>
+                    <h3 className="text-2xl font-serif text-brand-dark mb-4 italic leading-tight">Pagamento Confirmado!</h3>
                     
-                    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-black/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] mb-8 max-w-sm mx-auto text-left space-y-6">
-                      <div className="space-y-2">
-                        <p className="text-brand-orange text-[9px] uppercase tracking-[0.3em] font-black italic opacity-60">CONFIRMAÇÃO VIA PIX</p>
-                        <p className="text-xs text-brand-dark/60 font-serif leading-relaxed italic">
-                          Para confirmar seu apoio, realize o PIX e envie o comprovante para nosso WhatsApp.
-                        </p>
+                    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-black/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] mb-8 max-w-sm mx-auto text-center space-y-6">
+                      <p className="text-sm text-brand-dark/70 font-medium">
+                        Seu pagamento via Pix foi recebido instantaneamente e seu pedido já está confirmado.
+                      </p>
+                      <div className="py-4 border-t border-b border-black/5">
+                        <p className="text-[10px] uppercase tracking-[0.3em] font-black text-emerald-600">STATUS DO PEDIDO</p>
+                        <p className="text-xl font-black text-brand-dark mt-1">PAGO</p>
                       </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-3">
-                          <div className="bg-black/5 p-5 rounded-2xl border border-transparent shadow-inner">
-                            <span className="text-[8px] uppercase tracking-[0.2em] text-brand-dark/30 font-black block mb-2">CHAVE PIX ({pixType})</span>
-                            <p className="text-brand-dark font-mono font-black text-sm break-all tracking-tight leading-none">{pixKey}</p>
-                          </div>
-                          <button 
-                            onClick={handleCopyPix}
-                            className="w-full py-3 bg-brand-orange/10 text-brand-orange text-[10px] uppercase tracking-widest font-black rounded-xl hover:bg-brand-orange hover:text-white transition-all flex items-center justify-center gap-2"
-                          >
-                            <Copy size={12} /> COPIAR CHAVE PIX
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6 px-2">
-                          <div className="space-y-0.5">
-                            <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black">BANCO</p>
-                            <p className="text-xs font-black text-brand-dark">{pixBank}</p>
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[8px] uppercase tracking-widest text-brand-dark/30 font-black">RECEBEDOR</p>
-                            <p className="text-xs font-black text-brand-dark">{pixReceiver}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <a 
-                        href={`https://wa.me/55${(settings?.contact_whatsapp?.value || '31992127292').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Realizei um pedido de apoio e gostaria de enviar o comprovante. Nome: ${customerName}`)}`}
-                        target="_blank"
-                        className="w-full py-4 bg-[#25D366] text-white rounded-[1.5rem] text-[10px] uppercase tracking-[0.3em] font-black hover:shadow-[#25D366]/40 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
-                      >
-                        <Phone size={16} />
-                        Enviar Comprovante
-                      </a>
+                      <p className="text-xs text-brand-dark/50 italic">
+                        Enviamos os detalhes da sua contribuição para o seu e-mail. Muito obrigado por apoiar o Núcleo de Dança Tatiana Figueiredo!
+                      </p>
                     </div>
 
                     <button 
                       onClick={onClose}
-                      className="px-10 py-4 border border-black/5 text-brand-dark/20 rounded-[1.5rem] text-[9px] uppercase tracking-[0.3em] font-black hover:border-brand-dark hover:text-brand-dark transition-all"
+                      className="px-10 py-4 bg-brand-dark text-white rounded-[1.5rem] text-[9px] uppercase tracking-[0.3em] font-black hover:bg-brand-orange transition-all shadow-lg"
                     >
                       CONCLUIR E FECHAR
                     </button>
@@ -444,7 +604,7 @@ export function MainModal({ activeModal, selectedItemId, onClose, helpItems }: M
                 )}
               </div>
 
-              {!success && (
+              {step === 'cart' && (
                 <div className="flex flex-col min-h-[500px]">
                   {selectedProducts.length > 0 ? (
                     <div className="h-full flex flex-col gap-12">

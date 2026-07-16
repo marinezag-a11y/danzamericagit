@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Admin/Login';
 import Dashboard from './pages/Admin/Dashboard';
+import { Links } from './pages/Links';
 
 import { SupportBar } from './components/SupportBar';
 
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/admin" element={<Login />} />
         <Route path="/admin/dashboard" element={<Dashboard />} />
+        <Route path="/links" element={<Links />} />
       </Routes>
     </>
   );

@@ -14,6 +14,7 @@ import { FundraisingManager } from './FundraisingManager';
 import { TickerManager } from './TickerManager';
 import { HelpItemsManager } from './HelpItemsManager';
 import { GalleryManager } from './GalleryManager';
+import { SocialLinksManager } from './SocialLinksManager';
 
 interface ContentEditorProps {
   onAlert: (t: string, m: string, v: 'danger' | 'warning' | 'info') => void;
@@ -78,6 +79,10 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
     },
     {
       title: '05. Loja: Compre um Sonho',
+      keys: []
+    },
+    {
+      title: '06. Links Especiais (Instagram)',
       keys: []
     }
   ];
@@ -321,6 +326,12 @@ export function ContentEditor({ onAlert }: ContentEditorProps) {
                     {section.title === '05. Loja: Compre um Sonho' && (
                       <div className="border-t border-white/5 pt-12">
                         <HelpItemsManager onAlert={onAlert} />
+                      </div>
+                    )}
+
+                    {section.title === '06. Links Especiais (Instagram)' && (
+                      <div className="border-t border-white/5 pt-12">
+                        <SocialLinksManager onAlert={onAlert} />
                       </div>
                     )}
                   </div>
